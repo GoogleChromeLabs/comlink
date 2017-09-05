@@ -16,15 +16,33 @@ let pingPongMessageCounter: number = 0;
 export type Proxy = Function;
 export type Endpoint = MessagePort | Worker | Window;
 
+function postMessageOnEndpoint(endpoint: Endpoint, message: any, transfer: any[]): void {
+  if(endpoint instanceof Window)
+    return endpoint.postMessage(message, '*', transfer);
+  return endpoint.postMessage(message, transfer);
+}
+
 interface InvocationProxyResult {
+  id?: string;
   type: "PROXY";
   endpoint: Endpoint;
 }
 
 interface InvocationObjectResult {
+  id?: string;
   type: "OBJECT";
   obj: any;
 }
+
+interface InvocationRequest {
+  id?: string;
+  type: InvocationType;
+  callPath: PropertyKey[];
+  argumentsList?: any[];
+}
+
+type InvocationType = 'CONSTRUCT' | 'GET' | 'APPLY';
+type BatchingProxyCallback = (method: InvocationType, callPath: PropertyKey[], argumentsList?: any[]) => any;
 
 type InvocationResult = InvocationProxyResult | InvocationObjectResult;
 
@@ -56,10 +74,7 @@ function pingPongMessage(endpoint: Endpoint, msg: Object, transferables: any[]):
 
     // Copy msg and add `id` property
     msg = Object.assign({}, msg, {id});
-    if (endpoint instanceof Window)
-      endpoint.postMessage(msg, '*', transferables);
-    else
-      endpoint.postMessage(msg, transferables);
+    postMessageOnEndpoint(endpoint, msg, transferables);
   });
 }
 
@@ -72,8 +87,6 @@ function asyncIteratorSupport(): Boolean {
  * `construct` or `apply` is called. At that point the callback is invoked with
  * the accumulated call path.
  */
-type BatchingProxyCallback = (method: string, callPath: PropertyKey[], argumentsList?: any[]) => any;
-
 function batchingProxy(cb: BatchingProxyCallback): Proxy {
   let callPath: PropertyKey[] = [];
   return new Proxy(function() {}, {
@@ -167,3 +180,81 @@ export function proxy(endpoint: Endpoint): Proxy {
   });
 }
 
+const transferProxySymbol = Symbol('transferProxy');
+export function transferProxy(obj: any) {
+  obj[transferProxySymbol] = true;
+  return obj;
+};
+
+function isTransferProxy(obj: any): Boolean {
+  return obj && obj[transferProxySymbol];
+}
+
+function makeInvocationResult(obj: any): InvocationResult {
+  // TODO prepareResult actually needs to perform a structured clone tree
+  // walk of the data as we want to allow:
+  // return {foo: transferProxy(foo)};
+  // We also don't want to directly mutate the data as:
+  // class A {
+  //   constructor() { this.b = {b: transferProxy(new B())} }
+  //   method1() { return this.b; }
+  //   method2() { this.b.foo; /* should work */ }
+  // }
+  if (isTransferProxy(obj)) {
+    const {port1, port2} = new MessageChannel();
+    exportObject(obj, port1);
+    return {
+      type: 'PROXY',
+      endpoint: port2,
+    };
+  }
+
+  return {
+    type: 'OBJECT',
+    obj,
+  };
+}
+
+export function exportObject(endpoint: Endpoint, rootObj: any) {
+  endpoint.addEventListener('message', async function(event: MessageEvent) {
+    const irequest = event.data as InvocationRequest;
+    switch (irequest.type) {
+      case 'GET':
+      case 'APPLY': {
+        // TODO: Reshuffle and use fallthrough?
+        let obj = await irequest.callPath.reduce((obj, propName) => obj[propName], rootObj);
+        if (irequest.type === 'APPLY') {
+          irequest.callPath.pop();
+          const that = await irequest.callPath.reduce((obj, propName) => obj[propName], rootObj);
+          const isAsyncGenerator = obj.constructor.name === 'AsyncGeneratorFunction';
+          obj = await obj.apply(that, irequest.argumentsList);
+          // If the function being called is an async generator, proxy the
+          // result.
+          if (isAsyncGenerator)
+            obj = transferProxy(obj);
+        }
+        const iresult = makeInvocationResult(obj);
+        iresult.id = irequest.id;
+
+        postMessageOnEndpoint(endpoint, iresult, transferableProperties(obj));
+        break;
+      }
+      case 'CONSTRUCT': {
+        const constructor = irequest.callPath.reduce((obj, propName) => obj[propName], rootObj);
+        const instance = new constructor(...event.data.argumentsList);
+        const {port1, port2} = new MessageChannel();
+        exportObject(instance, port1);
+        postMessageOnEndpoint(
+          endpoint,
+          {
+            id: irequest.id,
+            type: 'PROXY',
+            endpoint: port2,
+          },
+          [port2]
+        );
+        break;
+      }
+    }
+  });
+}

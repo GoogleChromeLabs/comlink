@@ -3,3 +3,4 @@
 *.pem
 *.swp
 node_modules
+!tests/*

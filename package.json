@@ -1,13 +1,13 @@
 {
-  "name": "tasklets-polyfill",
+  "name": "comlink",
   "version": "0.0.1",
   "description": "",
   "scripts": {
-    "test": "npm run linter && npm run unittest",
+    "test": "npm run build && npm run unittest",
     "unittest": "karma start",
     "linter": "eslint .",
     "watchtest": "karma start --no-single-run --browsers ChromeHeadless",
-    "build": "babili -o tasklet-worker-scope.min.js tasklet-worker-scope.js && babili tasklet-polyfill.js | sed  's/tasklet-worker-scope.js/tasklet-worker-scope.min.js/' > tasklet-polyfill.min.js"
+    "build": "tsc"
   },
   "keywords": [],
   "author": {
@@ -37,5 +37,8 @@
     "babili": "^0.1.4",
     "eslint": "^4.5.0",
     "eslint-config-google": "^0.9.1"
+  },
+  "dependencies": {
+    "typescript": "^2.5.2"
   }
 }
