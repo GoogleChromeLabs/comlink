@@ -1,0 +1,5 @@
+*.d.ts
+*.js
+*.pem
+*.swp
+node_modules
