@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 self.Comlink = (function () {
     const uid = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
     let pingPongMessageCounter = 0;
+    const TRANSFERABLE_TYPES = [ArrayBuffer, MessagePort];
     function postMessageOnEndpoint(endpoint, message, transfer) {
         if (endpoint instanceof Window)
             return endpoint.postMessage(message, '*', transfer);
@@ -75,7 +76,6 @@ self.Comlink = (function () {
             },
         });
     }
-    const TRANSFERABLE_TYPES = [ArrayBuffer, MessagePort];
     function isTransferable(thing) {
         return TRANSFERABLE_TYPES.some(type => thing instanceof type);
     }
@@ -95,17 +95,6 @@ self.Comlink = (function () {
         return Array.from(iterateAllProperties(obj))
             .filter(val => isTransferable(val));
     }
-    // function hydrateTransferProxies(obj) {
-    //   // TODO This needs to be a tree-walk, when the worker performs a tree walk.
-    //   const transferProxyPort = obj && obj['__transfer_proxy_port'];
-    //   if (transferProxyPort)
-    //     return batchingProxy(resolveFunction(transferProxyPort));
-    //   return obj;
-    // }
-    // function resolveFunction(port) {
-    //   port.start();
-    //   return ;
-    // }
     function proxy(endpoint) {
         if (endpoint instanceof MessagePort)
             endpoint.start();
@@ -130,7 +119,7 @@ self.Comlink = (function () {
         return obj && obj[transferProxySymbol];
     }
     function makeInvocationResult(obj) {
-        // TODO prepareResult actually needs to perform a structured clone tree
+        // TODO We actually need to perform a structured clone tree
         // walk of the data as we want to allow:
         // return {foo: transferProxy(foo)};
         // We also don't want to directly mutate the data as:
@@ -157,37 +146,32 @@ self.Comlink = (function () {
             endpoint.start();
         endpoint.addEventListener('message', async function (event) {
             const irequest = event.data;
+            let obj = await irequest.callPath.reduce((obj, propName) => obj[propName], rootObj);
             switch (irequest.type) {
-                case 'GET':
                 case 'APPLY': {
-                    // TODO: Reshuffle and use fallthrough?
-                    let obj = await irequest.callPath.reduce((obj, propName) => obj[propName], rootObj);
-                    if (irequest.type === 'APPLY') {
-                        irequest.callPath.pop();
-                        const that = await irequest.callPath.reduce((obj, propName) => obj[propName], rootObj);
-                        const isAsyncGenerator = obj.constructor.name === 'AsyncGeneratorFunction';
-                        obj = await obj.apply(that, irequest.argumentsList);
-                        // If the function being called is an async generator, proxy the
-                        // result.
-                        if (isAsyncGenerator)
-                            obj = transferProxy(obj);
-                    }
+                    irequest.callPath.pop();
+                    const that = await irequest.callPath.reduce((obj, propName) => obj[propName], rootObj);
+                    const isAsyncGenerator = obj.constructor.name === 'AsyncGeneratorFunction';
+                    obj = await obj.apply(that, irequest.argumentsList);
+                    // If the function being called is an async generator, proxy the
+                    // result.
+                    if (isAsyncGenerator)
+                        obj = transferProxy(obj);
+                } // fallthrough!
+                case 'GET': {
                     const iresult = makeInvocationResult(obj);
                     iresult.id = irequest.id;
-                    postMessageOnEndpoint(endpoint, iresult, transferableProperties(obj));
-                    break;
+                    return postMessageOnEndpoint(endpoint, iresult, transferableProperties(obj));
                 }
                 case 'CONSTRUCT': {
-                    const constructor = irequest.callPath.reduce((obj, propName) => obj[propName], rootObj);
-                    const instance = new constructor(...(irequest.argumentsList || []));
+                    const instance = new obj(...(irequest.argumentsList || [])); // eslint-disable-line new-cap
                     const { port1, port2 } = new MessageChannel();
                     expose(instance, port1);
-                    postMessageOnEndpoint(endpoint, {
+                    return postMessageOnEndpoint(endpoint, {
                         id: irequest.id,
                         type: 'PROXY',
                         endpoint: port2,
                     }, [port2]);
-                    break;
                 }
             }
         });

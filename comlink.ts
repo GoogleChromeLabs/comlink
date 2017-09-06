@@ -173,7 +173,7 @@ export const Comlink = (function() {
   }
 
   function makeInvocationResult(obj: any): InvocationResult {
-    // TODO prepareResult actually needs to perform a structured clone tree
+    // TODO We actually need to perform a structured clone tree
     // walk of the data as we want to allow:
     // return {foo: transferProxy(foo)};
     // We also don't want to directly mutate the data as:
@@ -202,33 +202,28 @@ export const Comlink = (function() {
       endpoint.start();
     endpoint.addEventListener('message', async function(event: MessageEvent) {
       const irequest = event.data as InvocationRequest;
+      let obj = await irequest.callPath.reduce((obj, propName) => obj[propName], rootObj as any);
       switch (irequest.type) {
-        case 'GET':
         case 'APPLY': {
-          // TODO: Reshuffle and use fallthrough?
-          let obj = await irequest.callPath.reduce((obj, propName) => obj[propName], rootObj as any);
-          if (irequest.type === 'APPLY') {
-            irequest.callPath.pop();
-            const that = await irequest.callPath.reduce((obj, propName) => obj[propName], rootObj as any);
-            const isAsyncGenerator = obj.constructor.name === 'AsyncGeneratorFunction';
-            obj = await obj.apply(that, irequest.argumentsList);
-            // If the function being called is an async generator, proxy the
-            // result.
-            if (isAsyncGenerator)
-              obj = transferProxy(obj);
-          }
+          irequest.callPath.pop();
+          const that = await irequest.callPath.reduce((obj, propName) => obj[propName], rootObj as any);
+          const isAsyncGenerator = obj.constructor.name === 'AsyncGeneratorFunction';
+          obj = await obj.apply(that, irequest.argumentsList);
+          // If the function being called is an async generator, proxy the
+          // result.
+          if (isAsyncGenerator)
+            obj = transferProxy(obj);
+        } // fallthrough!
+        case 'GET': {
           const iresult = makeInvocationResult(obj);
           iresult.id = irequest.id;
-
-          postMessageOnEndpoint(endpoint, iresult, transferableProperties(obj));
-          break;
+          return postMessageOnEndpoint(endpoint, iresult, transferableProperties(obj));
         }
         case 'CONSTRUCT': {
-          const constructor = irequest.callPath.reduce((obj, propName) => obj[propName], rootObj as any);
-          const instance = new constructor(...(irequest.argumentsList || []));
+          const instance = new obj(...(irequest.argumentsList || [])); // eslint-disable-line new-cap
           const {port1, port2} = new MessageChannel();
           expose(instance, port1);
-          postMessageOnEndpoint(
+          return postMessageOnEndpoint(
             endpoint,
             {
               id: irequest.id,
@@ -237,7 +232,6 @@ export const Comlink = (function() {
             },
             [port2]
           );
-          break;
         }
       }
     });

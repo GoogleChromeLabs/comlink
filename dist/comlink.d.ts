@@ -15,5 +15,5 @@ export declare type Endpoint = MessagePort | Worker | Window;
 export declare const Comlink: {
     proxy: (endpoint: Endpoint) => Function;
     transferProxy: (obj: any) => any;
-    expose: (rootObj: any, endpoint: Endpoint) => void;
+    expose: (rootObj: Object | Function, endpoint: Endpoint) => void;
 };
