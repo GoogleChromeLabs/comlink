@@ -101,7 +101,9 @@ function batchingProxy(cb: BatchingProxyCallback): Proxy {
       return r;
     },
     get(_target, property, proxy) {
-      if (asyncIteratorSupport() && property === Symbol.asyncIterator) {
+      if (property === 'then' && callPath.length === 0) {
+        return {then: () => proxy};
+      } else if (asyncIteratorSupport() && property === Symbol.asyncIterator) {
         // For now, only async generators use `Symbol.asyncIterator` and they
         // return themselves, so we emulate that behavior here.
         return () => proxy;
@@ -197,7 +199,7 @@ function makeInvocationResult(obj: any): InvocationResult {
   // }
   if (isTransferProxy(obj)) {
     const {port1, port2} = new MessageChannel();
-    exportObject(obj, port1);
+    invoker(obj, port1);
     return {
       type: 'PROXY',
       endpoint: port2,
@@ -210,7 +212,7 @@ function makeInvocationResult(obj: any): InvocationResult {
   };
 }
 
-export function exportObject(endpoint: Endpoint, rootObj: any) {
+export function invoker(rootObj: any, endpoint: Endpoint) {
   if(endpoint instanceof MessagePort)
     endpoint.start();
   endpoint.addEventListener('message', async function(event: MessageEvent) {
@@ -238,9 +240,9 @@ export function exportObject(endpoint: Endpoint, rootObj: any) {
       }
       case 'CONSTRUCT': {
         const constructor = irequest.callPath.reduce((obj, propName) => obj[propName], rootObj);
-        const instance = new constructor(...event.data.argumentsList);
+        const instance = new constructor(...irequest.argumentsList);
         const {port1, port2} = new MessageChannel();
-        exportObject(instance, port1);
+        invoker(instance, port1);
         postMessageOnEndpoint(
           endpoint,
           {
