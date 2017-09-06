@@ -1,0 +1,1 @@
+self.Comlink = exports.Comlink;

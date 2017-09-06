@@ -3,15 +3,10 @@ module.exports = function(config) {
       basePath: '',
       frameworks: ['mocha', 'chai', 'karma-typescript'],
       files: [
-        {
-          pattern: 'comlink.ts',
-          included: false,
-        },
-        {
-          pattern: 'tests/*.test.js',
-          included: false,
-        },
-        'tests/tests.js',
+        'tests/prelude.js',
+        'comlink.ts',
+        'tests/postlude.js',
+        'tests/*.test.js',
       ],
       preprocessors: {
         '*.ts': ['karma-typescript'],
@@ -29,7 +24,7 @@ module.exports = function(config) {
       autoWatch: true,
       singleRun: true,
       concurrency: Infinity,
-      browsers: ['ChromeCanary', 'Safari'],
+      browsers: ['Chrome', 'ChromeCanaryHarmony', 'Firefox', 'Safari'],
       customLaunchers: {
         ChromeCanaryHarmony: {
           base: 'ChromeCanary',

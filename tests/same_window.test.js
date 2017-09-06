@@ -1,5 +1,3 @@
-import {Comlink} from '/base/comlink.js';
-
 class SampleClass {
   constructor() {
     this._counter = 1;
