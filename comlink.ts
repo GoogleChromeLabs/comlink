@@ -37,11 +37,14 @@ export const Comlink = (function() {
   }
 
   type InvocationType = 'CONSTRUCT' | 'GET' | 'APPLY';
-  type BatchingProxyCallback = (method: InvocationType, callPath: PropertyKey[], argumentsList?: any[]) => any; // eslint-disable-line no-unused-vars
+  type BatchingProxyCallback = (method: InvocationType, callPath: PropertyKey[], argumentsList?: {}[]) => any; // eslint-disable-line no-unused-vars
 
   type InvocationResult = InvocationProxyResult | InvocationObjectResult;
+  type Transferable = MessagePort | ArrayBuffer; // eslint-disable-line no-unused-vars
+  const TRANSFERABLE_TYPES = [ArrayBuffer, MessagePort];
+  type Exposable = Function | Object; // eslint-disable-line no-unused-vars
 
-  function postMessageOnEndpoint(endpoint: Endpoint, message: any, transfer: any[]): void {
+  function postMessageOnEndpoint(endpoint: Endpoint, message: Object, transfer: Transferable[]): void {
     if (endpoint instanceof Window)
       return endpoint.postMessage(message, '*', transfer);
     return endpoint.postMessage(message, transfer);
@@ -51,7 +54,7 @@ export const Comlink = (function() {
    * `pingPongMessage` sends a `postMessage` and waits for a reply. Replies are
    * identified by a unique id that is attached to the payload.
    */
-  function pingPongMessage(endpoint: Endpoint, msg: Object, transferables: any[]): Promise<MessageEvent> {
+  function pingPongMessage(endpoint: Endpoint, msg: Object, transferables: Transferable[]): Promise<MessageEvent> {
     const id = `${uid}-${pingPongMessageCounter++}`;
 
     return new Promise(resolve => {
@@ -116,12 +119,11 @@ export const Comlink = (function() {
     });
   }
 
-  const TRANSFERABLE_TYPES = [ArrayBuffer, MessagePort];
-  function isTransferable(thing: any): Boolean {
+  function isTransferable(thing: {}): Boolean {
     return TRANSFERABLE_TYPES.some(type => thing instanceof type);
   }
 
-  function* iterateAllProperties(obj: any): Iterable<any> {
+  function* iterateAllProperties(obj: {} | undefined): Iterable<any> {
     if (!obj)
       return;
     if (typeof obj === 'string')
@@ -135,24 +137,10 @@ export const Comlink = (function() {
       yield* iterateAllProperties(val);
   }
 
-  function transferableProperties(obj: any): any[] {
+  function transferableProperties(obj: {}[] | undefined): Transferable[] {
     return Array.from(iterateAllProperties(obj))
       .filter(val => isTransferable(val));
   }
-
-  // function hydrateTransferProxies(obj) {
-  //   // TODO This needs to be a tree-walk, when the worker performs a tree walk.
-  //   const transferProxyPort = obj && obj['__transfer_proxy_port'];
-  //   if (transferProxyPort)
-  //     return batchingProxy(resolveFunction(transferProxyPort));
-
-  //   return obj;
-  // }
-
-  // function resolveFunction(port) {
-  //   port.start();
-  //   return ;
-  // }
 
   function proxy(endpoint: Endpoint): Proxy {
     if (endpoint instanceof MessagePort)
@@ -209,7 +197,7 @@ export const Comlink = (function() {
     };
   }
 
-  function expose(rootObj: any, endpoint: Endpoint) {
+  function expose(rootObj: Exposable, endpoint: Endpoint) {
     if (endpoint instanceof MessagePort)
       endpoint.start();
     endpoint.addEventListener('message', async function(event: MessageEvent) {
@@ -218,10 +206,10 @@ export const Comlink = (function() {
         case 'GET':
         case 'APPLY': {
           // TODO: Reshuffle and use fallthrough?
-          let obj = await irequest.callPath.reduce((obj, propName) => obj[propName], rootObj);
+          let obj = await irequest.callPath.reduce((obj, propName) => obj[propName], rootObj as any);
           if (irequest.type === 'APPLY') {
             irequest.callPath.pop();
-            const that = await irequest.callPath.reduce((obj, propName) => obj[propName], rootObj);
+            const that = await irequest.callPath.reduce((obj, propName) => obj[propName], rootObj as any);
             const isAsyncGenerator = obj.constructor.name === 'AsyncGeneratorFunction';
             obj = await obj.apply(that, irequest.argumentsList);
             // If the function being called is an async generator, proxy the
@@ -236,7 +224,7 @@ export const Comlink = (function() {
           break;
         }
         case 'CONSTRUCT': {
-          const constructor = irequest.callPath.reduce((obj, propName) => obj[propName], rootObj);
+          const constructor = irequest.callPath.reduce((obj, propName) => obj[propName], rootObj as any);
           const instance = new constructor(...(irequest.argumentsList || []));
           const {port1, port2} = new MessageChannel();
           expose(instance, port1);
