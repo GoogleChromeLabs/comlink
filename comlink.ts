@@ -26,18 +26,18 @@ export const Comlink = (function() {
   interface InvocationObjectResult {
     id?: string;
     type: 'OBJECT';
-    obj: any;
+    obj: {};
   }
 
   interface InvocationRequest {
     id?: string;
     type: InvocationType;
     callPath: PropertyKey[];
-    argumentsList?: any[];
+    argumentsList?: {}[];
   }
 
   type InvocationType = 'CONSTRUCT' | 'GET' | 'APPLY';
-  type BatchingProxyCallback = (method: InvocationType, callPath: PropertyKey[], argumentsList?: {}[]) => any; // eslint-disable-line no-unused-vars
+  type BatchingProxyCallback = (method: InvocationType, callPath: PropertyKey[], argumentsList?: {}[]) => {}; // eslint-disable-line no-unused-vars
 
   type InvocationResult = InvocationProxyResult | InvocationObjectResult;
   type Transferable = MessagePort | ArrayBuffer; // eslint-disable-line no-unused-vars
@@ -94,7 +94,7 @@ export const Comlink = (function() {
         if (callPath[callPath.length - 1] === 'bind') {
           const localCallPath = callPath.slice();
           callPath = [];
-          return (...args: any[]) => cb('APPLY', localCallPath.slice(0, -1), args);
+          return (...args: {}[]) => cb('APPLY', localCallPath.slice(0, -1), args);
         }
         const r = cb('APPLY', callPath, argumentsList);
         callPath = [];
@@ -119,11 +119,11 @@ export const Comlink = (function() {
     });
   }
 
-  function isTransferable(thing: {}): Boolean {
+  function isTransferable(thing: {}): thing is Transferable {
     return TRANSFERABLE_TYPES.some(type => thing instanceof type);
   }
 
-  function* iterateAllProperties(obj: {} | undefined): Iterable<any> {
+  function* iterateAllProperties(obj: {} | undefined): Iterable<{}> {
     if (!obj)
       return;
     if (typeof obj === 'string')
@@ -138,8 +138,10 @@ export const Comlink = (function() {
   }
 
   function transferableProperties(obj: {}[] | undefined): Transferable[] {
+    // FIXME: Can I make the type inference work somehow so I don‘t have to
+    // `as Transferable[]`?
     return Array.from(iterateAllProperties(obj))
-      .filter(val => isTransferable(val));
+      .filter(val => isTransferable(val)) as Transferable[];
   }
 
   function proxy(endpoint: Endpoint): Proxy {
@@ -163,16 +165,16 @@ export const Comlink = (function() {
   }
 
   const transferProxySymbol = Symbol('transferProxy');
-  function transferProxy(obj: any) {
-    obj[transferProxySymbol] = true;
+  function transferProxy(obj: {}) {
+    (obj as any)[transferProxySymbol] = true;
     return obj;
   }
 
-  function isTransferProxy(obj: any): Boolean {
-    return obj && obj[transferProxySymbol];
+  function isTransferProxy(obj: {}): Boolean {
+    return obj && (obj as any)[transferProxySymbol];
   }
 
-  function makeInvocationResult(obj: any): InvocationResult {
+  function makeInvocationResult(obj: {}): InvocationResult {
     // TODO We actually need to perform a structured clone tree
     // walk of the data as we want to allow:
     // return {foo: transferProxy(foo)};
@@ -206,7 +208,7 @@ export const Comlink = (function() {
       switch (irequest.type) {
         case 'APPLY': {
           irequest.callPath.pop();
-          const that = await irequest.callPath.reduce((obj, propName) => obj[propName], rootObj as any);
+          const that = await irequest.callPath.reduce((obj, propName) => obj[propName], rootObj as any) as {};
           const isAsyncGenerator = obj.constructor.name === 'AsyncGeneratorFunction';
           obj = await obj.apply(that, irequest.argumentsList);
           // If the function being called is an async generator, proxy the

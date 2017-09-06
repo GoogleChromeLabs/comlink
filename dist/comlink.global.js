@@ -92,6 +92,8 @@ self.Comlink = (function () {
             yield* iterateAllProperties(val);
     }
     function transferableProperties(obj) {
+        // FIXME: Can I make the type inference work somehow so I don‘t have to
+        // `as Transferable[]`?
         return Array.from(iterateAllProperties(obj))
             .filter(val => isTransferable(val));
     }
