@@ -150,7 +150,7 @@ function makeInvocationResult(obj) {
     // }
     if (isTransferProxy(obj)) {
         const { port1, port2 } = new MessageChannel();
-        invoker(obj, port1);
+        expose(obj, port1);
         return {
             type: 'PROXY',
             endpoint: port2,
@@ -161,7 +161,7 @@ function makeInvocationResult(obj) {
         obj,
     };
 }
-export function invoker(rootObj, endpoint) {
+export function expose(rootObj, endpoint) {
     if (endpoint instanceof MessagePort)
         endpoint.start();
     endpoint.addEventListener('message', async function (event) {
@@ -188,9 +188,9 @@ export function invoker(rootObj, endpoint) {
             }
             case 'CONSTRUCT': {
                 const constructor = irequest.callPath.reduce((obj, propName) => obj[propName], rootObj);
-                const instance = new constructor(...irequest.argumentsList);
+                const instance = new constructor(...(irequest.argumentsList || []));
                 const { port1, port2 } = new MessageChannel();
-                invoker(instance, port1);
+                expose(instance, port1);
                 postMessageOnEndpoint(endpoint, {
                     id: irequest.id,
                     type: 'PROXY',

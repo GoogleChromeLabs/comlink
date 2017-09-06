@@ -11,5 +11,5 @@ declare global  {
 }
 export declare function proxy(endpoint: Endpoint): Proxy;
 export declare function transferProxy(obj: any): any;
-export declare function invoker(rootObj: any, endpoint: Endpoint): void;
+export declare function expose(rootObj: any, endpoint: Endpoint): void;
 export {};
