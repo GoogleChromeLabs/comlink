@@ -1,3 +1,4 @@
 *.pem
 *.swp
 node_modules
+*.bak
