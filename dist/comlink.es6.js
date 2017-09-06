@@ -2,6 +2,61 @@ export const Comlink = (function () {
     const uid = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
     let pingPongMessageCounter = 0;
     const TRANSFERABLE_TYPES = [ArrayBuffer, MessagePort];
+    const transferProxySymbol = Symbol('transferProxy');
+    /* export */ function proxy(endpoint) {
+        if (endpoint instanceof MessagePort)
+            endpoint.start();
+        return batchingProxy(async (type, callPath, argumentsList) => {
+            const response = await pingPongMessage(endpoint, {
+                type,
+                callPath,
+                argumentsList,
+            }, transferableProperties(argumentsList));
+            const result = response.data;
+            if (result.type === 'PROXY')
+                return proxy(result.endpoint);
+            return result.obj;
+        });
+    }
+    /* export */ function transferProxy(obj) {
+        obj[transferProxySymbol] = true;
+        return obj;
+    }
+    /* export */ function expose(rootObj, endpoint) {
+        if (endpoint instanceof MessagePort)
+            endpoint.start();
+        endpoint.addEventListener('message', async function (event) {
+            const irequest = event.data;
+            let obj = await irequest.callPath.reduce((obj, propName) => obj[propName], rootObj);
+            switch (irequest.type) {
+                case 'APPLY': {
+                    irequest.callPath.pop();
+                    const that = await irequest.callPath.reduce((obj, propName) => obj[propName], rootObj);
+                    const isAsyncGenerator = obj.constructor.name === 'AsyncGeneratorFunction';
+                    obj = await obj.apply(that, irequest.argumentsList);
+                    // If the function being called is an async generator, proxy the
+                    // result.
+                    if (isAsyncGenerator)
+                        obj = transferProxy(obj);
+                } // fallthrough!
+                case 'GET': {
+                    const iresult = makeInvocationResult(obj);
+                    iresult.id = irequest.id;
+                    return postMessageOnEndpoint(endpoint, iresult, transferableProperties(obj));
+                }
+                case 'CONSTRUCT': {
+                    const instance = new obj(...(irequest.argumentsList || [])); // eslint-disable-line new-cap
+                    const { port1, port2 } = new MessageChannel();
+                    expose(instance, port1);
+                    return postMessageOnEndpoint(endpoint, {
+                        id: irequest.id,
+                        type: 'PROXY',
+                        endpoint: port2,
+                    }, [port2]);
+                }
+            }
+        });
+    }
     function postMessageOnEndpoint(endpoint, message, transfer) {
         if (endpoint instanceof Window)
             return endpoint.postMessage(message, '*', transfer);
@@ -90,30 +145,12 @@ export const Comlink = (function () {
             yield* iterateAllProperties(val);
     }
     function transferableProperties(obj) {
-        // FIXME: Can I make the type inference work somehow so I don‘t have to
-        // `as Transferable[]`?
-        return Array.from(iterateAllProperties(obj))
-            .filter(val => isTransferable(val));
-    }
-    function proxy(endpoint) {
-        if (endpoint instanceof MessagePort)
-            endpoint.start();
-        return batchingProxy(async (type, callPath, argumentsList) => {
-            const response = await pingPongMessage(endpoint, {
-                type,
-                callPath,
-                argumentsList,
-            }, transferableProperties(argumentsList));
-            const result = response.data;
-            if (result.type === 'PROXY')
-                return proxy(result.endpoint);
-            return result.obj;
-        });
-    }
-    const transferProxySymbol = Symbol('transferProxy');
-    function transferProxy(obj) {
-        obj[transferProxySymbol] = true;
-        return obj;
+        const r = [];
+        for (const prop of iterateAllProperties(obj)) {
+            if (isTransferable(prop))
+                r.push(prop);
+        }
+        return r;
     }
     function isTransferProxy(obj) {
         return obj && obj[transferProxySymbol];
@@ -140,41 +177,6 @@ export const Comlink = (function () {
             type: 'OBJECT',
             obj,
         };
-    }
-    function expose(rootObj, endpoint) {
-        if (endpoint instanceof MessagePort)
-            endpoint.start();
-        endpoint.addEventListener('message', async function (event) {
-            const irequest = event.data;
-            let obj = await irequest.callPath.reduce((obj, propName) => obj[propName], rootObj);
-            switch (irequest.type) {
-                case 'APPLY': {
-                    irequest.callPath.pop();
-                    const that = await irequest.callPath.reduce((obj, propName) => obj[propName], rootObj);
-                    const isAsyncGenerator = obj.constructor.name === 'AsyncGeneratorFunction';
-                    obj = await obj.apply(that, irequest.argumentsList);
-                    // If the function being called is an async generator, proxy the
-                    // result.
-                    if (isAsyncGenerator)
-                        obj = transferProxy(obj);
-                } // fallthrough!
-                case 'GET': {
-                    const iresult = makeInvocationResult(obj);
-                    iresult.id = irequest.id;
-                    return postMessageOnEndpoint(endpoint, iresult, transferableProperties(obj));
-                }
-                case 'CONSTRUCT': {
-                    const instance = new obj(...(irequest.argumentsList || [])); // eslint-disable-line new-cap
-                    const { port1, port2 } = new MessageChannel();
-                    expose(instance, port1);
-                    return postMessageOnEndpoint(endpoint, {
-                        id: irequest.id,
-                        type: 'PROXY',
-                        endpoint: port2,
-                    }, [port2]);
-                }
-            }
-        });
     }
     return { proxy, transferProxy, expose };
 })();

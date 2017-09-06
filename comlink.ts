@@ -12,37 +12,101 @@
  */
 export type Proxy = Function;
 export type Endpoint = MessagePort | Worker | Window;
+type InvocationType = 'CONSTRUCT' | 'GET' | 'APPLY';
+type InvocationResult = InvocationProxyResult | InvocationObjectResult;
+type BatchingProxyCallback = (method: InvocationType, callPath: PropertyKey[], argumentsList?: {}[]) => {}; // eslint-disable-line no-unused-vars
+type Transferable = MessagePort | ArrayBuffer; // eslint-disable-line no-unused-vars
+type Exposable = Function | Object; // eslint-disable-line no-unused-vars
+
+interface InvocationProxyResult {
+  id?: string;
+  type: 'PROXY';
+  endpoint: Endpoint;
+}
+
+interface InvocationObjectResult {
+  id?: string;
+  type: 'OBJECT';
+  obj: {};
+}
+
+interface InvocationRequest {
+  id?: string;
+  type: InvocationType;
+  callPath: PropertyKey[];
+  argumentsList?: {}[];
+}
 
 export const Comlink = (function() {
   const uid: number = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
   let pingPongMessageCounter: number = 0;
-
-  interface InvocationProxyResult {
-    id?: string;
-    type: 'PROXY';
-    endpoint: Endpoint;
-  }
-
-  interface InvocationObjectResult {
-    id?: string;
-    type: 'OBJECT';
-    obj: {};
-  }
-
-  interface InvocationRequest {
-    id?: string;
-    type: InvocationType;
-    callPath: PropertyKey[];
-    argumentsList?: {}[];
-  }
-
-  type InvocationType = 'CONSTRUCT' | 'GET' | 'APPLY';
-  type BatchingProxyCallback = (method: InvocationType, callPath: PropertyKey[], argumentsList?: {}[]) => {}; // eslint-disable-line no-unused-vars
-
-  type InvocationResult = InvocationProxyResult | InvocationObjectResult;
-  type Transferable = MessagePort | ArrayBuffer; // eslint-disable-line no-unused-vars
   const TRANSFERABLE_TYPES = [ArrayBuffer, MessagePort];
-  type Exposable = Function | Object; // eslint-disable-line no-unused-vars
+  const transferProxySymbol = Symbol('transferProxy');
+
+  /* export */ function proxy(endpoint: Endpoint): Proxy {
+    if (endpoint instanceof MessagePort)
+      endpoint.start();
+    return batchingProxy(async (type, callPath, argumentsList) => {
+      const response = await pingPongMessage(
+        endpoint,
+        {
+          type,
+          callPath,
+          argumentsList,
+        },
+        transferableProperties(argumentsList)
+      );
+      const result = response.data as InvocationResult;
+      if (result.type === 'PROXY')
+        return proxy(result.endpoint);
+      return result.obj;
+    });
+  }
+
+  /* export */ function transferProxy(obj: {}): {} {
+    (obj as any)[transferProxySymbol] = true;
+    return obj;
+  }
+
+  /* export */ function expose(rootObj: Exposable, endpoint: Endpoint): void {
+    if (endpoint instanceof MessagePort)
+      endpoint.start();
+    endpoint.addEventListener('message', async function(event: MessageEvent) {
+      const irequest = event.data as InvocationRequest;
+      let obj = await irequest.callPath.reduce((obj, propName) => obj[propName], rootObj as any);
+      switch (irequest.type) {
+        case 'APPLY': {
+          irequest.callPath.pop();
+          const that = await irequest.callPath.reduce((obj, propName) => obj[propName], rootObj as any) as {};
+          const isAsyncGenerator = obj.constructor.name === 'AsyncGeneratorFunction';
+          obj = await obj.apply(that, irequest.argumentsList);
+          // If the function being called is an async generator, proxy the
+          // result.
+          if (isAsyncGenerator)
+            obj = transferProxy(obj);
+        } // fallthrough!
+        case 'GET': {
+          const iresult = makeInvocationResult(obj);
+          iresult.id = irequest.id;
+          return postMessageOnEndpoint(endpoint, iresult, transferableProperties(obj));
+        }
+        case 'CONSTRUCT': {
+          const instance = new obj(...(irequest.argumentsList || [])); // eslint-disable-line new-cap
+          const {port1, port2} = new MessageChannel();
+          expose(instance, port1);
+          return postMessageOnEndpoint(
+            endpoint,
+            {
+              id: irequest.id,
+              type: 'PROXY',
+              endpoint: port2,
+            },
+            [port2]
+          );
+        }
+      }
+    });
+  }
 
   function postMessageOnEndpoint(endpoint: Endpoint, message: Object, transfer: Transferable[]): void {
     if (endpoint instanceof Window)
@@ -138,36 +202,12 @@ export const Comlink = (function() {
   }
 
   function transferableProperties(obj: {}[] | undefined): Transferable[] {
-    // FIXME: Can I make the type inference work somehow so I don‘t have to
-    // `as Transferable[]`?
-    return Array.from(iterateAllProperties(obj))
-      .filter(val => isTransferable(val)) as Transferable[];
-  }
-
-  function proxy(endpoint: Endpoint): Proxy {
-    if (endpoint instanceof MessagePort)
-      endpoint.start();
-    return batchingProxy(async (type, callPath, argumentsList) => {
-      const response = await pingPongMessage(
-        endpoint,
-        {
-          type,
-          callPath,
-          argumentsList,
-        },
-        transferableProperties(argumentsList)
-      );
-      const result = response.data as InvocationResult;
-      if (result.type === 'PROXY')
-        return proxy(result.endpoint);
-      return result.obj;
-    });
-  }
-
-  const transferProxySymbol = Symbol('transferProxy');
-  function transferProxy(obj: {}) {
-    (obj as any)[transferProxySymbol] = true;
-    return obj;
+    const r: Transferable[] = [];
+    for (const prop of iterateAllProperties(obj)) {
+      if (isTransferable(prop))
+        r.push(prop);
+    }
+    return r;
   }
 
   function isTransferProxy(obj: {}): Boolean {
@@ -199,44 +239,5 @@ export const Comlink = (function() {
     };
   }
 
-  function expose(rootObj: Exposable, endpoint: Endpoint) {
-    if (endpoint instanceof MessagePort)
-      endpoint.start();
-    endpoint.addEventListener('message', async function(event: MessageEvent) {
-      const irequest = event.data as InvocationRequest;
-      let obj = await irequest.callPath.reduce((obj, propName) => obj[propName], rootObj as any);
-      switch (irequest.type) {
-        case 'APPLY': {
-          irequest.callPath.pop();
-          const that = await irequest.callPath.reduce((obj, propName) => obj[propName], rootObj as any) as {};
-          const isAsyncGenerator = obj.constructor.name === 'AsyncGeneratorFunction';
-          obj = await obj.apply(that, irequest.argumentsList);
-          // If the function being called is an async generator, proxy the
-          // result.
-          if (isAsyncGenerator)
-            obj = transferProxy(obj);
-        } // fallthrough!
-        case 'GET': {
-          const iresult = makeInvocationResult(obj);
-          iresult.id = irequest.id;
-          return postMessageOnEndpoint(endpoint, iresult, transferableProperties(obj));
-        }
-        case 'CONSTRUCT': {
-          const instance = new obj(...(irequest.argumentsList || [])); // eslint-disable-line new-cap
-          const {port1, port2} = new MessageChannel();
-          expose(instance, port1);
-          return postMessageOnEndpoint(
-            endpoint,
-            {
-              id: irequest.id,
-              type: 'PROXY',
-              endpoint: port2,
-            },
-            [port2]
-          );
-        }
-      }
-    });
-  }
   return {proxy, transferProxy, expose};
 })();
