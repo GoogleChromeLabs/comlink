@@ -57,8 +57,11 @@ export const Comlink = (function () {
             }
         });
     }
+    function isWindow(endpoint) {
+        return endpoint.constructor.name === 'Window';
+    }
     function postMessageOnEndpoint(endpoint, message, transfer) {
-        if (endpoint instanceof Window)
+        if (isWindow(endpoint))
             return endpoint.postMessage(message, '*', transfer);
         return endpoint.postMessage(message, transfer);
     }

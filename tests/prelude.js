@@ -1,4 +1,3 @@
-const expect = chai.expect;
 const exports = {};
 
 // describe('Tasklet Polyfill', function() {

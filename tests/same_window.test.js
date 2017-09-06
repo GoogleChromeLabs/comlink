@@ -1,3 +1,5 @@
+const expect = chai.expect;
+
 class SampleClass {
   constructor() {
     this._counter = 1;

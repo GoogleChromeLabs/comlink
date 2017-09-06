@@ -108,8 +108,12 @@ export const Comlink = (function() {
     });
   }
 
+  function isWindow(endpoint: Endpoint): endpoint is Window {
+    return endpoint.constructor.name === 'Window';
+  }
+
   function postMessageOnEndpoint(endpoint: Endpoint, message: Object, transfer: Transferable[]): void {
-    if (endpoint instanceof Window)
+    if (isWindow(endpoint))
       return endpoint.postMessage(message, '*', transfer);
     return endpoint.postMessage(message, transfer);
   }
