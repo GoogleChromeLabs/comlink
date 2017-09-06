@@ -17,20 +17,20 @@ export type Proxy = Function;
 export type Endpoint = MessagePort | Worker | Window;
 
 function postMessageOnEndpoint(endpoint: Endpoint, message: any, transfer: any[]): void {
-  if(endpoint instanceof Window)
+  if (endpoint instanceof Window)
     return endpoint.postMessage(message, '*', transfer);
   return endpoint.postMessage(message, transfer);
 }
 
 interface InvocationProxyResult {
   id?: string;
-  type: "PROXY";
+  type: 'PROXY';
   endpoint: Endpoint;
 }
 
 interface InvocationObjectResult {
   id?: string;
-  type: "OBJECT";
+  type: 'OBJECT';
   obj: any;
 }
 
@@ -42,7 +42,7 @@ interface InvocationRequest {
 }
 
 type InvocationType = 'CONSTRUCT' | 'GET' | 'APPLY';
-type BatchingProxyCallback = (method: InvocationType, callPath: PropertyKey[], argumentsList?: any[]) => any;
+type BatchingProxyCallback = (method: InvocationType, callPath: PropertyKey[], argumentsList?: any[]) => any; // eslint-disable-line no-unused-vars
 
 type InvocationResult = InvocationProxyResult | InvocationObjectResult;
 
@@ -52,7 +52,7 @@ declare global {
   }
 
   interface ObjectConstructor {
-    assign(... objects: Object[]): Object;
+    assign(...objects: Object[]): Object;
     values(o: any): string[];
   }
 }
@@ -104,9 +104,9 @@ function batchingProxy(cb: BatchingProxyCallback): Proxy {
       // `await tasklets.addModule(...)` will try to get the `then` property
       // of the return value of `addModule(...)` and then invoke it as a
       // function. This works. Sorry.
-      /*if (property === 'then' && callPath.length === 0) {
+      /* if (property === 'then' && callPath.length === 0) {
         return {then: _ => proxy};
-      } else*/ if (asyncIteratorSupport() && property === Symbol.asyncIterator) {
+      } else */ if (asyncIteratorSupport() && property === Symbol.asyncIterator) {
         // For now, only async generators use `Symbol.asyncIterator` and they
         // return themselves, so we emulate that behavior here.
         return () => proxy;
@@ -122,7 +122,7 @@ function batchingProxy(cb: BatchingProxyCallback): Proxy {
   });
 }
 
-export const TRANSFERABLE_TYPES = [ArrayBuffer, MessagePort];
+const TRANSFERABLE_TYPES = [ArrayBuffer, MessagePort];
 function isTransferable(thing: any): Boolean {
   return TRANSFERABLE_TYPES.some(type => thing instanceof type);
 }
@@ -161,7 +161,7 @@ function transferableProperties(obj: any): any[] {
 // }
 
 export function proxy(endpoint: Endpoint): Proxy {
-  if(endpoint instanceof MessagePort)
+  if (endpoint instanceof MessagePort)
     endpoint.start();
   return batchingProxy(async (type, callPath, argumentsList) => {
     const response = await pingPongMessage(
@@ -184,7 +184,7 @@ const transferProxySymbol = Symbol('transferProxy');
 export function transferProxy(obj: any) {
   obj[transferProxySymbol] = true;
   return obj;
-};
+}
 
 function isTransferProxy(obj: any): Boolean {
   return obj && obj[transferProxySymbol];
