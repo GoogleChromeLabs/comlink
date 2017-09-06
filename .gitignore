@@ -4,3 +4,4 @@
 *.swp
 node_modules
 !tests/*
+!karma.conf.js

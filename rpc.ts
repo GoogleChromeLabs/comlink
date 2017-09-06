@@ -38,7 +38,7 @@ interface InvocationRequest {
   id?: string;
   type: InvocationType;
   callPath: PropertyKey[];
-  argumentsList?: any[];
+  argumentsList?: Iterable<any>;
 }
 
 type InvocationType = 'CONSTRUCT' | 'GET' | 'APPLY';
@@ -98,12 +98,10 @@ function batchingProxy(cb: BatchingProxyCallback): Proxy {
     apply(_target, _thisArg, argumentsList) {
       // We use `bind` as an indicator to have a remote function bound locally.
       // The actual target for `bind()` is currently ignored.
-      if(callPath[callPath.length - 1] === 'bind') {
+      if (callPath[callPath.length - 1] === 'bind') {
         const localCallPath = callPath.slice();
         callPath = [];
-        return (...args: any[]) => {
-          return cb('APPLY', localCallPath.slice(0, -1), args);
-        }
+        return (...args: any[]) => cb('APPLY', localCallPath.slice(0, -1), args);
       }
       const r = cb('APPLY', callPath, argumentsList);
       callPath = [];
@@ -222,7 +220,7 @@ function makeInvocationResult(obj: any): InvocationResult {
 }
 
 export function invoker(rootObj: any, endpoint: Endpoint) {
-  if(endpoint instanceof MessagePort)
+  if (endpoint instanceof MessagePort)
     endpoint.start();
   endpoint.addEventListener('message', async function(event: MessageEvent) {
     const irequest = event.data as InvocationRequest;
