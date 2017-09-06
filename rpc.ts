@@ -96,6 +96,15 @@ function batchingProxy(cb: BatchingProxyCallback): Proxy {
       return r;
     },
     apply(_target, _thisArg, argumentsList) {
+      // We use `bind` as an indicator to have a remote function bound locally.
+      // The actual target for `bind()` is currently ignored.
+      if(callPath[callPath.length - 1] === 'bind') {
+        const localCallPath = callPath.slice();
+        callPath = [];
+        return (...args: any[]) => {
+          return cb('APPLY', localCallPath.slice(0, -1), args);
+        }
+      }
       const r = cb('APPLY', callPath, argumentsList);
       callPath = [];
       return r;
