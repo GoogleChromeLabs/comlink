@@ -44,8 +44,7 @@ export const Comlink = (function() {
   const transferProxySymbol = Symbol('transferProxy');
 
   /* export */ function proxy(endpoint: Endpoint): Proxy {
-    if (endpoint instanceof MessagePort)
-      endpoint.start();
+    activateEndpoint(endpoint);
     return batchingProxy(async (type, callPath, argumentsList) => {
       const response = await pingPongMessage(
         endpoint,
@@ -69,9 +68,10 @@ export const Comlink = (function() {
   }
 
   /* export */ function expose(rootObj: Exposable, endpoint: Endpoint): void {
-    if (endpoint instanceof MessagePort)
-      endpoint.start();
-    endpoint.addEventListener('message', async function(event: MessageEvent) {
+    activateEndpoint(endpoint);
+    attachMessageHandler(endpoint, async function(event: MessageEvent) {
+      if (!event.data.id)
+        return;
       const irequest = event.data as InvocationRequest;
       let obj = await irequest.callPath.reduce((obj, propName) => obj[propName], rootObj as any);
       switch (irequest.type) {
@@ -108,6 +108,23 @@ export const Comlink = (function() {
     });
   }
 
+  function activateEndpoint(endpoint: Endpoint): void {
+    if (isMessagePort(endpoint))
+      endpoint.start();
+  }
+
+  function attachMessageHandler(endpoint: Endpoint, f: (e: MessageEvent) => void): void {
+    endpoint.addEventListener('message', f);
+  }
+
+  function detachMessageHandler(endpoint: Endpoint, f: (e: MessageEvent) => void): void {
+    endpoint.removeEventListener('message', f);
+  }
+
+  function isMessagePort(endpoint: Endpoint): endpoint is MessagePort {
+    return endpoint.constructor.name === 'MessagePort';
+  }
+
   function isWindow(endpoint: Endpoint): endpoint is Window {
     return endpoint.constructor.name === 'Window';
   }
@@ -126,10 +143,10 @@ export const Comlink = (function() {
     const id = `${uid}-${pingPongMessageCounter++}`;
 
     return new Promise(resolve => {
-      endpoint.addEventListener('message', function handler(event: MessageEvent) {
+      attachMessageHandler(endpoint, function handler(event: MessageEvent) {
         if (event.data.id !== id)
           return;
-        endpoint.removeEventListener('message', handler);
+        detachMessageHandler(endpoint, handler);
         resolve(event);
       });
 

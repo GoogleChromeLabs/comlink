@@ -15,8 +15,7 @@
         const TRANSFERABLE_TYPES = [ArrayBuffer, MessagePort];
         const transferProxySymbol = Symbol('transferProxy');
         /* export */ function proxy(endpoint) {
-            if (endpoint instanceof MessagePort)
-                endpoint.start();
+            activateEndpoint(endpoint);
             return batchingProxy(async (type, callPath, argumentsList) => {
                 const response = await pingPongMessage(endpoint, {
                     type,
@@ -34,9 +33,10 @@
             return obj;
         }
         /* export */ function expose(rootObj, endpoint) {
-            if (endpoint instanceof MessagePort)
-                endpoint.start();
-            endpoint.addEventListener('message', async function (event) {
+            activateEndpoint(endpoint);
+            attachMessageHandler(endpoint, async function (event) {
+                if (!event.data.id)
+                    return;
                 const irequest = event.data;
                 let obj = await irequest.callPath.reduce((obj, propName) => obj[propName], rootObj);
                 switch (irequest.type) {
@@ -68,6 +68,19 @@
                 }
             });
         }
+        function activateEndpoint(endpoint) {
+            if (isMessagePort(endpoint))
+                endpoint.start();
+        }
+        function attachMessageHandler(endpoint, f) {
+            endpoint.addEventListener('message', f);
+        }
+        function detachMessageHandler(endpoint, f) {
+            endpoint.removeEventListener('message', f);
+        }
+        function isMessagePort(endpoint) {
+            return endpoint.constructor.name === 'MessagePort';
+        }
         function isWindow(endpoint) {
             return endpoint.constructor.name === 'Window';
         }
@@ -83,10 +96,10 @@
         function pingPongMessage(endpoint, msg, transferables) {
             const id = `${uid}-${pingPongMessageCounter++}`;
             return new Promise(resolve => {
-                endpoint.addEventListener('message', function handler(event) {
+                attachMessageHandler(endpoint, function handler(event) {
                     if (event.data.id !== id)
                         return;
-                    endpoint.removeEventListener('message', handler);
+                    detachMessageHandler(endpoint, handler);
                     resolve(event);
                 });
                 // Copy msg and add `id` property
