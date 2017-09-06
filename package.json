@@ -5,9 +5,9 @@
   "scripts": {
     "test": "npm run linter && npm run unittest",
     "unittest": "karma start",
-    "linter": "eslint rpc.ts",
+    "linter": "eslint comlink.ts",
     "watchtest": "karma start --no-single-run --browsers ChromeCanaryHarmony",
-    "build": "tsc"
+    "build": "tsc && babili -o comlink.min.js comlink.js"
   },
   "keywords": [],
   "author": {

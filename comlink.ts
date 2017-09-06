@@ -38,7 +38,7 @@ interface InvocationRequest {
   id?: string;
   type: InvocationType;
   callPath: PropertyKey[];
-  argumentsList?: Iterable<any>;
+  argumentsList?: any[];
 }
 
 type InvocationType = 'CONSTRUCT' | 'GET' | 'APPLY';
@@ -247,7 +247,7 @@ export function invoker(rootObj: any, endpoint: Endpoint) {
       }
       case 'CONSTRUCT': {
         const constructor = irequest.callPath.reduce((obj, propName) => obj[propName], rootObj);
-        const instance = new constructor(...irequest.argumentsList);
+        const instance = new constructor(...(irequest.argumentsList || []));
         const {port1, port2} = new MessageChannel();
         invoker(instance, port1);
         postMessageOnEndpoint(

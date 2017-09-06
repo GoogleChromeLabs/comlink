@@ -4,7 +4,7 @@ module.exports = function(config) {
       frameworks: ['mocha', 'chai', 'karma-typescript'],
       files: [
         {
-          pattern: 'rpc.ts',
+          pattern: 'comlink.ts',
           included: false,
         },
         {
@@ -14,7 +14,7 @@ module.exports = function(config) {
         'tests/tests.js',
       ],
       preprocessors: {
-        'rpc.ts': ['karma-typescript'],
+        '*.ts': ['karma-typescript'],
       },
       karmaTypescriptConfig: {
         tsconfig: './tsconfig.json',
