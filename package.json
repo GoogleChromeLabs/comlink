@@ -3,10 +3,10 @@
   "version": "0.0.1",
   "description": "",
   "scripts": {
-    "test": "npm run build && npm run linter && npm run unittest",
+    "test": "npm run linter && npm run unittest",
     "unittest": "karma start",
     "linter": "eslint rpc.ts",
-    "watchtest": "karma start --no-single-run --browsers ChromeHeadless",
+    "watchtest": "karma start --no-single-run --browsers ChromeCanaryHarmony",
     "build": "tsc"
   },
   "keywords": [],
@@ -39,6 +39,7 @@
     "eslint-config-google": "^0.9.1"
   },
   "dependencies": {
+    "karma-typescript": "^3.0.5",
     "typescript": "^2.5.2",
     "typescript-eslint-parser": "^8.0.0"
   }

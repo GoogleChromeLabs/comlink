@@ -101,12 +101,7 @@ function batchingProxy(cb: BatchingProxyCallback): Proxy {
       return r;
     },
     get(_target, property, proxy) {
-      // `await tasklets.addModule(...)` will try to get the `then` property
-      // of the return value of `addModule(...)` and then invoke it as a
-      // function. This works. Sorry.
-      /* if (property === 'then' && callPath.length === 0) {
-        return {then: _ => proxy};
-      } else */ if (asyncIteratorSupport() && property === Symbol.asyncIterator) {
+      if (asyncIteratorSupport() && property === Symbol.asyncIterator) {
         // For now, only async generators use `Symbol.asyncIterator` and they
         // return themselves, so we emulate that behavior here.
         return () => proxy;

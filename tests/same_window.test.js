@@ -1,4 +1,4 @@
-import * as RPC from '../rpc.js';
+import * as RPC from '/base/rpc.js';
 
 describe('Tasklet in the same realm', function () {
   beforeEach(function () {
