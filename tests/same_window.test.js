@@ -1,4 +1,4 @@
-import * as Comlink from '/base/comlink.js';
+import {Comlink} from '/base/comlink.js';
 
 class SampleClass {
   constructor() {

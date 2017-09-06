@@ -7,7 +7,10 @@
     "unittest": "karma start",
     "linter": "eslint comlink.ts",
     "watchtest": "karma start --no-single-run --browsers ChromeCanaryHarmony",
-    "build": "tsc && babili -o comlink.min.js comlink.js"
+    "build": "rm -rf dist && mkdir dist && npm run compile && npm run mangle_global && npm run minify",
+    "compile": "tsc --outDir dist -m none && mv dist/comlink.{,global.}js && tsc --outDir dist -m es2015 && mv dist/comlink.{,es6.}js && tsc -d --outDir dist -m umd && mv dist/comlink.{,umd.}js",
+    "mangle_global": "sed -i bak 's!exports.Comlink!self.Comlink!' dist/comlink.global.js",
+    "minify": "babili --minified -o dist/comlink.global.{min.,}js && babili --minified -o dist/comlink.es6.{min.,}js && babili --minified -o dist/comlink.umd.{min.,}js"
   },
   "keywords": [],
   "author": {
