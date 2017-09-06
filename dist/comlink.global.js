@@ -1,5 +1,5 @@
 "use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
+
 self.Comlink = (function () {
     const uid = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
     let pingPongMessageCounter = 0;
