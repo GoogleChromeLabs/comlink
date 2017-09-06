@@ -211,6 +211,8 @@ function makeInvocationResult(obj: any): InvocationResult {
 }
 
 export function exportObject(endpoint: Endpoint, rootObj: any) {
+  if(endpoint instanceof MessagePort)
+    endpoint.start();
   endpoint.addEventListener('message', async function(event: MessageEvent) {
     const irequest = event.data as InvocationRequest;
     switch (irequest.type) {
