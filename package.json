@@ -1,6 +1,6 @@
 {
   "name": "comlinkjs",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "",
   "scripts": {
     "test": "npm run linter && npm run unittest",
