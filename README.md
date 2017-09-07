@@ -1,5 +1,6 @@
 # Comlink
-An RPC library that works on windows, iframes, WebWorkers and ServiceWorkers.
+An tiny RPC library that works on windows, iframes, WebWorkers and
+ServiceWorkers.
 
 **TL;DR: With Comlink you can work on objects from another JavaScript realm
 (like a Worker or an iframe) as if it was a local object. Just use `await`
@@ -16,6 +17,9 @@ end of that channel you can use Comlink to synthesize an ES6 proxy. Every action
 performed on that proxy object will be serialized using a simple (and naïve) RPC
 protocol and be applied to the exposed value on the other side.
 
+**Size**: ~2.5k, ~1.1k gzip’d.
+
+
 ## Example
 
 ```html
@@ -31,9 +35,9 @@ protocol and be applied to the exposed value on the other side.
     // Note the usage of `await`.
     const app = await new api.App();
 
-    console.log(`Counter: ${await app.count}`);
+    alert(`Counter: ${await app.count}`);
     await app.inc();
-    console.log(`Counter: ${await app.count}`);
+    alert(`Counter: ${await app.count}`);
   };
 
   init();
@@ -105,6 +109,16 @@ If structurally cloning a return value is undesired, wrapping the value in a
 `proxyValue` call will cause `expose` to send back a
 [`MessagePort`][MessagePort] instead of the actual value. The `MessagePort` will
 be hooked up to a new proxy on the other end.
+
+### `windowEndpoint(window)`
+
+If a window is to be used as an endpoint, the value must be wrapped by
+`windowEndpoint` so that messages will be dispatched correctly.
+
+```js
+const ifr = document.querySelector('iframe');
+Comlink.proxy(Comlink.windowEndpoint(ifr.contentWindow));
+```
 
 
 [UMD]: https://github.com/umdjs/umd

@@ -48,13 +48,13 @@ self.Comlink = (function () {
                 case 'GET': {
                     const iresult = makeInvocationResult(obj);
                     iresult.id = irequest.id;
-                    return postMessageOnEndpoint(endpoint, iresult, transferableProperties([iresult]));
+                    return endpoint.postMessage(iresult, transferableProperties([iresult]));
                 }
                 case 'CONSTRUCT': {
                     const instance = new obj(...(irequest.argumentsList || [])); // eslint-disable-line new-cap
                     const { port1, port2 } = new MessageChannel();
                     expose(instance, port1);
-                    return postMessageOnEndpoint(endpoint, {
+                    return endpoint.postMessage({
                         id: irequest.id,
                         type: 'PROXY',
                         endpoint: port2,
@@ -62,6 +62,15 @@ self.Comlink = (function () {
                 }
             }
         });
+    }
+    /* export */ function windowEndpoint(w) {
+        if (self.constructor.name !== 'Window')
+            throw Error('self is not a window');
+        return {
+            addEventListener: self.addEventListener.bind(self),
+            removeEventListener: self.removeEventListener.bind(self),
+            postMessage: (msg, transfer) => w.postMessage(msg, '*', transfer),
+        };
     }
     function isEndpoint(endpoint) {
         return 'addEventListener' in endpoint && 'removeEventListener' in endpoint && 'postMessage' in endpoint;
@@ -71,21 +80,23 @@ self.Comlink = (function () {
             endpoint.start();
     }
     function attachMessageHandler(endpoint, f) {
+        // Checking all possible types of `endpoint` manually satisfies TypeScript’s
+        // type checker. Not sure why the inference is failing here. Since it’s
+        // unnecessary code I’m going to resort to `any` for now.
+        // if(isWorker(endpoint))
+        //   endpoint.addEventListener('message', f);
+        // if(isMessagePort(endpoint))
+        //   endpoint.addEventListener('message', f);
+        // if(isOtherWindow(endpoint))
+        //   endpoint.addEventListener('message', f);
         endpoint.addEventListener('message', f);
     }
     function detachMessageHandler(endpoint, f) {
+        // Same as above.
         endpoint.removeEventListener('message', f);
     }
     function isMessagePort(endpoint) {
         return endpoint.constructor.name === 'MessagePort';
-    }
-    function isWindow(endpoint) {
-        return endpoint.constructor.name === 'Window';
-    }
-    function postMessageOnEndpoint(endpoint, message, transfer) {
-        if (isWindow(endpoint))
-            return endpoint.postMessage(message, '*', transfer);
-        return endpoint.postMessage(message, transfer);
     }
     /**
      * `pingPongMessage` sends a `postMessage` and waits for a reply. Replies are
@@ -102,7 +113,7 @@ self.Comlink = (function () {
             });
             // Copy msg and add `id` property
             msg = Object.assign({}, msg, { id });
-            postMessageOnEndpoint(endpoint, msg, transferables);
+            endpoint.postMessage(msg, transferables);
         });
     }
     function asyncIteratorSupport() {
@@ -203,5 +214,5 @@ self.Comlink = (function () {
             obj,
         };
     }
-    return { proxy, proxyValue, expose };
+    return { proxy, proxyValue, expose, windowEndpoint };
 })();

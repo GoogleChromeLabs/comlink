@@ -3,6 +3,10 @@ module.exports = function(config) {
       basePath: '',
       frameworks: ['mocha', 'chai', 'karma-typescript'],
       files: [
+        {
+          pattern: 'tests/fixtures/*',
+          included: false,
+        },
         'tests/prelude.js',
         'comlink.ts',
         'tests/postlude.js',

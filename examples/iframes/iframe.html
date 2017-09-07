@@ -1,0 +1,9 @@
+<!doctype html>
+
+<script src="../../dist/comlink.global.js"></script>
+<script>
+  function add(a, b) {
+    return a + b;
+  }
+  Comlink.expose(add, Comlink.windowEndpoint(self.parent));
+</script>

@@ -10,9 +10,9 @@
     // Note the usage of `await`.
     const app = await new api.App();
 
-    console.log(`Counter: ${await app.count}`);
+    alert(`Counter: ${await app.count}`);
     await app.inc();
-    console.log(`Counter: ${await app.count}`);
+    alert(`Counter: ${await app.count}`);
   };
 
   init();

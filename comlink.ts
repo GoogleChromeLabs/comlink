@@ -10,13 +10,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+export interface Endpoint {
+  postMessage(message: any, transfer?: any[]): void;
+  addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: {}): void;
+  removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: {}): void;
+}
 export type Proxy = Function;
-export type Endpoint = MessagePort | Worker | Window;
 type InvocationType = 'CONSTRUCT' | 'GET' | 'APPLY';
 type InvocationResult = InvocationProxyResult | InvocationObjectResult;
 type BatchingProxyCallback = (method: InvocationType, callPath: PropertyKey[], argumentsList?: {}[]) => {}; // eslint-disable-line no-unused-vars
 type Transferable = MessagePort | ArrayBuffer; // eslint-disable-line no-unused-vars
 type Exposable = Function | Object; // eslint-disable-line no-unused-vars
+
 
 interface InvocationProxyResult {
   id?: string;
@@ -92,14 +97,13 @@ export const Comlink = (function() {
         case 'GET': {
           const iresult = makeInvocationResult(obj);
           iresult.id = irequest.id;
-          return postMessageOnEndpoint(endpoint, iresult, transferableProperties([iresult]));
+          return endpoint.postMessage(iresult, transferableProperties([iresult]));
         }
         case 'CONSTRUCT': {
           const instance = new obj(...(irequest.argumentsList || [])); // eslint-disable-line new-cap
           const {port1, port2} = new MessageChannel();
           expose(instance, port1);
-          return postMessageOnEndpoint(
-            endpoint,
+          return endpoint.postMessage(
             {
               id: irequest.id,
               type: 'PROXY',
@@ -112,7 +116,17 @@ export const Comlink = (function() {
     });
   }
 
-  function isEndpoint(endpoint: Endpoint): Boolean {
+  /* export */ function windowEndpoint(w: Window): Endpoint {
+    if (self.constructor.name !== 'Window')
+      throw Error('self is not a window');
+    return {
+      addEventListener: self.addEventListener.bind(self),
+      removeEventListener: self.removeEventListener.bind(self),
+      postMessage: (msg, transfer) => w.postMessage(msg, '*', transfer),
+    };
+  }
+
+  function isEndpoint(endpoint: any): endpoint is Endpoint {
     return 'addEventListener' in endpoint && 'removeEventListener' in endpoint && 'postMessage' in endpoint;
   }
 
@@ -122,25 +136,25 @@ export const Comlink = (function() {
   }
 
   function attachMessageHandler(endpoint: Endpoint, f: (e: MessageEvent) => void): void {
-    endpoint.addEventListener('message', f);
+    // Checking all possible types of `endpoint` manually satisfies TypeScript’s
+    // type checker. Not sure why the inference is failing here. Since it’s
+    // unnecessary code I’m going to resort to `any` for now.
+    // if(isWorker(endpoint))
+    //   endpoint.addEventListener('message', f);
+    // if(isMessagePort(endpoint))
+    //   endpoint.addEventListener('message', f);
+    // if(isOtherWindow(endpoint))
+    //   endpoint.addEventListener('message', f);
+    (<any>endpoint).addEventListener('message', f);
   }
 
   function detachMessageHandler(endpoint: Endpoint, f: (e: MessageEvent) => void): void {
-    endpoint.removeEventListener('message', f);
+    // Same as above.
+    (<any>endpoint).removeEventListener('message', f);
   }
 
   function isMessagePort(endpoint: Endpoint): endpoint is MessagePort {
     return endpoint.constructor.name === 'MessagePort';
-  }
-
-  function isWindow(endpoint: Endpoint): endpoint is Window {
-    return endpoint.constructor.name === 'Window';
-  }
-
-  function postMessageOnEndpoint(endpoint: Endpoint, message: Object, transfer: Transferable[]): void {
-    if (isWindow(endpoint))
-      return endpoint.postMessage(message, '*', transfer);
-    return endpoint.postMessage(message, transfer);
   }
 
   /**
@@ -160,7 +174,7 @@ export const Comlink = (function() {
 
       // Copy msg and add `id` property
       msg = Object.assign({}, msg, {id});
-      postMessageOnEndpoint(endpoint, msg, transferables);
+      endpoint.postMessage(msg, transferables);
     });
   }
 
@@ -268,5 +282,5 @@ export const Comlink = (function() {
     };
   }
 
-  return {proxy, proxyValue, expose};
+  return {proxy, proxyValue, expose, windowEndpoint};
 })();
