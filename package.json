@@ -1,5 +1,5 @@
 {
-  "name": "comlink",
+  "name": "comlinkjs",
   "version": "1.0.0",
   "description": "",
   "scripts": {
@@ -8,7 +8,8 @@
     "linter": "eslint comlink.ts",
     "watchtest": "karma start --no-single-run --browsers ChromeHeadless",
     "watchtestharmony": "karma start --no-single-run --browsers ChromeCanaryHeadlessHarmony",
-    "build": "rm -rf dist && mkdir dist && npm run compile && npm run mangle_global && npm run minify",
+    "publish": "npm run build && npm run test && cp README.md package.json dist && npm publish dist",
+    "build": "rm -rf dist && mkdir dist && npm run compile && npm run mangle_global && npm run minify && cp comlink.ts dist",
     "compile": "tsc --outDir dist -m none && mv dist/comlink.{,global.}js && tsc --outDir dist -m es2015 && mv dist/comlink.{,es6.}js && tsc -d --outDir dist -m umd && mv dist/comlink.{,umd.}js",
     "mangle_global": "sed -i .bak 's!exports.Comlink!self.Comlink!' dist/comlink.global.js && sed -i .bak 's!^.*\"__esModule\".*$!!' dist/comlink.global.js",
     "minify": "babili --minified -o dist/comlink.global.{min.,}js && babili --minified -o dist/comlink.es6.{min.,}js && babili --minified -o dist/comlink.umd.{min.,}js"
@@ -40,11 +41,11 @@
     "karma-safari-launcher": "^1.0.0",
     "babili": "^0.1.4",
     "eslint": "^4.5.0",
-    "eslint-config-google": "^0.9.1"
-  },
-  "dependencies": {
+    "eslint-config-google": "^0.9.1",
     "karma-typescript": "^3.0.5",
     "typescript": "^2.5.2",
     "typescript-eslint-parser": "^8.0.0"
+  },
+  "dependencies": {
   }
 }

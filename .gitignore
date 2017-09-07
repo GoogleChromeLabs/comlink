@@ -2,3 +2,6 @@
 *.swp
 node_modules
 *.bak
+dist/comlink.ts
+dist/README.md
+dist/package.json

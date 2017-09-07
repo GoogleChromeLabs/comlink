@@ -5,6 +5,10 @@ An RPC library that works on windows, iframes, WebWorkers and ServiceWorkers.
 (like a Worker or an iframe) as if it was a local object. Just use `await`
 whenever the remote value is involed.**
 
+```
+$ npm install --save comlinkjs
+```
+
 Comlink allows you to expose an arbitrary JavaScript value (objects, classes,
 functions, etc) to the endpoint of an communications channel. Anything that
 works with `postMessage` can be used as a communication channel. on the other
