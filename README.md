@@ -1,5 +1,5 @@
 # Comlink
-An tiny RPC library that works on windows, iframes, WebWorkers and
+A tiny RPC library that works on windows, iframes, WebWorkers and
 ServiceWorkers.
 
 **TL;DR: With Comlink you can work on objects from another JavaScript realm
@@ -32,7 +32,7 @@ protocol and be applied to the exposed value on the other side.
   const api = Comlink.proxy(worker);
 
   async function init() {
-    // Note the usage of `await`.
+    // Note the usage of `await`:
     const app = await new api.App();
 
     alert(`Counter: ${await app.count}`);
