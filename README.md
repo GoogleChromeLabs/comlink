@@ -97,7 +97,7 @@ The Comlink module exports 3 functions:
 `proxy` creates an ES6 proxy and sends all operations through the channel behind
 `endpoint`. The other end of the channel should be passed to `expose`.
 
-### `expose: (rootObj, endpoint)`
+### `expose(rootObj, endpoint)`
 
 `expose` listens for RPC messages on `endpoint` and applies the operations to
 `rootObj`. The return value will be structurally cloned and sent back. Values
