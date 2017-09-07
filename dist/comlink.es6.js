@@ -4,6 +4,8 @@ export const Comlink = (function () {
     const TRANSFERABLE_TYPES = [ArrayBuffer, MessagePort];
     const transferProxySymbol = Symbol('transferProxy');
     /* export */ function proxy(endpoint) {
+        if (!isEndpoint(endpoint))
+            throw Error('endpoint does not have all of addEventListener, removeEventListener and postMessage defined');
         activateEndpoint(endpoint);
         return batchingProxy(async (type, callPath, argumentsList) => {
             const response = await pingPongMessage(endpoint, {
@@ -22,6 +24,8 @@ export const Comlink = (function () {
         return obj;
     }
     /* export */ function expose(rootObj, endpoint) {
+        if (!isEndpoint(endpoint))
+            throw Error('endpoint does not have all of addEventListener, removeEventListener and postMessage defined');
         activateEndpoint(endpoint);
         attachMessageHandler(endpoint, async function (event) {
             if (!event.data.id)
@@ -42,7 +46,7 @@ export const Comlink = (function () {
                 case 'GET': {
                     const iresult = makeInvocationResult(obj);
                     iresult.id = irequest.id;
-                    return postMessageOnEndpoint(endpoint, iresult, transferableProperties(obj));
+                    return postMessageOnEndpoint(endpoint, iresult, transferableProperties([iresult]));
                 }
                 case 'CONSTRUCT': {
                     const instance = new obj(...(irequest.argumentsList || [])); // eslint-disable-line new-cap
@@ -56,6 +60,9 @@ export const Comlink = (function () {
                 }
             }
         });
+    }
+    function isEndpoint(endpoint) {
+        return 'addEventListener' in endpoint && 'removeEventListener' in endpoint && 'postMessage' in endpoint;
     }
     function activateEndpoint(endpoint) {
         if (isMessagePort(endpoint))

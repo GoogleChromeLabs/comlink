@@ -1,4 +1,7 @@
 # Comlink
-A RPC library.
+An RPC library that works on windows, iframes, WebWorkers and ServiceWorkers.
 
-More soon. For now, read the tests.
+## Usage
+
+Grab your desired file from the `dist` folder.
+```

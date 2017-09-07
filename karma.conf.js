@@ -30,6 +30,10 @@ module.exports = function(config) {
           base: 'ChromeCanary',
           flags: ['--js-flags=--harmony'],
         },
+        ChromeCanaryHeadlessHarmony: {
+          base: 'ChromeCanary',
+          flags: ['--js-flags=--harmony', /* '--headless', */ '--disable-gpu'],
+        },
         DockerChrome: {
             base: 'ChromeHeadless',
             flags: ['--no-sandbox'],
