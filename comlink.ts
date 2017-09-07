@@ -44,7 +44,7 @@ export const Comlink = (function() {
   const transferProxySymbol = Symbol('transferProxy');
 
   /* export */ function proxy(endpoint: Endpoint): Proxy {
-    if(!isEndpoint(endpoint))
+    if (!isEndpoint(endpoint))
       throw Error('endpoint does not have all of addEventListener, removeEventListener and postMessage defined');
     activateEndpoint(endpoint);
     return batchingProxy(async (type, callPath, argumentsList) => {
@@ -70,7 +70,7 @@ export const Comlink = (function() {
   }
 
   /* export */ function expose(rootObj: Exposable, endpoint: Endpoint): void {
-    if(!isEndpoint(endpoint))
+    if (!isEndpoint(endpoint))
       throw Error('endpoint does not have all of addEventListener, removeEventListener and postMessage defined');
     activateEndpoint(endpoint);
     attachMessageHandler(endpoint, async function(event: MessageEvent) {
@@ -92,7 +92,7 @@ export const Comlink = (function() {
         case 'GET': {
           const iresult = makeInvocationResult(obj);
           iresult.id = irequest.id;
-          return postMessageOnEndpoint(endpoint, iresult, transferableProperties(obj));
+          return postMessageOnEndpoint(endpoint, iresult, transferableProperties([iresult]));
         }
         case 'CONSTRUCT': {
           const instance = new obj(...(irequest.argumentsList || [])); // eslint-disable-line new-cap
