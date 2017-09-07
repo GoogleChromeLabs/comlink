@@ -1,6 +1,6 @@
 {
   "name": "comlinkjs",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "",
   "scripts": {
     "test": "npm run linter && npm run unittest",
@@ -46,6 +46,5 @@
     "typescript": "^2.5.2",
     "typescript-eslint-parser": "^8.0.0"
   },
-  "dependencies": {
-  }
+  "dependencies": {}
 }
