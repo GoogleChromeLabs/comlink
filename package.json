@@ -8,7 +8,7 @@
     "linter": "eslint comlink.ts",
     "watchtest": "karma start --no-single-run --browsers ChromeHeadless",
     "watchtestharmony": "karma start --no-single-run --browsers ChromeCanaryHeadlessHarmony",
-    "publish": "npm run build && npm run test && cp README.md package.json dist && npm publish dist",
+    "mypublish": "npm run build && npm run test && cp README.md package.json dist && npm publish dist",
     "build": "rm -rf dist && mkdir dist && npm run compile && npm run mangle_global && npm run minify && cp comlink.ts dist",
     "compile": "tsc --outDir dist -m none && mv dist/comlink.{,global.}js && tsc --outDir dist -m es2015 && mv dist/comlink.{,es6.}js && tsc -d --outDir dist -m umd && mv dist/comlink.{,umd.}js",
     "mangle_global": "sed -i .bak 's!exports.Comlink!self.Comlink!' dist/comlink.global.js && sed -i .bak 's!^.*\"__esModule\".*$!!' dist/comlink.global.js",
