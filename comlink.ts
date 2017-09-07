@@ -44,6 +44,8 @@ export const Comlink = (function() {
   const transferProxySymbol = Symbol('transferProxy');
 
   /* export */ function proxy(endpoint: Endpoint): Proxy {
+    if(!isEndpoint(endpoint))
+      throw Error('endpoint does not have all of addEventListener, removeEventListener and postMessage defined');
     activateEndpoint(endpoint);
     return batchingProxy(async (type, callPath, argumentsList) => {
       const response = await pingPongMessage(
@@ -68,6 +70,8 @@ export const Comlink = (function() {
   }
 
   /* export */ function expose(rootObj: Exposable, endpoint: Endpoint): void {
+    if(!isEndpoint(endpoint))
+      throw Error('endpoint does not have all of addEventListener, removeEventListener and postMessage defined');
     activateEndpoint(endpoint);
     attachMessageHandler(endpoint, async function(event: MessageEvent) {
       if (!event.data.id)
@@ -106,6 +110,10 @@ export const Comlink = (function() {
         }
       }
     });
+  }
+
+  function isEndpoint(endpoint: Endpoint): Boolean {
+    return 'addEventListener' in endpoint && 'removeEventListener' in endpoint && 'postMessage' in endpoint;
   }
 
   function activateEndpoint(endpoint: Endpoint): void {

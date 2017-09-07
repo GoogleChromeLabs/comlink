@@ -6,7 +6,7 @@
     "test": "npm run linter && npm run unittest",
     "unittest": "karma start",
     "linter": "eslint comlink.ts",
-    "watchtest": "karma start --no-single-run --browsers ChromeCanaryHarmony",
+    "watchtest": "karma start --no-single-run --browsers ChromeHeadless",
     "build": "rm -rf dist && mkdir dist && npm run compile && npm run mangle_global && npm run minify",
     "compile": "tsc --outDir dist -m none && mv dist/comlink.{,global.}js && tsc --outDir dist -m es2015 && mv dist/comlink.{,es6.}js && tsc -d --outDir dist -m umd && mv dist/comlink.{,umd.}js",
     "mangle_global": "sed -i .bak 's!exports.Comlink!self.Comlink!' dist/comlink.global.js && sed -i .bak 's!^.*\"__esModule\".*$!!' dist/comlink.global.js",

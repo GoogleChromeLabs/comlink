@@ -25,6 +25,11 @@ describe('Comlink in the same realm', function () {
     this.port2 = port2;
   });
 
+  it('catched invalid endpoints', async function () {
+    expect(_ => Comlink.proxy({})).to.throw();
+    expect(_ => Comlink.expose({}, {})).to.throw();
+  });
+
   it('can work with objects', async function () {
     const proxy = Comlink.proxy(this.port1);
     Comlink.expose({value: 4}, this.port2);
@@ -47,6 +52,12 @@ describe('Comlink in the same realm', function () {
     const proxy = Comlink.proxy(this.port1);
     Comlink.expose((a, b) => a+b, this.port2);
     expect(await proxy(1, 3)).to.equal(4);
+  });
+
+  it('can work with functions that return promises', async function () {
+    const proxy = Comlink.proxy(this.port1);
+    Comlink.expose(_ => new Promise(resolve => setTimeout(_ => resolve(4), 100)), this.port2);
+    expect(await proxy()).to.equal(4);
   });
 
   it('can work with classes', async function () {
