@@ -1,0 +1,19 @@
+<!doctype html>
+
+<script src="../../dist/comlink.global.js"></script>
+<script>
+  const worker = new Worker('worker.js');
+  // WebWorkers use `postMessage` and therefore work with Comlink.
+  const api = Comlink.proxy(worker);
+
+  async function init() {
+    // Note the usage of `await`.
+    const app = await new api.App();
+
+    console.log(`Counter: ${await app.count}`);
+    await app.inc();
+    console.log(`Counter: ${await app.count}`);
+  };
+
+  init();
+</script>

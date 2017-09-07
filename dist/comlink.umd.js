@@ -13,7 +13,7 @@
         const uid = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
         let pingPongMessageCounter = 0;
         const TRANSFERABLE_TYPES = [ArrayBuffer, MessagePort];
-        const transferProxySymbol = Symbol('transferProxy');
+        const proxyValueSymbol = Symbol('proxyValue');
         /* export */ function proxy(endpoint) {
             if (!isEndpoint(endpoint))
                 throw Error('endpoint does not have all of addEventListener, removeEventListener and postMessage defined');
@@ -30,8 +30,8 @@
                 return result.obj;
             });
         }
-        /* export */ function transferProxy(obj) {
-            obj[transferProxySymbol] = true;
+        /* export */ function proxyValue(obj) {
+            obj[proxyValueSymbol] = true;
             return obj;
         }
         /* export */ function expose(rootObj, endpoint) {
@@ -52,7 +52,7 @@
                         // If the function being called is an async generator, proxy the
                         // result.
                         if (isAsyncGenerator)
-                            obj = transferProxy(obj);
+                            obj = proxyValue(obj);
                     } // fallthrough!
                     case 'GET': {
                         const iresult = makeInvocationResult(obj);
@@ -186,20 +186,20 @@
             }
             return r;
         }
-        function isTransferProxy(obj) {
-            return obj && obj[transferProxySymbol];
+        function isproxyValue(obj) {
+            return obj && obj[proxyValueSymbol];
         }
         function makeInvocationResult(obj) {
             // TODO We actually need to perform a structured clone tree
             // walk of the data as we want to allow:
-            // return {foo: transferProxy(foo)};
+            // return {foo: proxyValue(foo)};
             // We also don't want to directly mutate the data as:
             // class A {
-            //   constructor() { this.b = {b: transferProxy(new B())} }
+            //   constructor() { this.b = {b: proxyValue(new B())} }
             //   method1() { return this.b; }
             //   method2() { this.b.foo; /* should work */ }
             // }
-            if (isTransferProxy(obj)) {
+            if (isproxyValue(obj)) {
                 const { port1, port2 } = new MessageChannel();
                 expose(obj, port1);
                 return {
@@ -212,6 +212,6 @@
                 obj,
             };
         }
-        return { proxy, transferProxy, expose };
+        return { proxy, proxyValue, expose };
     })();
 });

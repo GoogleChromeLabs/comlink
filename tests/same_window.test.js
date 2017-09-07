@@ -35,7 +35,7 @@ class SampleClass {
   }
 
   proxyFunc() {
-    return Comlink.transferProxy({
+    return Comlink.proxyValue({
       counter: 0,
       inc() {
         this.counter++;
@@ -209,7 +209,7 @@ describe('Comlink in the same realm', function () {
 
   it('will proxy marked objects', async function() {
     const proxy = Comlink.proxy(this.port1);
-    Comlink.expose(_ => Comlink.transferProxy({
+    Comlink.expose(_ => Comlink.proxyValue({
       counter: 0,
       inc() {
         this.counter += 1;

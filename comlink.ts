@@ -41,7 +41,7 @@ export const Comlink = (function() {
   const uid: number = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
   let pingPongMessageCounter: number = 0;
   const TRANSFERABLE_TYPES = [ArrayBuffer, MessagePort];
-  const transferProxySymbol = Symbol('transferProxy');
+  const proxyValueSymbol = Symbol('proxyValue');
 
   /* export */ function proxy(endpoint: Endpoint): Proxy {
     if (!isEndpoint(endpoint))
@@ -64,8 +64,8 @@ export const Comlink = (function() {
     });
   }
 
-  /* export */ function transferProxy(obj: {}): {} {
-    (obj as any)[transferProxySymbol] = true;
+  /* export */ function proxyValue(obj: {}): {} {
+    (obj as any)[proxyValueSymbol] = true;
     return obj;
   }
 
@@ -87,7 +87,7 @@ export const Comlink = (function() {
           // If the function being called is an async generator, proxy the
           // result.
           if (isAsyncGenerator)
-            obj = transferProxy(obj);
+            obj = proxyValue(obj);
         } // fallthrough!
         case 'GET': {
           const iresult = makeInvocationResult(obj);
@@ -239,21 +239,21 @@ export const Comlink = (function() {
     return r;
   }
 
-  function isTransferProxy(obj: {}): Boolean {
-    return obj && (obj as any)[transferProxySymbol];
+  function isproxyValue(obj: {}): Boolean {
+    return obj && (obj as any)[proxyValueSymbol];
   }
 
   function makeInvocationResult(obj: {}): InvocationResult {
     // TODO We actually need to perform a structured clone tree
     // walk of the data as we want to allow:
-    // return {foo: transferProxy(foo)};
+    // return {foo: proxyValue(foo)};
     // We also don't want to directly mutate the data as:
     // class A {
-    //   constructor() { this.b = {b: transferProxy(new B())} }
+    //   constructor() { this.b = {b: proxyValue(new B())} }
     //   method1() { return this.b; }
     //   method2() { this.b.foo; /* should work */ }
     // }
-    if (isTransferProxy(obj)) {
+    if (isproxyValue(obj)) {
       const {port1, port2} = new MessageChannel();
       expose(obj, port1);
       return {
@@ -268,5 +268,5 @@ export const Comlink = (function() {
     };
   }
 
-  return {proxy, transferProxy, expose};
+  return {proxy, proxyValue, expose};
 })();
