@@ -1,10 +1,10 @@
 {
   "name": "comlinkjs",
-  "version": "1.1.0",
-	"description": "",
-	"main": "comlink.umd.js",
-	"module": "comlink.es6.js",
-	"typings": "comlink.d.ts",
+  "version": "1.2.0",
+  "description": "",
+  "main": "comlink.umd.js",
+  "module": "comlink.es6.js",
+  "typings": "comlink.d.ts",
   "scripts": {
     "test": "npm run linter && npm run unittest",
     "unittest": "karma start",
