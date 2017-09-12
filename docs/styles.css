@@ -42,10 +42,12 @@ select {
   font-family: inherit;
 }
 header {
-  width: 100vw;
-  height: 51.40187vw;
+  position: relative;
+  width: 100%;
+  max-width: 720px;
   background-image: url('bg.svg');
   background-size: cover;
+  margin: 0 auto;
 
   display: -webkit-box;
 
@@ -65,6 +67,10 @@ header {
 
   border-bottom: 8px solid #221A20;
 }
+
+header > *:first-child {
+  margin-top: 3em;
+}
 header > * {
   margin: 0;
   margin-right: 2vw;
@@ -75,13 +81,14 @@ header > *:last-child {
 header > h1, header > h2 {
   font-family: 'Teko', sans-serif;
   font-weight: 400;
-  font-size: 16vw;
-  line-height: 16vw;
+  font-size: 32px;
+  line-height: 32px;
 }
 header > h2 {
   font-weight: 300;
-  font-size: 5.4vw;
-  line-height: 5.4vw;
+  font-size: 24px;
+  line-height: 24px;
+
 }
 main {
   max-width: 720px;
@@ -195,8 +202,10 @@ code .string {
           animation: none;
 }
 
+#footer {
+  font-size: 0.5em;
+}
+
 #footer a {
-  color: #E9C21D;
-  background-color: #221A20;
-  padding: 0 0.5em;
+  color: rgb(93, 9, 25);
 }

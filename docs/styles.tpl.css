@@ -19,8 +19,8 @@
   --separator: calc(var(--base) * var(--separator-factor));
   --section-factor: calc(2 * var(--separator-factor));
   --section: calc(var(--base) * var(--section-factor));
-  --hero-h1-factor: 16;
-  --hero-h2-factor: 5.4;
+  --hero-h1-factor: 4;
+  --hero-h2-factor: 3;
 
   --font-size-factor: 2;
   --headline-size-factor: 1.25;
@@ -69,10 +69,12 @@ select {
   font-family: inherit;
 }
 header {
-  width: 100vw;
-  height: calc(100vw * var(--bg-height) / var(--bg-width) );
+  position: relative;
+  width: 100%;
+  max-width: 720px;
   background-image: url('bg.svg');
   background-size: cover;
+  margin: 0 auto;
 
   display: flex;
   flex-direction: column;
@@ -80,6 +82,10 @@ header {
   align-items: flex-end;
 
   border-bottom: var(--padding) solid var(--black);
+}
+
+header > *:first-child {
+  margin-top: 3em;
 }
 header > * {
   margin: 0;
@@ -91,13 +97,14 @@ header > *:last-child {
 header > h1, header > h2 {
   font-family: 'Teko', sans-serif;
   font-weight: 400;
-  font-size: calc(var(--hero-h1-factor) * 1vw);
-  line-height: calc(var(--hero-h1-factor) * 1vw);
+  font-size: calc(var(--hero-h1-factor) * var(--base));
+  line-height: calc(var(--hero-h1-factor) * var(--base));
 }
 header > h2 {
   font-weight: 300;
-  font-size: calc(var(--hero-h2-factor) * 1vw);
-  line-height: calc(var(--hero-h2-factor) * 1vw);
+  font-size: calc(var(--hero-h2-factor) * var(--base));
+  line-height: calc(var(--hero-h2-factor) * var(--base));
+
 }
 main {
   max-width: 720px;
@@ -200,8 +207,10 @@ code .string {
   animation: none;
 }
 
+#footer {
+  font-size: 0.5em;
+}
+
 #footer a {
-  color: var(--yellow);
-  background-color: var(--black);
-  padding: 0 0.5em;
+  color: var(--red);
 }
