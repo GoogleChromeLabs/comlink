@@ -21,6 +21,9 @@
     <h2>An RPC library for the web</h2>
   </header>
   <main>
+    <section>
+      Comlink allows you to expose JavaScript values from one realm to another – only requiring a <code class="intertext"><span class="token function">postMessage</span><span class="token punctuation">(</span><span class="token punctuation">)</span></code>-like channel.
+    </section>
     <section id="vis" class="box">
       <div class="realm site">
         <h1>Site</h1>
@@ -39,7 +42,7 @@ Comlink<span class="token punctuation">.</span><span class="token function">expo
       </div>
     </section>
     <section>
-      Comlink allows you to expose JavaScript values from one realm to another – only requiring a <code class="intertext"><span class="token function">postMessage</span><span class="token punctuation">(</span><span class="token punctuation">)</span></code>-like channel. It works with windows, WebWorkers, ServiceWorkers and iFrames. You can <code class="intertext"><span class="token function">expose</span><span class="token punctuation">(</span><span class="token punctuation">)</span></code> pretty much anything, including objects, classes or class instances.
+      Comlink works with windows, WebWorkers, ServiceWorkers and iFrames. You can <code class="intertext"><span class="token function">expose</span><span class="token punctuation">(</span><span class="token punctuation">)</span></code> pretty much anything, including objects, classes or class instances.
     </section>
     <section id="quickstart" class="box box--quickstart">
       <h1>Quickstart</h1>
@@ -85,4 +88,14 @@ Comlink<span class="token punctuation">.</span><span class="token function">expo
   <script src="commit-injecter.js" defer></script>
   <script src="anime.js" defer></script>
   <script src="vis.js" defer></script>
+  <script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-88614738-1', 'auto');
+  ga('send', 'pageview');
+
+  </script>
 </body>

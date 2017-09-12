@@ -21,6 +21,9 @@
     <h2>An RPC library for the web</h2>
   </header>
   <main>
+    <section>
+      Comlink allows you to expose JavaScript values from one realm to another – only requiring a <code class="intertext" highlight>postMessage()</code>-like channel.
+    </section>
     <section id="vis" class="box">
       <div class="realm site">
         <h1>Site</h1>
@@ -39,7 +42,7 @@ Comlink.expose(expensive, self);</code></pre>
       </div>
     </section>
     <section>
-      Comlink allows you to expose JavaScript values from one realm to another – only requiring a <code class="intertext" highlight>postMessage()</code>-like channel. It works with windows, WebWorkers, ServiceWorkers and iFrames. You can <code class="intertext" highlight>expose()</code> pretty much anything, including objects, classes or class instances.
+      Comlink works with windows, WebWorkers, ServiceWorkers and iFrames. You can <code class="intertext" highlight>expose()</code> pretty much anything, including objects, classes or class instances.
     </section>
     <section id="quickstart" class="box box--quickstart">
       <h1>Quickstart</h1>
