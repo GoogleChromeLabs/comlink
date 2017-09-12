@@ -7,7 +7,7 @@
   const api = Comlink.proxy(worker);
 
   async function init() {
-    // Note the usage of `await`.
+    // Note the usage of `await`:
     const app = await new api.App();
 
     alert(`Counter: ${await app.count}`);

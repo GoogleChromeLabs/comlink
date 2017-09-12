@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="1622px" height="829px" viewBox="0 0 1622 829" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <!-- Generator: Sketch 46.2 (44496) - http://www.bohemiancoding.com/sketch -->
+    <title>Group</title>
+    <desc>Created with Sketch.</desc>
+    <defs>
+        <rect id="path-1" x="0" y="0" width="1622" height="829"></rect>
+    </defs>
+    <g id="Page-1" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <g id="Group">
+            <mask id="mask-2" fill="white">
+                <use xlink:href="#path-1"></use>
+            </mask>
+            <use id="Mask" fill="#221A20" xlink:href="#path-1"></use>
+            <g mask="url(#mask-2)">
+                <g transform="translate(-788.000000, -575.000000)">
+                    <polygon id="Path-2" fill="#E9C21D" points="935.021339 1107.42147 2555.37082 575.182852 1036.20719 575.182852"></polygon>
+                    <polygon id="Path-2-Copy" fill="#D0D3D8" transform="translate(2142.226881, 1457.521951) rotate(60.000000) translate(-2142.226881, -1457.521951) " points="1270.06739 2231.34121 3014.38637 1648.03765 1592.57579 683.70269"></polygon>
+                    <polygon id="Path-2-Copy-2" fill="#BABEC6" transform="translate(1563.850017, 2087.812719) rotate(120.000000) translate(-1563.850017, -2087.812719) " points="1000.17469 2945.12385 2127.52535 2577.51622 1349.82609 1230.50159"></polygon>
+                    <polygon id="Path-2" fill="#E9C21D" transform="translate(685.855584, 1797.848327) rotate(180.000000) translate(-685.855584, -1797.848327) " points="304.732507 2331.11813 1066.97866 2086.40854 534.421762 1264.57853"></polygon>
+                    <polygon id="Path-2-Copy" fill="#D0D3D8" transform="translate(483.297301, 1123.666979) rotate(240.000000) translate(-483.297301, -1123.666979) " points="104.062834 1462.09292 862.531769 1210.31234 254.255961 785.241035"></polygon>
+                    <polygon id="Path-2-Copy-2" fill="#BABEC6" transform="translate(764.384450, 600.516594) rotate(300.000000) translate(-764.384450, -600.516594) " points="311.541107 1017.13573 1217.22779 707.715151 472.960743 183.89746"></polygon>
+                </g>
+            </g>
+        </g>
+    </g>
+</svg>
