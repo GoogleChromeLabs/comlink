@@ -108,7 +108,7 @@ main > section:last-of-type {
 code {
   display: inline-block;
   max-width: 100%;
-  overflow-x: scroll;
+  overflow-x: auto;
 }
 code.intertext {
   vertical-align: sub;
