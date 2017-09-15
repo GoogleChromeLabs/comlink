@@ -10,6 +10,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 export interface Endpoint {
   postMessage(message: any, transfer?: any[]): void;
   addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: {}): void;
