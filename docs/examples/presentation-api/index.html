@@ -27,8 +27,9 @@
 <script>
   function comlinkHandler(f) {
     return event => {
-      event.data = JSON.parse(event.data)
-      return f(event);
+      const data = JSON.parse(event.data);
+      // I can’t mutate `event.data` so I’m totally cheating here
+      return f({data});
     }
   }
 
