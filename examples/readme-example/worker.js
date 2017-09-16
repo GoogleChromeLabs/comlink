@@ -11,7 +11,7 @@
  * limitations under the License.
  */
 
-importScripts('../../dist/comlink.global.js');
+importScripts('https://cdn.jsdelivr.net/npm/comlinkjs/comlink.global.min.js');
 
 class App {
   constructor() {
