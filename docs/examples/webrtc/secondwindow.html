@@ -1,0 +1,67 @@
+<!doctype html>
+<a href="sametab.html">Run both endpoints in the same tab</a>
+<a href="secondwindow.html" target="_blank" rel="noopener">Open second window</a>
+<h1>Handshake</h1>
+<textarea></textarea>
+<button id="genanswer">Generate answer</button>
+<script src="https://cdn.jsdelivr.net/npm/comlinkjs/comlink.global.js"></script>
+<script>
+  const connection = new RTCPeerConnection(null, null);
+  const channelPromise = new Promise(resolve => {
+    connection.ondatachannel = ({channel}) => {
+      resolve(channel);
+    };
+  });
+
+  const ta = document.querySelector('textarea');
+  function comlinkHandler(f) {
+    return event => {
+      const data = JSON.parse(event.data);
+      // I can’t mutate `event.data` so I’m totally cheating here
+      return f({data});
+    }
+  }
+
+  function toComlinkEndpoint(con) {
+    return {
+      addEventListener: (name, f) => con.addEventListener(name, comlinkHandler(f)),
+      removeEventListener: _ => {}, // lol
+      postMessage: (msg, transferables) => con.send(JSON.stringify(msg)),
+    };
+  }
+
+  async function generateResponse([offer, remoteCandidates]) {
+    offer = new RTCSessionDescription(offer);
+    let candidates = [];
+    connection.onicecandidate = ({candidate}) => {
+      if (!candidate) return;
+      candidates.push(candidate);
+    };
+    await connection.setRemoteDescription(offer);
+
+    for(const candidate of remoteCandidates)
+      connection.addIceCandidate(new RTCIceCandidate(candidate));
+
+    const answer = await connection.createAnswer();
+    await connection.setLocalDescription(answer);
+    return new Promise(async resolve => {
+      setTimeout(_ => resolve([answer.toJSON(), candidates.map(c => c.toJSON())]), 1000);
+    });
+  }
+
+  async function main() {
+    document.querySelector('#genanswer').addEventListener('click', async _ => {
+      const ta = document.querySelector('textarea');
+      ta.value = JSON.stringify(await generateResponse(JSON.parse(ta.value)));
+    });
+
+    const channel = await channelPromise;
+    Comlink.expose({
+      counter: 0,
+      inc() {
+        this.counter++;
+      }
+    }, toComlinkEndpoint(channel))
+  }
+  main();
+</script>

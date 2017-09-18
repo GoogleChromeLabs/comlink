@@ -1,0 +1,71 @@
+<!doctype html>
+<a href="sametab.html">Run both endpoints in the same tab</a>
+<a href="secondwindow.html" target="_blank" rel="noopener">Open second window</a>
+<h1>Handshake</h1>
+<textarea></textarea>
+<button id="genhandshake">Generate Handshake</button>
+<button id="conanswer">Consume answer</button>
+<script src="https://cdn.jsdelivr.net/npm/comlinkjs/comlink.global.js"></script>
+<script>
+  const connection = new RTCPeerConnection(null, null);
+  const channelPromise = new Promise(resolve => {
+    const c = connection.createDataChannel('comlink', null);
+    c.onopen = ({target}) => {
+      if (target.readyState === 'open')
+        resolve(c);
+    };
+  });
+
+  const ta = document.querySelector('textarea');
+  function comlinkHandler(f) {
+    return event => {
+      const data = JSON.parse(event.data);
+      // I can’t mutate `event.data` so I’m totally cheating here
+      return f({data});
+    }
+  }
+
+  function toComlinkEndpoint(con) {
+    return {
+      addEventListener: (name, f) => con.addEventListener(name, comlinkHandler(f)),
+      removeEventListener: _ => {}, // lol
+      postMessage: (msg, transferables) => con.send(JSON.stringify(msg)),
+    };
+  }
+
+  async function generateHandshake() {
+    let candidates = [];
+    connection.onicecandidate = ({candidate}) => {
+      if (!candidate) return;
+      candidates.push(candidate);
+    };
+    const offer = await connection.createOffer();
+    connection.setLocalDescription(offer);
+    return new Promise(async resolve => {
+      setTimeout(_ => resolve([offer.toJSON(), candidates.map(c => c.toJSON())]), 1000);
+    });
+  }
+
+  async function consumeAnswer([answer, remoteCandidates]) {
+    answer = new RTCSessionDescription(answer);
+    await connection.setRemoteDescription(answer);
+    for(const candidate of remoteCandidates)
+      connection.addIceCandidate(new RTCIceCandidate(candidate));
+  }
+
+  async function main() {
+    document.querySelector('#genhandshake').addEventListener('click', async _ => {
+      document.querySelector('textarea').value = JSON.stringify(await generateHandshake());
+    });
+    document.querySelector('#conanswer').addEventListener('click', async _ => {
+      await consumeAnswer(JSON.parse(await document.querySelector('textarea').value));
+    });
+
+    const channel = await channelPromise;
+    const api = Comlink.proxy(toComlinkEndpoint(channel));
+    console.log(await api.counter);
+    await api.inc();
+    console.log(await api.counter);
+  }
+  main();
+</script>
