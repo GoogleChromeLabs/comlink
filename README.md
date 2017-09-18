@@ -90,7 +90,7 @@ sticking to one format, though.
 
 ## API
 
-The Comlink module exports 4 functions:
+The Comlink module exports 3 functions:
 
 ### `proxy(endpoint)`
 
