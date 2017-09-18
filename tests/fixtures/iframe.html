@@ -2,5 +2,5 @@
 <script src='/base/comlink.js'></script>
 <script src='/base/tests/postlude.js'></script>
 <script>
-  Comlink.expose((a, b) => a + b, Comlink.windowEndpoint(self.parent));
+  Comlink.expose((a, b) => a + b, self.parent);
 </script>

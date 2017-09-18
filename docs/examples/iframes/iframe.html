@@ -5,5 +5,5 @@
   function add(a, b) {
     return a + b;
   }
-  Comlink.expose(add, Comlink.windowEndpoint(self.parent));
+  Comlink.expose(add, self.parent);
 </script>

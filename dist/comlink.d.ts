@@ -17,8 +17,7 @@ export interface Endpoint {
 }
 export declare type Proxy = Function;
 export declare const Comlink: {
-    proxy: (endpoint: Endpoint) => Function;
+    proxy: (endpoint: Window | Endpoint) => Function;
     proxyValue: (obj: {}) => {};
-    expose: (rootObj: Object | Function, endpoint: Endpoint) => void;
-    windowEndpoint: (w: Window) => Endpoint;
+    expose: (rootObj: Object | Function, endpoint: Window | Endpoint) => void;
 };

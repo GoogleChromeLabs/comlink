@@ -16,6 +16,8 @@ export const Comlink = (function () {
     const TRANSFERABLE_TYPES = [ArrayBuffer, MessagePort];
     const proxyValueSymbol = Symbol('proxyValue');
     /* export */ function proxy(endpoint) {
+        if (isWindow(endpoint))
+            endpoint = windowEndpoint(endpoint);
         if (!isEndpoint(endpoint))
             throw Error('endpoint does not have all of addEventListener, removeEventListener and postMessage defined');
         activateEndpoint(endpoint);
@@ -36,6 +38,8 @@ export const Comlink = (function () {
         return obj;
     }
     /* export */ function expose(rootObj, endpoint) {
+        if (isWindow(endpoint))
+            endpoint = windowEndpoint(endpoint);
         if (!isEndpoint(endpoint))
             throw Error('endpoint does not have all of addEventListener, removeEventListener and postMessage defined');
         activateEndpoint(endpoint);
@@ -73,7 +77,7 @@ export const Comlink = (function () {
             }
         });
     }
-    /* export */ function windowEndpoint(w) {
+    function windowEndpoint(w) {
         if (self.constructor.name !== 'Window')
             throw Error('self is not a window');
         return {
@@ -107,6 +111,9 @@ export const Comlink = (function () {
     }
     function isMessagePort(endpoint) {
         return endpoint.constructor.name === 'MessagePort';
+    }
+    function isWindow(endpoint) {
+        return endpoint.constructor.name === 'Window';
     }
     /**
      * `pingPongMessage` sends a `postMessage` and waits for a reply. Replies are
@@ -224,5 +231,5 @@ export const Comlink = (function () {
             obj,
         };
     }
-    return { proxy, proxyValue, expose, windowEndpoint };
+    return { proxy, proxyValue, expose };
 })();

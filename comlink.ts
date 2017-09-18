@@ -49,13 +49,15 @@ export const Comlink = (function() {
   const TRANSFERABLE_TYPES = [ArrayBuffer, MessagePort];
   const proxyValueSymbol = Symbol('proxyValue');
 
-  /* export */ function proxy(endpoint: Endpoint): Proxy {
+  /* export */ function proxy(endpoint: Endpoint | Window): Proxy {
+    if (isWindow(endpoint))
+      endpoint = windowEndpoint(endpoint);
     if (!isEndpoint(endpoint))
       throw Error('endpoint does not have all of addEventListener, removeEventListener and postMessage defined');
     activateEndpoint(endpoint);
     return batchingProxy(async (type, callPath, argumentsList) => {
       const response = await pingPongMessage(
-        endpoint,
+        endpoint as Endpoint,
         {
           type,
           callPath,
@@ -75,7 +77,9 @@ export const Comlink = (function() {
     return obj;
   }
 
-  /* export */ function expose(rootObj: Exposable, endpoint: Endpoint): void {
+  /* export */ function expose(rootObj: Exposable, endpoint: Endpoint | Window): void {
+    if (isWindow(endpoint))
+      endpoint = windowEndpoint(endpoint);
     if (!isEndpoint(endpoint))
       throw Error('endpoint does not have all of addEventListener, removeEventListener and postMessage defined');
     activateEndpoint(endpoint);
@@ -98,13 +102,13 @@ export const Comlink = (function() {
         case 'GET': {
           const iresult = makeInvocationResult(obj);
           iresult.id = irequest.id;
-          return endpoint.postMessage(iresult, transferableProperties([iresult]));
+          return (endpoint as Endpoint).postMessage(iresult, transferableProperties([iresult]));
         }
         case 'CONSTRUCT': {
           const instance = new obj(...(irequest.argumentsList || [])); // eslint-disable-line new-cap
           const {port1, port2} = new MessageChannel();
           expose(instance, port1);
-          return endpoint.postMessage(
+          return (endpoint as Endpoint).postMessage(
             {
               id: irequest.id,
               type: 'PROXY',
@@ -117,7 +121,7 @@ export const Comlink = (function() {
     });
   }
 
-  /* export */ function windowEndpoint(w: Window): Endpoint {
+  function windowEndpoint(w: Window): Endpoint {
     if (self.constructor.name !== 'Window')
       throw Error('self is not a window');
     return {
@@ -156,6 +160,10 @@ export const Comlink = (function() {
 
   function isMessagePort(endpoint: Endpoint): endpoint is MessagePort {
     return endpoint.constructor.name === 'MessagePort';
+  }
+
+  function isWindow(endpoint: Endpoint | Window): endpoint is Window {
+    return endpoint.constructor.name === 'Window';
   }
 
   /**
@@ -283,5 +291,5 @@ export const Comlink = (function() {
     };
   }
 
-  return {proxy, proxyValue, expose, windowEndpoint};
+  return {proxy, proxyValue, expose};
 })();

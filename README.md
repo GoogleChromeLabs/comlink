@@ -110,17 +110,6 @@ If structurally cloning a return value is undesired, wrapping the value in a
 [`MessagePort`][MessagePort] instead of the actual value. The `MessagePort` will
 be hooked up to a new proxy on the other end.
 
-### `windowEndpoint(window)`
-
-If a window is to be used as an endpoint, the value must be wrapped by
-`windowEndpoint` so that messages will be dispatched correctly.
-
-```js
-const ifr = document.querySelector('iframe');
-Comlink.proxy(Comlink.windowEndpoint(ifr.contentWindow));
-```
-
-
 [UMD]: https://github.com/umdjs/umd
 [transferable]: https://developer.mozilla.org/en-US/docs/Web/API/Transferable
 [MessagePort]: https://developer.mozilla.org/en-US/docs/Web/API/MessagePort
