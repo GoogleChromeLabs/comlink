@@ -14,6 +14,7 @@
 describe('Comlink across iframes', function () {
   beforeEach(function () {
     this.ifr = document.createElement('iframe')
+    this.ifr.sandbox.add('allow-scripts');
     this.ifr.src = '/base/tests/fixtures/iframe.html';
     document.body.appendChild(this.ifr);
     return new Promise(resolve => this.ifr.onload = resolve);

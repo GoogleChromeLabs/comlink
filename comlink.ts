@@ -163,7 +163,10 @@ export const Comlink = (function() {
   }
 
   function isWindow(endpoint: Endpoint | Window): endpoint is Window {
-    return endpoint.constructor.name === 'Window';
+    // TODO: This doesn’t work on cross-origin iframes.
+    // Is `'window' in endpoint` ok?
+    // return endpoint.constructor.name === 'Window';
+    return 'window' in endpoint;
   }
 
   /**

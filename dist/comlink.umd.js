@@ -124,7 +124,10 @@
             return endpoint.constructor.name === 'MessagePort';
         }
         function isWindow(endpoint) {
-            return endpoint.constructor.name === 'Window';
+            // TODO: This doesn’t work on cross-origin iframes.
+            // Is `'window' in endpoint` ok?
+            // return endpoint.constructor.name === 'Window';
+            return 'window' in endpoint;
         }
         /**
          * `pingPongMessage` sends a `postMessage` and waits for a reply. Replies are
