@@ -95,7 +95,10 @@ The Comlink module exports 3 functions:
 ### `proxy(endpoint)`
 
 `proxy` creates an ES6 proxy and sends all operations through the channel behind
-`endpoint`. The other end of the channel should be passed to `expose`.
+`endpoint`. The other end of the channel should be passed to `expose`. Note that
+as of now all parameters for function or method invocations will be either
+transfered or structurally cloned. As a result, callbacks are currently not
+supported.
 
 ### `expose(rootObj, endpoint)`
 
