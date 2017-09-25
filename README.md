@@ -17,7 +17,7 @@ end of that channel you can use Comlink to synthesize an ES6 proxy. Every action
 performed on that proxy object will be serialized using a simple (and naïve) RPC
 protocol and be applied to the exposed value on the other side.
 
-**Size**: ~2.5k, ~1.1k gzip’d.
+**Size**: ~3.1k, ~1.3k gzip’d.
 
 ## Example
 
