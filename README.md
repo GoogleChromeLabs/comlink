@@ -4,7 +4,7 @@ ServiceWorkers.
 
 **TL;DR: With Comlink you can work on objects from another JavaScript realm
 (like a Worker or an iframe) as if it was a local object. Just use `await`
-whenever the remote value is involed.**
+whenever using the remote value.**
 
 ```
 $ npm install --save comlinkjs
@@ -18,7 +18,6 @@ performed on that proxy object will be serialized using a simple (and naïve) RP
 protocol and be applied to the exposed value on the other side.
 
 **Size**: ~2.5k, ~1.1k gzip’d.
-
 
 ## Example
 
@@ -65,13 +64,60 @@ class App {
 Comlink.expose({App}, self);
 ```
 
+## API
+
+The Comlink module exports 3 functions:
+
+### `Comlink.proxy(endpoint)`
+
+`proxy` creates an ES6 proxy and sends all operations performed on that proxy
+through the channel behind `endpoint`. `endpoint` can be a `Window`, a `Worker`
+or a `MessagePort`.* The other endpoint of the channel should be passed to
+`expose`.
+
+Note that as of now all parameters for function or method invocations will be
+structurally cloned or transferred if they are [transferable]. As a result,
+callback functions are currently not supported as parameter values.
+
+*) Technically it can be any object with `postMessage`, `addEventListener` and
+`removeEventListener`.
+
+### `expose(rootObj, endpoint)`
+
+`expose` is the counter-part to `proxy`. It listens for RPC messages on
+`endpoint` and applies the operations to `rootObj`. Return values of functions
+will be structurally cloned or transfered if they are [transferable]. The same
+restrictions as for `proxy` apply.
+
+### `proxyValue(value)`
+
+If structurally cloning a function’s return value is undesired, wrapping the
+return value in a `proxyValue` call will automatically create a new `proxy` on the
+other end of the message channel. This is useful for example for the Singleton
+pattern:
+
+```js
+// worker.js
+let instance = null;
+class StateManager {
+  static getInstance() {
+    if (instance === null)
+      instance = new StateManager();
+    // Make sure the value is not structurally cloned but proxy’d instead.
+    return Comlink.proxyValue(instance);
+  }
+
+  // ...
+}
+```
+
 ## Module formats
 
 The Comlink module is provided in 3 different formats:
 
 * **“es6”**: This package uses the native ES6 module format. Due to some
-  necessary hackery, the module exports a `Comlink` object.
-  Import it as follows:
+  necessary hackery, the module exports a `Comlink` object. Import it as
+  follows:
 
   ```js
   import {Comlink} from '../dist/comlink.es6.js';
@@ -79,39 +125,14 @@ The Comlink module is provided in 3 different formats:
   // ...
   ```
 
-* **“global”**: This package adds a `Comlink` namespace on `self`. Useful
-  for workers or projects without a module loader.
-* **“umd”**: This package uses [UMD] so it is compatible with AMD, CommonJS and
-  requireJS.
+* **“global”**: This package adds a `Comlink` namespace on `self`. Useful for
+  workers or projects without a module loader.
+* **“umd”**: This package uses [UMD] so it is compatible with AMD, CommonJS
+  and requireJS.
 
-These packages can be mixed and matched. A worker using `global` can work
-with a window using `es6`. For the sake of network conservation, I do recommend
-sticking to one format, though.
-
-## API
-
-The Comlink module exports 3 functions:
-
-### `proxy(endpoint)`
-
-`proxy` creates an ES6 proxy and sends all operations through the channel behind
-`endpoint`. The other end of the channel should be passed to `expose`. Note that
-as of now all parameters for function or method invocations will be either
-transfered or structurally cloned. As a result, callbacks are currently not
-supported.
-
-### `expose(rootObj, endpoint)`
-
-`expose` listens for RPC messages on `endpoint` and applies the operations to
-`rootObj`. The return value will be structurally cloned and sent back. Values
-that implement the [`Transferable`][transferable] interface will be transferred.
-
-### `proxyValue(value)`
-
-If structurally cloning a return value is undesired, wrapping the value in a
-`proxyValue` call will cause `expose` to send back a
-[`MessagePort`][MessagePort] instead of the actual value. The `MessagePort` will
-be hooked up to a new proxy on the other end.
+These packages can be mixed and matched. A worker using `global` can be
+connected to a window using `es6`. For the sake of network conservation, I do
+recommend sticking to one format, though.
 
 [UMD]: https://github.com/umdjs/umd
 [transferable]: https://developer.mozilla.org/en-US/docs/Web/API/Transferable
