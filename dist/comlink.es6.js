@@ -60,8 +60,12 @@ export const Comlink = (function () {
             if (!event.data.id)
                 return;
             const irequest = event.data;
+            let that = await irequest.callPath.slice(0, -1).reduce((obj, propName) => obj[propName], rootObj);
             let obj = await irequest.callPath.reduce((obj, propName) => obj[propName], rootObj);
-            if (irequest.type === 'APPLY' || irequest.type === 'CONSTRUCT') {
+            const isAsyncGenerator = obj.constructor.name === 'AsyncGeneratorFunction';
+            let iresult = obj;
+            // If there is an arguments list, proxy-fy parameters as necessary
+            if ('argumentsList' in irequest) {
                 irequest.argumentsList =
                     irequest.argumentsList.map(arg => {
                         if (arg[transferMarker] === 'PROXY')
@@ -70,33 +74,15 @@ export const Comlink = (function () {
                             return arg;
                     });
             }
-            switch (irequest.type) {
-                case 'APPLY': {
-                    irequest.callPath.pop();
-                    const that = await irequest.callPath.reduce((obj, propName) => obj[propName], rootObj);
-                    const isAsyncGenerator = obj.constructor.name === 'AsyncGeneratorFunction';
-                    obj = await obj.apply(that, irequest.argumentsList);
-                    // If the function being called is an async generator, proxy the
-                    // result.
-                    if (isAsyncGenerator)
-                        obj = proxyValue(obj);
-                } // fallthrough!
-                case 'GET': {
-                    const iresult = makeInvocationResult(obj);
-                    iresult.id = irequest.id;
-                    return endpoint.postMessage(iresult, transferableProperties([iresult]));
-                }
-                case 'CONSTRUCT': {
-                    const instance = new obj(...(irequest.argumentsList || [])); // eslint-disable-line new-cap
-                    const { port1, port2 } = new MessageChannel();
-                    expose(instance, port1);
-                    return endpoint.postMessage({
-                        id: irequest.id,
-                        type: 'PROXY',
-                        endpoint: port2,
-                    }, [port2]);
-                }
-            }
+            if (irequest.type === 'APPLY')
+                iresult = await obj.apply(that, irequest.argumentsList);
+            if (isAsyncGenerator)
+                iresult = proxyValue(iresult);
+            if (irequest.type === 'CONSTRUCT')
+                iresult = proxyValue(new obj(...(irequest.argumentsList || []))); // eslint-disable-line new-cap
+            iresult = makeInvocationResult(iresult);
+            iresult.id = irequest.id;
+            return endpoint.postMessage(iresult, transferableProperties([iresult]));
         });
     }
     function windowEndpoint(w) {
