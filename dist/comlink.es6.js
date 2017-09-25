@@ -96,6 +96,12 @@ export const Comlink = (function () {
                     ierror = e;
                 }
             }
+            if (irequest.type === 'SET') {
+                obj[irequest.property] = irequest.value;
+                // FIXME: ES6 Proxy Handler `set` methods are supposed to return a
+                // boolean. To show good will, we return true asynchronously ¯\_(ツ)_/¯
+                iresult = true;
+            }
             iresult = makeInvocationResult(iresult, ierror);
             iresult.id = irequest.id;
             return endpoint.postMessage(iresult, transferableProperties([iresult]));
@@ -220,6 +226,14 @@ export const Comlink = (function () {
                     callPath.push(property);
                     return proxy;
                 }
+            },
+            set(_target, property, value, _proxy) {
+                return cb({
+                    type: 'SET',
+                    callPath,
+                    property,
+                    value,
+                });
             },
         });
     }

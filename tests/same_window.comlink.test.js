@@ -29,6 +29,10 @@ class SampleClass {
     return this._counter;
   }
 
+  set counter(value) {
+    this._counter = value;
+  }
+
   get promise() {
     return this._promise;
   }
@@ -132,6 +136,15 @@ describe('Comlink in the same realm', function () {
     expect(await instance._counter).to.equal(1);
   });
 
+  it('can set class instance properties', async function () {
+    const proxy = Comlink.proxy(this.port1);
+    Comlink.expose(SampleClass, this.port2);
+    const instance = await new proxy();
+    expect(await instance._counter).to.equal(1);
+    await (instance._counter = 4);
+    expect(await instance._counter).to.equal(4);
+  });
+
   it('can work with class instance methods', async function () {
     const proxy = Comlink.proxy(this.port1);
     Comlink.expose(SampleClass, this.port2);
@@ -210,6 +223,15 @@ describe('Comlink in the same realm', function () {
     expect(await instance.counter).to.equal(1);
     await instance.increaseCounter();
     expect(await instance.counter).to.equal(2);
+  });
+
+  it('can work with class instance setters', async function () {
+    const proxy = Comlink.proxy(this.port1);
+    Comlink.expose(SampleClass, this.port2);
+    const instance = await new proxy();
+    expect(await instance._counter).to.equal(1);
+    await (instance.counter = 4);
+    expect(await instance._counter).to.equal(4);
   });
 
   it('will transfer buffers', async function() {

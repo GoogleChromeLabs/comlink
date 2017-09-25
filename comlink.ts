@@ -40,7 +40,7 @@ interface InvocationErrorResult {
   error: string;
 }
 
-type InvocationRequest = GetInvocationRequest | ApplyInvocationRequest | ConstructInvocationRequest;
+type InvocationRequest = GetInvocationRequest | ApplyInvocationRequest | ConstructInvocationRequest | SetInvocationRequest;
 
 interface GetInvocationRequest {
   id?: string;
@@ -60,6 +60,14 @@ interface ConstructInvocationRequest {
   type: 'CONSTRUCT';
   callPath: PropertyKey[];
   argumentsList: {}[];
+}
+
+interface SetInvocationRequest {
+  id?: string;
+  type: 'SET';
+  callPath: PropertyKey[];
+  property: PropertyKey;
+  value: {};
 }
 
 export const Comlink = (function() {
@@ -153,6 +161,12 @@ export const Comlink = (function() {
         } catch (e) {
           ierror = e;
         }
+      }
+      if (irequest.type === 'SET') {
+        obj[irequest.property] = irequest.value;
+        // FIXME: ES6 Proxy Handler `set` methods are supposed to return a
+        // boolean. To show good will, we return true asynchronously ¯\_(ツ)_/¯
+        iresult = true;
       }
 
       iresult = makeInvocationResult(iresult, ierror);
@@ -288,6 +302,14 @@ export const Comlink = (function() {
           callPath.push(property);
           return proxy;
         }
+      },
+      set(_target, property, value, _proxy): boolean {
+        return cb({
+          type: 'SET',
+          callPath,
+          property,
+          value,
+        }) as boolean;
       },
     });
   }
