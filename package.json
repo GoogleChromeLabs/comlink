@@ -47,7 +47,7 @@
     "karma-safari-launcher": "1.0.0",
     "karma-typescript": "3.0.6",
     "mocha": "3.5.3",
-    "postcss": "6.0.11",
+    "postcss": "6.0.12",
     "postcss-cssnext": "3.0.2",
     "prismjs": "1.8.1",
     "typescript": "2.5.2",
