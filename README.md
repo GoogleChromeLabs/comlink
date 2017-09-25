@@ -91,24 +91,25 @@ restrictions as for `proxy` apply.
 
 ### `proxyValue(value)`
 
-If structurally cloning a function’s return value is undesired, wrapping the
-return value in a `proxyValue` call will automatically create a new `proxy` on the
-other end of the message channel. This is useful for example for the Singleton
-pattern:
+If structurally cloning a value is undesired (either for a function parameter or
+its return value), wrapping the value in a `proxyValue` call proxy that value
+instead. This is necessary for callback functions being passed around or for the
+Singleton pattern:
+
+```js
+// main.js
+const worker = new Worker('worker.js');
+const doStuff = Comlink.proxy(worker);
+await doStuff(result => console.log(result));
+```
 
 ```js
 // worker.js
-let instance = null;
-class StateManager {
-  static getInstance() {
-    if (instance === null)
-      instance = new StateManager();
-    // Make sure the value is not structurally cloned but proxy’d instead.
-    return Comlink.proxyValue(instance);
-  }
-
-  // ...
-}
+Comlink.expose(async function (f) {
+  const result = /* omg so expensive */;
+  /* f is a proxy, as if created by proxy(). So we need to use `await. */
+  await f(result);
+}, self);
 ```
 
 ## Module formats

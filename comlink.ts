@@ -61,6 +61,9 @@ export const Comlink = (function() {
   let pingPongMessageCounter: number = 0;
   const TRANSFERABLE_TYPES = [ArrayBuffer, MessagePort];
   const proxyValueSymbol = Symbol('proxyValue');
+  // Symbols are not transferable. For the case where a parameter needs to be
+  // proxy’d, we need to set some sort of transferable, secret marker. This is it.
+  const transferMarker = '__omg_so_secret';
 
   /* export */ function proxy(endpoint: Endpoint | Window): Proxy {
     if (isWindow(endpoint))
@@ -70,8 +73,19 @@ export const Comlink = (function() {
     activateEndpoint(endpoint);
     return batchingProxy(async (irequest) => {
       let args: {}[] = [];
-      if (irequest.type === 'APPLY' || irequest.type === 'CONSTRUCT')
-        args = irequest.argumentsList;
+      if (irequest.type === 'APPLY' || irequest.type === 'CONSTRUCT') {
+        args = irequest.argumentsList =
+          irequest.argumentsList.map(arg => {
+            if (!isProxyValue(arg))
+              return arg;
+            const {port1, port2} = new MessageChannel();
+            expose(arg, port1);
+            return {
+              [transferMarker]: 'PROXY',
+              endpoint: port2,
+            };
+          });
+      }
       const response = await pingPongMessage(
         endpoint as Endpoint,
         irequest,
@@ -100,6 +114,15 @@ export const Comlink = (function() {
         return;
       const irequest = event.data as InvocationRequest;
       let obj = await irequest.callPath.reduce((obj, propName) => obj[propName], rootObj as any);
+      if (irequest.type === 'APPLY' || irequest.type === 'CONSTRUCT') {
+        irequest.argumentsList =
+        irequest.argumentsList.map(arg => {
+            if ((arg as any)[transferMarker] === 'PROXY')
+              return Comlink.proxy((arg as any).endpoint);
+            else
+              return arg;
+          });
+      }
       switch (irequest.type) {
         case 'APPLY': {
           irequest.callPath.pop();
@@ -291,7 +314,7 @@ export const Comlink = (function() {
     return r;
   }
 
-  function isproxyValue(obj: {}): Boolean {
+  function isProxyValue(obj: {}): Boolean {
     return obj && (obj as any)[proxyValueSymbol];
   }
 
@@ -305,7 +328,7 @@ export const Comlink = (function() {
     //   method1() { return this.b; }
     //   method2() { this.b.foo; /* should work */ }
     // }
-    if (isproxyValue(obj)) {
+    if (isProxyValue(obj)) {
       const {port1, port2} = new MessageChannel();
       expose(obj, port1);
       return {

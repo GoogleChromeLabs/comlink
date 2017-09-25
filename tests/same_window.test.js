@@ -218,7 +218,7 @@ describe('Comlink in the same realm', function () {
     });
   });
 
-  it('will proxy marked objects', async function() {
+  it('will proxy marked return values', async function() {
     const proxy = Comlink.proxy(this.port1);
     Comlink.expose(_ => Comlink.proxyValue({
       counter: 0,
@@ -232,7 +232,7 @@ describe('Comlink in the same realm', function () {
     expect(await obj.counter).to.equal(1);
   });
 
-  it('will proxy marked objects from class instance methods', async function() {
+  it('will proxy marked return values from class instance methods', async function() {
     const proxy = Comlink.proxy(this.port1);
     Comlink.expose(SampleClass, this.port2);
     const instance = await new proxy();
@@ -240,6 +240,33 @@ describe('Comlink in the same realm', function () {
     expect(await obj.counter).to.equal(0);
     await obj.inc();
     expect(await obj.counter).to.equal(1);
+  });
+
+  it('will proxy marked parameter values', async function() {
+    const proxy = Comlink.proxy(this.port1);
+    const local = {
+      counter: 0,
+      inc() {
+        this.counter++;
+      }
+    };
+    Comlink.expose(async function (f) {
+      await f.inc();
+    }, this.port2);
+    expect(local.counter).to.equal(0);
+    await proxy(Comlink.proxyValue(local));
+    expect(await local.counter).to.equal(1);
+  });
+
+  it('will proxy marked parameter values, simple function', async function() {
+    const proxy = Comlink.proxy(this.port1);
+    Comlink.expose(async function (f) {
+      await f();
+    }, this.port2);
+    // Weird code because Mocha
+    await new Promise(async resolve => {
+      proxy(Comlink.proxyValue(_ => resolve()));
+    });
   });
 
   if (asyncGeneratorSupport())
