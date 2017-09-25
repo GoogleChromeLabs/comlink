@@ -2,24 +2,32 @@
 A tiny RPC library that works on windows, iframes, WebWorkers and
 ServiceWorkers.
 
-**TL;DR: With Comlink you can work on objects from another JavaScript realm
-(like a Worker or an iframe) as if it was a local object. Just use `await`
+**With Comlink you can work on values from another JavaScript realm
+(like a Worker or an iframe) as if it was a local value. Just use `await`
 whenever using the remote value.**
+
+Anything that works with `postMessage` can be used as a communication channel.
+
+## Usage
+
+You can download Comlink from the [dist folder][dist]. Alternatively, you can
+install it via npm
 
 ```
 $ npm install --save comlinkjs
 ```
 
-Comlink allows you to expose an arbitrary JavaScript value (objects, classes,
-functions, etc) to the endpoint of an communications channel. Anything that
-works with `postMessage` can be used as a communication channel. On the other
-end of that channel you can use Comlink to synthesize an ES6 proxy. Every action
-performed on that proxy object will be serialized using a simple (and naïve) RPC
-protocol and be applied to the exposed value on the other side.
+or use a CDN like [delivrjs]:
+
+```
+https://cdn.jsdelivr.net/npm/comlinkjs@2.1.0/comlink.es6.min.js
+```
 
 **Size**: ~3.1k, ~1.3k gzip’d.
 
 ## Example
+
+There’s more examples in the [examples directory][examples].
 
 ```html
 <-- index.html -->
@@ -63,6 +71,29 @@ class App {
 
 Comlink.expose({App}, self);
 ```
+
+## Module formats
+
+The Comlink module is provided in 3 different formats:
+
+* **“es6”**: This package uses the native ES6 module format. Due to some
+  necessary hackery, the module exports a `Comlink` object. Import it as
+  follows:
+
+  ```js
+  import {Comlink} from '../dist/comlink.es6.js';
+
+  // ...
+  ```
+
+* **“global”**: This package adds a `Comlink` namespace on `self`. Useful for
+  workers or projects without a module loader.
+* **“umd”**: This package uses [UMD] so it is compatible with AMD, CommonJS
+  and requireJS.
+
+These packages can be mixed and matched. A worker using `global` can be
+connected to a window using `es6`. For the sake of network conservation, I do
+recommend sticking to one format, though.
 
 ## API
 
@@ -112,32 +143,12 @@ Comlink.expose(async function (f) {
 }, self);
 ```
 
-## Module formats
-
-The Comlink module is provided in 3 different formats:
-
-* **“es6”**: This package uses the native ES6 module format. Due to some
-  necessary hackery, the module exports a `Comlink` object. Import it as
-  follows:
-
-  ```js
-  import {Comlink} from '../dist/comlink.es6.js';
-
-  // ...
-  ```
-
-* **“global”**: This package adds a `Comlink` namespace on `self`. Useful for
-  workers or projects without a module loader.
-* **“umd”**: This package uses [UMD] so it is compatible with AMD, CommonJS
-  and requireJS.
-
-These packages can be mixed and matched. A worker using `global` can be
-connected to a window using `es6`. For the sake of network conservation, I do
-recommend sticking to one format, though.
-
 [UMD]: https://github.com/umdjs/umd
 [transferable]: https://developer.mozilla.org/en-US/docs/Web/API/Transferable
 [MessagePort]: https://developer.mozilla.org/en-US/docs/Web/API/MessagePort
+[examples]: https://github.com/GoogleChromeLabs/comlink/tree/master/docs/examples
+[dist]: https://github.com/GoogleChromeLabs/comlink/tree/master/dist
+[delivrjs]: https://cdn.jsdelivr.net/
 
 ---
 License Apache-2.0
