@@ -17,12 +17,10 @@ export interface Endpoint {
   removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: {}): void;
 }
 export type Proxy = Function;
-type InvocationType = 'CONSTRUCT' | 'GET' | 'APPLY';
 type InvocationResult = InvocationProxyResult | InvocationObjectResult;
-type BatchingProxyCallback = (method: InvocationType, callPath: PropertyKey[], argumentsList?: {}[]) => {}; // eslint-disable-line no-unused-vars
+type BatchingProxyCallback = (irequest: InvocationRequest) => {}; // eslint-disable-line no-unused-vars
 type Transferable = MessagePort | ArrayBuffer; // eslint-disable-line no-unused-vars
 type Exposable = Function | Object; // eslint-disable-line no-unused-vars
-
 
 interface InvocationProxyResult {
   id?: string;
@@ -36,11 +34,26 @@ interface InvocationObjectResult {
   obj: {};
 }
 
-interface InvocationRequest {
+type InvocationRequest = GetInvocationRequest | ApplyInvocationRequest | ConstructInvocationRequest;
+
+interface GetInvocationRequest {
   id?: string;
-  type: InvocationType;
+  type: 'GET';
   callPath: PropertyKey[];
-  argumentsList?: {}[];
+}
+
+interface ApplyInvocationRequest {
+  id?: string;
+  type: 'APPLY';
+  callPath: PropertyKey[];
+  argumentsList: {}[];
+}
+
+interface ConstructInvocationRequest {
+  id?: string;
+  type: 'CONSTRUCT';
+  callPath: PropertyKey[];
+  argumentsList: {}[];
 }
 
 export const Comlink = (function() {
@@ -55,15 +68,14 @@ export const Comlink = (function() {
     if (!isEndpoint(endpoint))
       throw Error('endpoint does not have all of addEventListener, removeEventListener and postMessage defined');
     activateEndpoint(endpoint);
-    return batchingProxy(async (type, callPath, argumentsList) => {
+    return batchingProxy(async (irequest) => {
+      let args: {}[] = [];
+      if (irequest.type === 'APPLY' || irequest.type === 'CONSTRUCT')
+        args = irequest.argumentsList;
       const response = await pingPongMessage(
         endpoint as Endpoint,
-        {
-          type,
-          callPath,
-          argumentsList,
-        },
-        transferableProperties(argumentsList)
+        irequest,
+        transferableProperties(args)
       );
       const result = response.data as InvocationResult;
       if (result.type === 'PROXY')
@@ -202,7 +214,11 @@ export const Comlink = (function() {
     let callPath: PropertyKey[] = [];
     return new Proxy(function() {}, {
       construct(_target, argumentsList, proxy) {
-        const r = cb('CONSTRUCT', callPath, argumentsList);
+        const r = cb({
+          type: 'CONSTRUCT',
+          callPath,
+          argumentsList,
+        });
         callPath = [];
         return r;
       },
@@ -212,9 +228,17 @@ export const Comlink = (function() {
         if (callPath[callPath.length - 1] === 'bind') {
           const localCallPath = callPath.slice();
           callPath = [];
-          return (...args: {}[]) => cb('APPLY', localCallPath.slice(0, -1), args);
+          return (...args: {}[]) => cb({
+            type: 'APPLY',
+            callPath: localCallPath.slice(0, -1),
+            argumentsList: args,
+          });
         }
-        const r = cb('APPLY', callPath, argumentsList);
+        const r = cb({
+          type: 'APPLY',
+          callPath,
+          argumentsList,
+        });
         callPath = [];
         return r;
       },
@@ -226,7 +250,10 @@ export const Comlink = (function() {
           // return themselves, so we emulate that behavior here.
           return () => proxy;
         } else if (property === 'then') {
-          const r = cb('GET', callPath);
+          const r = cb({
+            type: 'GET',
+            callPath,
+          });
           callPath = [];
           return Promise.resolve(r).then.bind(r);
         } else {

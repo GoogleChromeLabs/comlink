@@ -32,12 +32,11 @@
             if (!isEndpoint(endpoint))
                 throw Error('endpoint does not have all of addEventListener, removeEventListener and postMessage defined');
             activateEndpoint(endpoint);
-            return batchingProxy(async (type, callPath, argumentsList) => {
-                const response = await pingPongMessage(endpoint, {
-                    type,
-                    callPath,
-                    argumentsList,
-                }, transferableProperties(argumentsList));
+            return batchingProxy(async (irequest) => {
+                let args = [];
+                if (irequest.type === 'APPLY' || irequest.type === 'CONSTRUCT')
+                    args = irequest.argumentsList;
+                const response = await pingPongMessage(endpoint, irequest, transferableProperties(args));
                 const result = response.data;
                 if (result.type === 'PROXY')
                     return proxy(result.endpoint);
@@ -158,7 +157,11 @@
             let callPath = [];
             return new Proxy(function () { }, {
                 construct(_target, argumentsList, proxy) {
-                    const r = cb('CONSTRUCT', callPath, argumentsList);
+                    const r = cb({
+                        type: 'CONSTRUCT',
+                        callPath,
+                        argumentsList,
+                    });
                     callPath = [];
                     return r;
                 },
@@ -168,9 +171,17 @@
                     if (callPath[callPath.length - 1] === 'bind') {
                         const localCallPath = callPath.slice();
                         callPath = [];
-                        return (...args) => cb('APPLY', localCallPath.slice(0, -1), args);
+                        return (...args) => cb({
+                            type: 'APPLY',
+                            callPath: localCallPath.slice(0, -1),
+                            argumentsList: args,
+                        });
                     }
-                    const r = cb('APPLY', callPath, argumentsList);
+                    const r = cb({
+                        type: 'APPLY',
+                        callPath,
+                        argumentsList,
+                    });
                     callPath = [];
                     return r;
                 },
@@ -184,7 +195,10 @@
                         return () => proxy;
                     }
                     else if (property === 'then') {
-                        const r = cb('GET', callPath);
+                        const r = cb({
+                            type: 'GET',
+                            callPath,
+                        });
                         callPath = [];
                         return Promise.resolve(r).then.bind(r);
                     }
