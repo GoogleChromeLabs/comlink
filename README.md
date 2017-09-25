@@ -106,9 +106,10 @@ through the channel behind `endpoint`. `endpoint` can be a `Window`, a `Worker`
 or a `MessagePort`.* The other endpoint of the channel should be passed to
 `expose`.
 
-Note that as of now all parameters for function or method invocations will be
-structurally cloned or transferred if they are [transferable]. As a result,
-callback functions are currently not supported as parameter values.
+Note that all parameters for a function or method invocations will be
+structurally cloned or transferred if they are [transferable]. If you want to
+pass use functions as parameters (e.g. callbacks), make sure to wrap them with
+`proxyValue` (see below).
 
 *) Technically it can be any object with `postMessage`, `addEventListener` and
 `removeEventListener`.
@@ -123,9 +124,9 @@ restrictions as for `proxy` apply.
 ### `proxyValue(value)`
 
 If structurally cloning a value is undesired (either for a function parameter or
-its return value), wrapping the value in a `proxyValue` call proxy that value
-instead. This is necessary for callback functions being passed around or for the
-Singleton pattern:
+a function’s return value), wrapping the value in a `proxyValue` call will proxy
+that value instead. This is necessary for callback functions being passed
+around:
 
 ```js
 // main.js
