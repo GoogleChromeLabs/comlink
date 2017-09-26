@@ -11,4 +11,5 @@
  * limitations under the License.
  */
 
-self.Comlink = exports.Comlink;
+self.MessageChannelAdapter = exports.MessageChannelAdapter;
+delete exports.MessageChannelAdapter;

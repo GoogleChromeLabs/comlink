@@ -11,8 +11,5 @@
  * limitations under the License.
  */
 
-importScripts('/base/tests/prelude.js');
-importScripts('/base/comlink.js');
-importScripts('/base/tests/comlink_postlude.js');
-
-Comlink.expose((a, b) => a + b, self);
+self.Comlink = exports.Comlink;
+delete exports.Comlink;
