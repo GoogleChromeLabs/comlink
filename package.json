@@ -8,7 +8,7 @@
   "scripts": {
     "test": "npm run linter && npm run unittest",
     "unittest": "karma start",
-    "linter": "eslint comlink.ts",
+    "linter": "eslint comlink.ts && eslint messagechanneladapter.ts",
     "watchtest": "karma start --no-single-run --browsers ChromeHeadless",
     "watchtestharmony": "karma start --no-single-run --browsers ChromeCanaryHeadlessHarmony",
     "mypublish": "npm run build && npm run test && cp README.md package.json dist && npm publish dist",

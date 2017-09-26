@@ -11,8 +11,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-self.Comlink = (function () {
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.Comlink = (function () {
     const uid = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
     let pingPongMessageCounter = 0;
     const TRANSFERABLE_TYPES = [ArrayBuffer, MessagePort];

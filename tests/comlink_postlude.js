@@ -10,14 +10,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-export interface Endpoint {
-    postMessage(message: any, transfer?: any[]): void;
-    addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: {}): void;
-    removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: {}): void;
-}
-export declare type Proxy = Function;
-export declare const Comlink: {
-    proxy: (endpoint: Window | Endpoint) => Function;
-    proxyValue: (obj: {}) => {};
-    expose: (rootObj: Object | Function, endpoint: Window | Endpoint) => void;
-};
+
+self.Comlink = exports.Comlink;
+delete exports.Comlink;

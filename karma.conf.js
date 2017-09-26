@@ -22,7 +22,9 @@ module.exports = function(config) {
         },
         'tests/prelude.js',
         'comlink.ts',
-        'tests/postlude.js',
+        'tests/comlink_postlude.js',
+        'messagechanneladapter.ts',
+        'tests/messagechanneladapter_postlude.js',
         'tests/*.test.js',
       ],
       preprocessors: {
