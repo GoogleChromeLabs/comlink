@@ -71,7 +71,7 @@ self.Comlink = (function () {
                 irequest.argumentsList =
                     irequest.argumentsList.map(arg => {
                         if (arg[transferMarker] === 'PROXY')
-                            return self.Comlink.proxy(arg.endpoint);
+                            return proxy(arg.endpoint);
                         else
                             return arg;
                     });
