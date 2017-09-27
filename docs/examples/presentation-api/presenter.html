@@ -13,6 +13,9 @@
 </style>
 
 <script src="https://cdn.jsdelivr.net/npm/comlinkjs/comlink.global.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/comlinkjs/messagechanneladapter.global.js"></script>
+<!-- <script src="/dist/comlink.global.js"></script> -->
+<!-- <script src="/dist/messagechanneladapter.global.js"></script> -->
 <script>
   const api = {
     setColor: color => {
@@ -20,29 +23,13 @@
     }
   };
 
-  function comlinkHandler(f) {
-    return event => {
-      const data = JSON.parse(event.data);
-      // I can’t mutate `event.data` so I’m totally cheating here
-      return f({data});
-    }
-  }
-
-  function toEndpoint(con) {
-    return {
-      addEventListener: (name, f) => con.addEventListener(name, comlinkHandler(f)),
-      removeEventListener: _ => {}, // lol
-      postMessage: (msg, transferables) => con.send(JSON.stringify(msg)),
-    };
-  }
-
   async function init() {
     const list = await navigator.presentation.receiver.connectionList;
     list.connections.forEach(connection => {
-      Comlink.expose(api, toEndpoint(connection));
+      Comlink.expose(api, MessageChannelAdapter.wrap(connection));
     });
     list.onconnectionavailable = event => {
-      Comlink.expose(api, toEndpoint(event.connection));
+      Comlink.expose(api, MessageChannelAdapter.wrap(event.connection));
     }
   }
   init();
