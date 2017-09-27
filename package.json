@@ -11,6 +11,7 @@
     "linter": "eslint comlink.ts && eslint messagechanneladapter.ts",
     "watchtest": "karma start --no-single-run --browsers ChromeHeadless",
     "watchtestharmony": "karma start --no-single-run --browsers ChromeCanaryHeadlessHarmony",
+    "version": "sed -i .bak -E 's!comlinkjs@[0-9.]+!comlinkjs@'${npm_package_version}'!' README.md && git add README.md",
     "mypublish": "npm run build && npm run test && cp README.md package.json dist && npm publish dist",
     "build": "rm -rf dist && mkdir dist && npm run compile && npm run mangle_global && npm run minify",
     "compile": "tsc --outDir dist -m none && mv dist/comlink.{,global.}js && mv dist/messagechanneladapter.{,global.}js && tsc --outDir dist -m es2015 && mv dist/comlink.{,es6.}js && mv dist/messagechanneladapter.{,es6.}js && tsc -d --outDir dist -m umd && mv dist/comlink.{,umd.}js && mv dist/messagechanneladapter.{,umd.}js",
