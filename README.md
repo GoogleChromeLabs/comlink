@@ -20,7 +20,7 @@ $ npm install --save comlinkjs
 or use a CDN like [delivrjs]:
 
 ```
-https://cdn.jsdelivr.net/npm/comlinkjs@2.1.0/comlink.es6.min.js
+https://cdn.jsdelivr.net/npm/comlinkjs@2.2.0/comlink.es6.min.js
 ```
 
 **Size**: ~3.1k, ~1.3k gzip’d.
