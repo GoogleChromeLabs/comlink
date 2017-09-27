@@ -17,24 +17,9 @@
 <button id="inccounter" disabled>Increase Counter</button>
 <pre></pre>
 <script src="https://cdn.jsdelivr.net/npm/comlinkjs/comlink.global.js"></script>
-<script>
-  function comlinkHandler(f) {
-    return event => {
-      const data = JSON.parse(event.data);
-      // I can’t mutate `event.data` so I’m totally cheating here
-      return f({data});
-    }
-  }
-
-  function toComlinkEndpoint(con) {
-    return {
-      addEventListener: (name, f) => con.addEventListener(name, comlinkHandler(f)),
-      removeEventListener: _ => {}, // lol
-      postMessage: (msg, transferables) => con.send(JSON.stringify(msg)),
-    };
-  }
-</script>
-</script>
+<script src="https://cdn.jsdelivr.net/npm/comlinkjs/messagechanneladapter.global.js"></script>
+<!-- <script src="/dist/comlink.global.js"></script> -->
+<!-- <script src="/dist/messagechanneladapter.global.js"></script> -->
 <script>
   const connection = new RTCPeerConnection(null, null);
   const channel = new Promise(resolve => {
@@ -79,14 +64,15 @@
 
   async function main() {
     const pre = document.querySelector('pre');
-    const api = Comlink.proxy(toComlinkEndpoint(await channel));
-    pre.textContent = `Counter: ${await api.counter}${'\n'}`;
+    const api = Comlink.proxy(MessageChannelAdapter.wrap(await channel));
+    const counter = await new api.Counter();
+    pre.textContent = `Counter: ${await counter.count}${'\n'}`;
     const btn = document.querySelector('#inccounter');
     btn.disabled = false;
     btn.onclick = async _ => {
       pre.textContent += `Increasing counter${'\n'}`;
-      await api.inc();
-      pre.textContent += `Counter: ${await api.counter}${'\n'}`;
+      await counter.inc();
+      pre.textContent += `Counter: ${await counter.count}${'\n'}`;
     };
   }
   main();

@@ -10,9 +10,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-importScripts('/base/tests/prelude.js');
-importScripts('/base/comlink.js');
-importScripts('/base/tests/comlink_postlude.js');
-
-Comlink.expose((a, b) => a + b, self);
+export interface StringMessageChannel extends EventTarget {
+    send(data: string): void;
+}
+export declare const MessageChannelAdapter: {
+    wrap: (smc: StringMessageChannel, id?: string | null) => MessagePort;
+};

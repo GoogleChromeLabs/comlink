@@ -24,28 +24,16 @@
 <button class="colorBtn" data-color="blue">Blue</button>
 
 <script src="https://cdn.jsdelivr.net/npm/comlinkjs/comlink.global.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/comlinkjs/messagechanneladapter.global.js"></script>
+<!-- <script src="/dist/comlink.global.js"></script> -->
+<!-- <script src="/dist/messagechanneladapter.global.js"></script> -->
 <script>
-  function comlinkHandler(f) {
-    return event => {
-      const data = JSON.parse(event.data);
-      // I can’t mutate `event.data` so I’m totally cheating here
-      return f({data});
-    }
-  }
-
   let api;
   let connection;
   document.querySelector('#start').addEventListener('click', async event => {
     const pr = new PresentationRequest('presenter.html');
     connection = await pr.start();
-    // We are building our own little postMessage-stlye API here. Sadly, that means that
-    // we can’t use `proxyValue` or `new`, as we can’t transfer `MessageChannel` to
-    // the presenter.
-    api = Comlink.proxy({
-      addEventListener: (name, f) => connection.addEventListener(name, comlinkHandler(f)),
-      removeEventListener: _ => {}, // lol
-      postMessage: (msg, transferable) => connection.send(JSON.stringify(msg)),
-    });
+    api = Comlink.proxy(MessageChannelAdapter.wrap(connection));
   });
 
   document.querySelectorAll('.colorBtn').forEach(btn => {

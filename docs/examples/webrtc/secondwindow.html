@@ -4,24 +4,9 @@
 <button id="genanswer">Generate answer</button>
 <pre></pre>
 <script src="https://cdn.jsdelivr.net/npm/comlinkjs/comlink.global.js"></script>
-<script>
-  function comlinkHandler(f) {
-    return event => {
-      const data = JSON.parse(event.data);
-      // I can’t mutate `event.data` so I’m totally cheating here
-      return f({data});
-    }
-  }
-
-  function toComlinkEndpoint(con) {
-    return {
-      addEventListener: (name, f) => con.addEventListener(name, comlinkHandler(f)),
-      removeEventListener: _ => {}, // lol
-      postMessage: (msg, transferables) => con.send(JSON.stringify(msg)),
-    };
-  }
-
-</script>
+<script src="https://cdn.jsdelivr.net/npm/comlinkjs/messagechanneladapter.global.js"></script>
+<!-- <script src="/dist/comlink.global.js"></script>
+<script src="/dist/messagechanneladapter.global.js"></script> -->
 <script>
   const connection = new RTCPeerConnection(null, null);
   const channelPromise = new Promise(resolve => {
@@ -43,7 +28,6 @@
       connection.addIceCandidate(new RTCIceCandidate(candidate));
 
     const answer = new RTCSessionDescription(await connection.createAnswer());
-    // console.log(answer);
     await connection.setLocalDescription(answer);
     return new Promise(async resolve => {
       setTimeout(_ => resolve([answer.toJSON(), candidates.map(c => c.toJSON())]), 1000);
@@ -51,22 +35,27 @@
   }
 
   const pre = document.querySelector('pre');
-  const apiObject = {
-    counter: 0,
-    inc() {
-      this.counter++;
-      pre.textContent += `Increasing counter by 1, now at ${this.counter}${'\n'}`;
-    }
-  };
-
   document.querySelector('#genanswer').addEventListener('click', async _ => {
     const ta = document.querySelector('textarea');
     ta.value = JSON.stringify(await generateAnswer(JSON.parse(ta.value)));
   });
 
+  class Counter {
+    constructor() {
+      this._counter = 0;
+    }
+    get count() {
+      return this._counter;
+    }
+
+    inc() {
+      this._counter++;
+      pre.textContent += `Increasing counter by 1, now at ${this.count}${'\n'}`;
+    }
+  }
+
   async function main() {
-    const channel = await channelPromise;
-    Comlink.expose(apiObject, toComlinkEndpoint(channel))
+    Comlink.expose({Counter}, MessageChannelAdapter.wrap(await channelPromise));
   }
   main();
 </script>
