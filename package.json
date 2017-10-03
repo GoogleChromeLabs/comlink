@@ -39,7 +39,7 @@
     "chai": "4.1.2",
     "eslint": "4.8.0",
     "eslint-config-google": "0.9.1",
-    "gsap": "1.20.2",
+    "gsap": "1.20.3",
     "karma": "1.7.1",
     "karma-chai": "0.1.0",
     "karma-chrome-launcher": "2.2.0",
