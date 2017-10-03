@@ -52,6 +52,8 @@
                 }
                 const response = await pingPongMessage(endpoint, irequest, transferableProperties(args));
                 const result = response.data;
+                if (result.type === 'ERROR')
+                    throw Error(result.error);
                 if (result.type === 'PROXY')
                     return proxy(result.endpoint);
                 return result.obj;
@@ -75,6 +77,7 @@
                 let obj = await irequest.callPath.reduce((obj, propName) => obj[propName], rootObj);
                 const isAsyncGenerator = obj.constructor.name === 'AsyncGeneratorFunction';
                 let iresult = obj;
+                let ierror;
                 // If there is an arguments list, proxy-fy parameters as necessary
                 if ('argumentsList' in irequest) {
                     irequest.argumentsList =
@@ -85,13 +88,26 @@
                                 return arg;
                         });
                 }
-                if (irequest.type === 'APPLY')
-                    iresult = await obj.apply(that, irequest.argumentsList);
+                if (irequest.type === 'APPLY') {
+                    try {
+                        iresult = await obj.apply(that, irequest.argumentsList);
+                    }
+                    catch (e) {
+                        ierror = e;
+                    }
+                }
                 if (isAsyncGenerator)
                     iresult = proxyValue(iresult);
-                if (irequest.type === 'CONSTRUCT')
-                    iresult = proxyValue(new obj(...(irequest.argumentsList || []))); // eslint-disable-line new-cap
-                iresult = makeInvocationResult(iresult);
+                if (irequest.type === 'CONSTRUCT') {
+                    try {
+                        iresult = new obj(...(irequest.argumentsList || [])); // eslint-disable-line new-cap
+                        iresult = proxyValue(iresult);
+                    }
+                    catch (e) {
+                        ierror = e;
+                    }
+                }
+                iresult = makeInvocationResult(iresult, ierror);
                 iresult.id = irequest.id;
                 return endpoint.postMessage(iresult, transferableProperties([iresult]));
             });
@@ -244,7 +260,13 @@
         function isProxyValue(obj) {
             return obj && obj[proxyValueSymbol];
         }
-        function makeInvocationResult(obj) {
+        function makeInvocationResult(obj, err = null) {
+            if (err) {
+                return {
+                    type: 'ERROR',
+                    error: ('stack' in err) ? err.stack : err.toString(),
+                };
+            }
             // TODO We actually need to perform a structured clone tree
             // walk of the data as we want to allow:
             // return {foo: proxyValue(foo)};

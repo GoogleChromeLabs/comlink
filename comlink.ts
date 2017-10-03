@@ -17,7 +17,7 @@ export interface Endpoint {
   removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: {}): void;
 }
 export type Proxy = Function;
-type InvocationResult = InvocationProxyResult | InvocationObjectResult;
+type InvocationResult = InvocationProxyResult | InvocationObjectResult | InvocationErrorResult;
 type BatchingProxyCallback = (irequest: InvocationRequest) => {}; // eslint-disable-line no-unused-vars
 type Transferable = MessagePort | ArrayBuffer; // eslint-disable-line no-unused-vars
 type Exposable = Function | Object; // eslint-disable-line no-unused-vars
@@ -32,6 +32,12 @@ interface InvocationObjectResult {
   id?: string;
   type: 'OBJECT';
   obj: {};
+}
+
+interface InvocationErrorResult {
+  id?: string;
+  type: 'ERROR';
+  error: string;
 }
 
 type InvocationRequest = GetInvocationRequest | ApplyInvocationRequest | ConstructInvocationRequest;
@@ -92,6 +98,8 @@ export const Comlink = (function() {
         transferableProperties(args)
       );
       const result = response.data as InvocationResult;
+      if (result.type === 'ERROR')
+        throw Error(result.error);
       if (result.type === 'PROXY')
         return proxy(result.endpoint);
       return result.obj;
@@ -117,6 +125,7 @@ export const Comlink = (function() {
       let obj = await irequest.callPath.reduce((obj, propName) => obj[propName], rootObj as any);
       const isAsyncGenerator = obj.constructor.name === 'AsyncGeneratorFunction';
       let iresult = obj;
+      let ierror;
 
       // If there is an arguments list, proxy-fy parameters as necessary
       if ('argumentsList' in irequest) {
@@ -128,14 +137,25 @@ export const Comlink = (function() {
               return arg;
           });
       }
-      if (irequest.type === 'APPLY')
-        iresult = await obj.apply(that, irequest.argumentsList);
+      if (irequest.type === 'APPLY') {
+        try {
+          iresult = await obj.apply(that, irequest.argumentsList);
+        } catch (e) {
+          ierror = e;
+        }
+      }
       if (isAsyncGenerator)
         iresult = proxyValue(iresult);
-      if (irequest.type === 'CONSTRUCT')
-        iresult = proxyValue(new obj(...(irequest.argumentsList || []))); // eslint-disable-line new-cap
+      if (irequest.type === 'CONSTRUCT') {
+        try {
+          iresult = new obj(...(irequest.argumentsList || [])); // eslint-disable-line new-cap
+          iresult = proxyValue(iresult);
+        } catch (e) {
+          ierror = e;
+        }
+      }
 
-      iresult = makeInvocationResult(iresult);
+      iresult = makeInvocationResult(iresult, ierror);
       iresult.id = irequest.id;
       return (endpoint as Endpoint).postMessage(iresult, transferableProperties([iresult]));
     });
@@ -303,7 +323,13 @@ export const Comlink = (function() {
     return obj && (obj as any)[proxyValueSymbol];
   }
 
-  function makeInvocationResult(obj: {}): InvocationResult {
+  function makeInvocationResult(obj: {}, err: Error | null = null): InvocationResult {
+    if (err) {
+      return {
+        type: 'ERROR',
+        error: ('stack' in err) ? err.stack! : err.toString(),
+      };
+    }
     // TODO We actually need to perform a structured clone tree
     // walk of the data as we want to allow:
     // return {foo: proxyValue(foo)};

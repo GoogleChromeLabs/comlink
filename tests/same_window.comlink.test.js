@@ -53,6 +53,10 @@ class SampleClass {
       }
     });
   }
+
+  throwsAnError() {
+    throw Error('OMG');
+  }
 }
 
 describe('Comlink in the same realm', function () {
@@ -83,6 +87,16 @@ describe('Comlink in the same realm', function () {
     const proxy = Comlink.proxy(this.port1);
     Comlink.expose(_ => 4, this.port2);
     expect(await proxy()).to.equal(4);
+  });
+
+  it('can handle throwing functions', async function () {
+    const proxy = Comlink.proxy(this.port1);
+    Comlink.expose(_ => {
+      throw Error('OMG');
+    }, this.port2);
+    return proxy()
+      .then(_ => Promise.reject())
+      .catch(err => {});
   });
 
   it('can work with parameterized functions', async function () {
@@ -125,6 +139,15 @@ describe('Comlink in the same realm', function () {
     expect(await instance.counter).to.equal(1);
     await instance.increaseCounter();
     expect(await instance.counter).to.equal(2);
+  });
+
+  it('can handle throwing class instance methods', async function () {
+    const proxy = Comlink.proxy(this.port1);
+    Comlink.expose(SampleClass, this.port2);
+    const instance = await new proxy();
+    return instance.throwsAnError()
+      .then(_ => Promise.reject())
+      .catch(err => {});
   });
 
   it('can work with class instance methods multiple times', async function () {
