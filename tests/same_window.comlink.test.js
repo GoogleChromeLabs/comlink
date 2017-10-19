@@ -93,6 +93,12 @@ describe('Comlink in the same realm', function () {
     expect(await proxy()).to.equal(4);
   });
 
+  it('can work with objects that have undefined properties', async function () {
+    const proxy = Comlink.proxy(this.port1);
+    Comlink.expose({x: undefined}, this.port2);
+    expect(await proxy.x).to.be.undefined;
+  });
+
   it('can handle throwing functions', async function () {
     const proxy = Comlink.proxy(this.port1);
     Comlink.expose(_ => {

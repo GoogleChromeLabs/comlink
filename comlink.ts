@@ -131,7 +131,7 @@ export const Comlink = (function() {
       const irequest = event.data as InvocationRequest;
       let that = await irequest.callPath.slice(0, -1).reduce((obj, propName) => obj[propName], rootObj as any);
       let obj = await irequest.callPath.reduce((obj, propName) => obj[propName], rootObj as any);
-      const isAsyncGenerator = obj.constructor.name === 'AsyncGeneratorFunction';
+      const isAsyncGenerator = obj && obj.constructor.name === 'AsyncGeneratorFunction';
       let iresult = obj;
       let ierror;
 
