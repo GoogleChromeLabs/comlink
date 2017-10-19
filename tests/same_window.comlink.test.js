@@ -320,6 +320,12 @@ describe('Comlink in the same realm', function () {
     });
   });
 
+  it('will undefined paramters', async function () {
+    const proxy = Comlink.proxy(this.port1);
+    Comlink.expose({f: _ => 4}, this.port2);
+    expect(await proxy.f(undefined)).to.equal(4);
+  });
+
   if (asyncGeneratorSupport())
     eval(`
       it('can work with async generators', async function() {

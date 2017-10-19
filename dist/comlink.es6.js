@@ -71,7 +71,7 @@ export const Comlink = (function () {
             if ('argumentsList' in irequest) {
                 irequest.argumentsList =
                     irequest.argumentsList.map(arg => {
-                        if (arg[transferMarker] === 'PROXY')
+                        if (arg && arg[transferMarker] === 'PROXY')
                             return proxy(arg.endpoint);
                         else
                             return arg;

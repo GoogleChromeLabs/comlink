@@ -139,7 +139,7 @@ export const Comlink = (function() {
       if ('argumentsList' in irequest) {
         (irequest as ApplyInvocationRequest).argumentsList =
           (irequest as ApplyInvocationRequest).argumentsList.map(arg => {
-            if ((arg as any)[transferMarker] === 'PROXY')
+            if (arg && (arg as any)[transferMarker] === 'PROXY')
               return proxy((arg as any).endpoint);
             else
               return arg;
