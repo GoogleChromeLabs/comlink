@@ -17,9 +17,6 @@ self.Comlink = (function () {
     let pingPongMessageCounter = 0;
     const TRANSFERABLE_TYPES = [ArrayBuffer, MessagePort];
     const proxyValueSymbol = Symbol('proxyValue');
-    // Symbols are not transferable. For the case where a parameter needs to be
-    // proxy’d, we need to set some sort of transferable, secret marker. This is it.
-    const transferMarker = '__omg_so_secret';
     /* export */ function proxy(endpoint) {
         if (isWindow(endpoint))
             endpoint = windowEndpoint(endpoint);
@@ -29,19 +26,22 @@ self.Comlink = (function () {
         return batchingProxy(async (irequest) => {
             let args = [];
             if (irequest.type === 'APPLY' || irequest.type === 'CONSTRUCT') {
-                args = irequest.argumentsList =
-                    irequest.argumentsList.map(arg => {
-                        if (!isProxyValue(arg))
-                            return arg;
+                args = irequest.argumentsList.map((arg) => {
+                    if (isProxyValue(arg)) {
                         const { port1, port2 } = new MessageChannel();
                         expose(arg, port1);
                         return {
-                            [transferMarker]: 'PROXY',
+                            type: 'PROXY',
                             endpoint: port2,
                         };
-                    });
+                    }
+                    return {
+                        type: 'RAW',
+                        value: arg,
+                    };
+                });
             }
-            const response = await pingPongMessage(endpoint, irequest, transferableProperties(args));
+            const response = await pingPongMessage(endpoint, Object.assign({}, irequest, { argumentsList: args }), transferableProperties(args));
             const result = response.data;
             if (result.type === 'ERROR')
                 throw Error(result.error);
@@ -69,19 +69,20 @@ self.Comlink = (function () {
             const isAsyncGenerator = obj && obj.constructor.name === 'AsyncGeneratorFunction';
             let iresult = obj;
             let ierror;
+            let args = [];
             // If there is an arguments list, proxy-fy parameters as necessary
-            if ('argumentsList' in irequest) {
-                irequest.argumentsList =
-                    irequest.argumentsList.map(arg => {
-                        if (arg && arg[transferMarker] === 'PROXY')
-                            return proxy(arg.endpoint);
-                        else
-                            return arg;
-                    });
+            if (irequest.type === 'APPLY' || irequest.type === 'CONSTRUCT') {
+                args = irequest.argumentsList.map((arg) => {
+                    if (arg.type === 'PROXY')
+                        return proxy(arg.endpoint);
+                    if (arg.type === 'RAW')
+                        return arg.value;
+                    throw Error('Unknown type');
+                });
             }
             if (irequest.type === 'APPLY') {
                 try {
-                    iresult = await obj.apply(that, irequest.argumentsList);
+                    iresult = await obj.apply(that, args);
                 }
                 catch (e) {
                     ierror = e;
@@ -91,7 +92,7 @@ self.Comlink = (function () {
                 iresult = proxyValue(iresult);
             if (irequest.type === 'CONSTRUCT') {
                 try {
-                    iresult = new obj(...(irequest.argumentsList || [])); // eslint-disable-line new-cap
+                    iresult = new obj(...(args || [])); // eslint-disable-line new-cap
                     iresult = proxyValue(iresult);
                 }
                 catch (e) {

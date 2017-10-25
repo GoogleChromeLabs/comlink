@@ -18,7 +18,7 @@ export interface Endpoint {
 }
 export type Proxy = Function;
 type InvocationResult = InvocationProxyResult | InvocationObjectResult | InvocationErrorResult;
-type BatchingProxyCallback = (irequest: InvocationRequest) => {}; // eslint-disable-line no-unused-vars
+type BatchingProxyCallback = (bpcd: BatchingProxyCallbackDescriptor) => {}; // eslint-disable-line no-unused-vars
 type Transferable = MessagePort | ArrayBuffer; // eslint-disable-line no-unused-vars
 type Exposable = Function | Object; // eslint-disable-line no-unused-vars
 
@@ -40,6 +40,44 @@ interface InvocationErrorResult {
   error: string;
 }
 
+type WrappedArgument = WrappedRawValue | WrappedProxyValue;
+
+interface WrappedRawValue {
+  type: 'RAW';
+  value: {};
+}
+
+interface WrappedProxyValue {
+  type: 'PROXY';
+  endpoint: MessagePort;
+}
+
+type BatchingProxyCallbackDescriptor = BPCDGet | BPCDApply | BPCDConstruct | BPCDSet; // eslint-disable-line no-unused-vars
+
+interface BPCDGet {
+  type: 'GET';
+  callPath: PropertyKey[];
+}
+
+interface BPCDApply {
+  type: 'APPLY';
+  callPath: PropertyKey[];
+  argumentsList: {}[];
+}
+
+interface BPCDConstruct {
+  type: 'CONSTRUCT';
+  callPath: PropertyKey[];
+  argumentsList: {}[];
+}
+
+interface BPCDSet {
+  type: 'SET';
+  callPath: PropertyKey[];
+  property: PropertyKey;
+  value: {};
+}
+
 type InvocationRequest = GetInvocationRequest | ApplyInvocationRequest | ConstructInvocationRequest | SetInvocationRequest;
 
 interface GetInvocationRequest {
@@ -52,14 +90,14 @@ interface ApplyInvocationRequest {
   id?: string;
   type: 'APPLY';
   callPath: PropertyKey[];
-  argumentsList: {}[];
+  argumentsList: WrappedArgument[];
 }
 
 interface ConstructInvocationRequest {
   id?: string;
   type: 'CONSTRUCT';
   callPath: PropertyKey[];
-  argumentsList: {}[];
+  argumentsList: WrappedArgument[];
 }
 
 interface SetInvocationRequest {
@@ -75,9 +113,6 @@ export const Comlink = (function() {
   let pingPongMessageCounter: number = 0;
   const TRANSFERABLE_TYPES = [ArrayBuffer, MessagePort];
   const proxyValueSymbol = Symbol('proxyValue');
-  // Symbols are not transferable. For the case where a parameter needs to be
-  // proxy’d, we need to set some sort of transferable, secret marker. This is it.
-  const transferMarker = '__omg_so_secret';
 
   /* export */ function proxy(endpoint: Endpoint | Window): Proxy {
     if (isWindow(endpoint))
@@ -86,23 +121,26 @@ export const Comlink = (function() {
       throw Error('endpoint does not have all of addEventListener, removeEventListener and postMessage defined');
     activateEndpoint(endpoint);
     return batchingProxy(async (irequest) => {
-      let args: {}[] = [];
+      let args: WrappedArgument[] = [];
       if (irequest.type === 'APPLY' || irequest.type === 'CONSTRUCT') {
-        args = irequest.argumentsList =
-          irequest.argumentsList.map(arg => {
-            if (!isProxyValue(arg))
-              return arg;
+        args = irequest.argumentsList.map((arg: {}): WrappedArgument => {
+          if (isProxyValue(arg)) {
             const {port1, port2} = new MessageChannel();
             expose(arg, port1);
             return {
-              [transferMarker]: 'PROXY',
+              type: 'PROXY',
               endpoint: port2,
             };
-          });
+          }
+          return {
+            type: 'RAW',
+            value: arg,
+          };
+        });
       }
       const response = await pingPongMessage(
         endpoint as Endpoint,
-        irequest,
+        Object.assign({}, irequest, {argumentsList: args}),
         transferableProperties(args)
       );
       const result = response.data as InvocationResult;
@@ -134,20 +172,21 @@ export const Comlink = (function() {
       const isAsyncGenerator = obj && obj.constructor.name === 'AsyncGeneratorFunction';
       let iresult = obj;
       let ierror;
+      let args: {}[] = [];
 
       // If there is an arguments list, proxy-fy parameters as necessary
-      if ('argumentsList' in irequest) {
-        (irequest as ApplyInvocationRequest).argumentsList =
-          (irequest as ApplyInvocationRequest).argumentsList.map(arg => {
-            if (arg && (arg as any)[transferMarker] === 'PROXY')
-              return proxy((arg as any).endpoint);
-            else
-              return arg;
-          });
+      if (irequest.type === 'APPLY' || irequest.type === 'CONSTRUCT') {
+        args = irequest.argumentsList.map((arg: WrappedArgument): {} => {
+          if (arg.type === 'PROXY')
+            return proxy(arg.endpoint);
+          if (arg.type === 'RAW')
+            return arg.value;
+          throw Error('Unknown type');
+        });
       }
       if (irequest.type === 'APPLY') {
         try {
-          iresult = await obj.apply(that, irequest.argumentsList);
+          iresult = await obj.apply(that, args);
         } catch (e) {
           ierror = e;
         }
@@ -156,7 +195,7 @@ export const Comlink = (function() {
         iresult = proxyValue(iresult);
       if (irequest.type === 'CONSTRUCT') {
         try {
-          iresult = new obj(...(irequest.argumentsList || [])); // eslint-disable-line new-cap
+          iresult = new obj(...(args || [])); // eslint-disable-line new-cap
           iresult = proxyValue(iresult);
         } catch (e) {
           ierror = e;
