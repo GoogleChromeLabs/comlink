@@ -11,6 +11,15 @@
  * limitations under the License.
  */
 
+function eventTarget() {
+  const {port1} = new MessageChannel();
+  return {
+    addEventListener: port1.addEventListener.bind(port1),
+    removeEventListener: port1.removeEventListener.bind(port1),
+    dispatchEvent: port1.dispatchEvent.bind(port1),
+  };
+}
+
 class SampleClass {
   constructor() {
     this._counter = 1;
@@ -320,7 +329,18 @@ describe('Comlink in the same realm', function () {
     });
   });
 
-  it('will undefined paramters', async function () {
+  it('will handle event listeners', function(done) {
+    const proxy = Comlink.proxy(this.port1);
+    const target = eventTarget();
+    Comlink.expose(target, this.port2);
+    target.addEventListener('my-event', Comlink.eventListener(event => {
+      expect(event.detail).to.equal('detail');
+      done();
+    }));
+    target.dispatchEvent(new CustomEvent('my-event', {detail: 'detail'}));
+  });
+
+  it('will undefined parameters', async function () {
     const proxy = Comlink.proxy(this.port1);
     Comlink.expose({f: _ => 4}, this.port2);
     expect(await proxy.f(undefined)).to.equal(4);
