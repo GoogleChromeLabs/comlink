@@ -19,6 +19,6 @@ export declare type Proxy = Function;
 export declare const Comlink: {
     proxy: (endpoint: Window | Endpoint) => Function;
     proxyValue: (obj: {}) => {};
-    eventListener: (f: Function) => {};
+    eventListener: (f: EventListener) => {};
     expose: (rootObj: Object | Function, endpoint: Window | Endpoint) => void;
 };
