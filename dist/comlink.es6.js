@@ -64,7 +64,7 @@ export const Comlink = (function () {
     // Intentionally undocumented for now!
     /* export */ function eventListener(f) {
         f[eventListenerSymbol] = true;
-        return f;
+        return (ev) => f(mangleEvent(ev));
     }
     /* export */ function expose(rootObj, endpoint) {
         if (isWindow(endpoint))
@@ -89,11 +89,7 @@ export const Comlink = (function () {
                         return proxy(arg.endpoint);
                     if (arg.type === 'EVENTLISTENER') {
                         const f = proxy(arg.endpoint);
-                        return (e) => f({
-                            targetId: e.target && e.target.id,
-                            targetClassList: e.target && e.target.classList,
-                            detail: e.detail,
-                        });
+                        return (e) => f(mangleEvent(e));
                     }
                     if (arg.type === 'RAW')
                         return arg.value;
@@ -129,6 +125,13 @@ export const Comlink = (function () {
             iresult.id = irequest.id;
             return endpoint.postMessage(iresult, transferableProperties([iresult]));
         });
+    }
+    function mangleEvent(e) {
+        return {
+            targetId: e.target && e.target.id,
+            targetClassList: e.target && e.target.classList,
+            detail: e.detail,
+        };
     }
     function windowEndpoint(w) {
         if (self.constructor.name !== 'Window')
