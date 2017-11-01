@@ -65,8 +65,9 @@ self.Comlink = (function () {
     }
     // Intentionally undocumented for now!
     /* export */ function eventListener(f) {
-        f[eventListenerSymbol] = true;
-        return (ev) => f(mangleEvent(ev));
+        const newF = (ev) => f(mangleEvent(ev));
+        newF[eventListenerSymbol] = true;
+        return newF;
     }
     /* export */ function expose(rootObj, endpoint) {
         if (isWindow(endpoint))
