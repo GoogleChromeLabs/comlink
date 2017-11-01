@@ -172,9 +172,9 @@ export const Comlink = (function() {
   }
 
   // Intentionally undocumented for now!
-  /* export */ function eventListener(f: EventListener): {} {
+  /* export */ function eventListener(f: Function): {} {
     (f as any)[eventListenerSymbol] = true;
-    return f;
+    return (ev: CustomEvent): Object => f(mangleEvent(ev));
   }
 
   /* export */ function expose(rootObj: Exposable, endpoint: Endpoint | Window): void {
@@ -201,11 +201,7 @@ export const Comlink = (function() {
             return proxy(arg.endpoint);
           if (arg.type === 'EVENTLISTENER') {
             const f = proxy(arg.endpoint);
-            return (e: CustomEvent) => f({
-              targetId: e.target && (e.target as any).id,
-              targetClassList: e.target && (e.target as any).classList,
-              detail: e.detail,
-            });
+            return (e: CustomEvent) => f(mangleEvent(e));
           }
           if (arg.type === 'RAW')
             return arg.value;
@@ -240,6 +236,14 @@ export const Comlink = (function() {
       iresult.id = irequest.id;
       return (endpoint as Endpoint).postMessage(iresult, transferableProperties([iresult]));
     });
+  }
+
+  function mangleEvent(e: CustomEvent): Object {
+    return {
+      targetId: e.target && (e.target as any).id,
+      targetClassList: e.target && (e.target as any).classList,
+      detail: e.detail,
+    };
   }
 
   function windowEndpoint(w: Window): Endpoint {
