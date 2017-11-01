@@ -40,7 +40,7 @@ interface InvocationErrorResult {
   error: string;
 }
 
-type WrappedArgument = WrappedRawValue | WrappedProxyValue | WrappedEventListener;
+type WrappedArgument = WrappedRawValue | WrappedProxyValue;
 
 interface WrappedRawValue {
   type: 'RAW';
@@ -49,11 +49,6 @@ interface WrappedRawValue {
 
 interface WrappedProxyValue {
   type: 'PROXY';
-  endpoint: MessagePort;
-}
-
-interface WrappedEventListener {
-  type: 'EVENTLISTENER';
   endpoint: MessagePort;
 }
 
@@ -118,7 +113,6 @@ export const Comlink = (function() {
   let pingPongMessageCounter: number = 0;
   const TRANSFERABLE_TYPES = [ArrayBuffer, MessagePort];
   const proxyValueSymbol = Symbol('proxyValue');
-  const eventListenerSymbol = Symbol('eventListener');
 
   /* export */ function proxy(endpoint: Endpoint | Window): Proxy {
     if (isWindow(endpoint))
@@ -135,14 +129,6 @@ export const Comlink = (function() {
             expose(arg, port1);
             return {
               type: 'PROXY',
-              endpoint: port2,
-            };
-          }
-          if (isEventListener(arg)) {
-            const {port1, port2} = new MessageChannel();
-            expose(arg, port1);
-            return {
-              type: 'EVENTLISTENER',
               endpoint: port2,
             };
           }
@@ -171,12 +157,6 @@ export const Comlink = (function() {
     return obj;
   }
 
-  // Intentionally undocumented for now!
-  /* export */ function eventListener(f: EventListener): {} {
-    (f as any)[eventListenerSymbol] = true;
-    return f;
-  }
-
   /* export */ function expose(rootObj: Exposable, endpoint: Endpoint | Window): void {
     if (isWindow(endpoint))
       endpoint = windowEndpoint(endpoint);
@@ -199,14 +179,6 @@ export const Comlink = (function() {
         args = irequest.argumentsList.map((arg: WrappedArgument): {} => {
           if (arg.type === 'PROXY')
             return proxy(arg.endpoint);
-          if (arg.type === 'EVENTLISTENER') {
-            const f = proxy(arg.endpoint);
-            return (e: CustomEvent) => f({
-              targetId: e.target && (e.target as any).id,
-              targetClassList: e.target && (e.target as any).classList,
-              detail: e.detail,
-            });
-          }
           if (arg.type === 'RAW')
             return arg.value;
           throw Error('Unknown type');
@@ -412,10 +384,6 @@ export const Comlink = (function() {
     return obj && (obj as any)[proxyValueSymbol];
   }
 
-  function isEventListener(obj: {}): Boolean {
-    return obj && (obj as any)[eventListenerSymbol];
-  }
-
   function makeInvocationResult(obj: {}, err: Error | null = null): InvocationResult {
     if (err) {
       return {
@@ -447,5 +415,5 @@ export const Comlink = (function() {
     };
   }
 
-  return {proxy, proxyValue, eventListener, expose};
+  return {proxy, proxyValue, expose};
 })();

@@ -17,7 +17,6 @@ self.Comlink = (function () {
     let pingPongMessageCounter = 0;
     const TRANSFERABLE_TYPES = [ArrayBuffer, MessagePort];
     const proxyValueSymbol = Symbol('proxyValue');
-    const eventListenerSymbol = Symbol('eventListener');
     /* export */ function proxy(endpoint) {
         if (isWindow(endpoint))
             endpoint = windowEndpoint(endpoint);
@@ -33,14 +32,6 @@ self.Comlink = (function () {
                         expose(arg, port1);
                         return {
                             type: 'PROXY',
-                            endpoint: port2,
-                        };
-                    }
-                    if (isEventListener(arg)) {
-                        const { port1, port2 } = new MessageChannel();
-                        expose(arg, port1);
-                        return {
-                            type: 'EVENTLISTENER',
                             endpoint: port2,
                         };
                     }
@@ -63,11 +54,6 @@ self.Comlink = (function () {
         obj[proxyValueSymbol] = true;
         return obj;
     }
-    // Intentionally undocumented for now!
-    /* export */ function eventListener(f) {
-        f[eventListenerSymbol] = true;
-        return f;
-    }
     /* export */ function expose(rootObj, endpoint) {
         if (isWindow(endpoint))
             endpoint = windowEndpoint(endpoint);
@@ -89,14 +75,6 @@ self.Comlink = (function () {
                 args = irequest.argumentsList.map((arg) => {
                     if (arg.type === 'PROXY')
                         return proxy(arg.endpoint);
-                    if (arg.type === 'EVENTLISTENER') {
-                        const f = proxy(arg.endpoint);
-                        return (e) => f({
-                            targetId: e.target && e.target.id,
-                            targetClassList: e.target && e.target.classList,
-                            detail: e.detail,
-                        });
-                    }
                     if (arg.type === 'RAW')
                         return arg.value;
                     throw Error('Unknown type');
@@ -288,9 +266,6 @@ self.Comlink = (function () {
     function isProxyValue(obj) {
         return obj && obj[proxyValueSymbol];
     }
-    function isEventListener(obj) {
-        return obj && obj[eventListenerSymbol];
-    }
     function makeInvocationResult(obj, err = null) {
         if (err) {
             return {
@@ -320,5 +295,5 @@ self.Comlink = (function () {
             obj,
         };
     }
-    return { proxy, proxyValue, eventListener, expose };
+    return { proxy, proxyValue, expose };
 })();
