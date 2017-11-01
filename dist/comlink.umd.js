@@ -74,9 +74,8 @@
         }
         // Intentionally undocumented for now!
         /* export */ function eventListener(f) {
-            const newF = (ev) => f(mangleEvent(ev));
-            newF[eventListenerSymbol] = true;
-            return newF;
+            f[eventListenerSymbol] = true;
+            return (ev) => f(mangleEvent(ev));
         }
         /* export */ function expose(rootObj, endpoint) {
             if (isWindow(endpoint))

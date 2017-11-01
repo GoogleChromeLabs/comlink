@@ -333,22 +333,10 @@ describe('Comlink in the same realm', function () {
     const proxy = Comlink.proxy(this.port1);
     const target = eventTarget();
     Comlink.expose(target, this.port2);
-    proxy.addEventListener('my-event', Comlink.eventListener(event => {
+    target.addEventListener('my-event', Comlink.eventListener(event => {
       expect(event.detail).to.equal('detail');
       done();
-    })).then(_ => {
-      target.dispatchEvent(new CustomEvent('my-event', {detail: 'detail'}));
-    });
-  });
-
-  it('will handle remote event listeners', function(done) {
-    const proxy = Comlink.proxy(this.port1);
-    const target = eventTarget();
-    Comlink.expose({f: e => {
-      expect(e.detail).to.equal('detail');
-      done();
-    }}, this.port2);
-    target.addEventListener('my-event', Comlink.eventListener(proxy.f.bind()));
+    }));
     target.dispatchEvent(new CustomEvent('my-event', {detail: 'detail'}));
   });
 

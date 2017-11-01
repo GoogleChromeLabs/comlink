@@ -172,10 +172,9 @@ export const Comlink = (function() {
   }
 
   // Intentionally undocumented for now!
-  /* export */ function eventListener(f: Function) {
-    const newF: EventListener = (ev: CustomEvent): Object => f(mangleEvent(ev));
-    (newF as any)[eventListenerSymbol] = true;
-    return newF;
+  /* export */ function eventListener(f: Function): {} {
+    (f as any)[eventListenerSymbol] = true;
+    return (ev: CustomEvent): Object => f(mangleEvent(ev));
   }
 
   /* export */ function expose(rootObj: Exposable, endpoint: Endpoint | Window): void {
