@@ -11,15 +11,6 @@
  * limitations under the License.
  */
 
-function eventTarget() {
-  const {port1} = new MessageChannel();
-  return {
-    addEventListener: port1.addEventListener.bind(port1),
-    removeEventListener: port1.removeEventListener.bind(port1),
-    dispatchEvent: port1.dispatchEvent.bind(port1),
-  };
-}
-
 class SampleClass {
   constructor() {
     this._counter = 1;
@@ -329,124 +320,9 @@ describe('Comlink in the same realm', function () {
     });
   });
 
-  it('will handle remote event targets', function(done) {
-    const proxy = Comlink.proxy(this.port1);
-    const target = eventTarget();
-    Comlink.expose(target, this.port2);
-    proxy.addEventListener('my-event', Comlink.eventListener(event => {
-      expect(event.detail).to.equal('detail');
-      done();
-    })).then(_ => {
-      target.dispatchEvent(new CustomEvent('my-event', {detail: 'detail'}));
-    });
-  });
-
-  it('will handle remote event listeners', function(done) {
-    const proxy = Comlink.proxy(this.port1);
-    const target = eventTarget();
-    Comlink.expose({f: e => {
-      expect(e.detail).to.equal('detail');
-      done();
-    }}, this.port2);
-    target.addEventListener('my-event', Comlink.eventListener(proxy.f.bind()));
-    target.dispatchEvent(new CustomEvent('my-event', {detail: 'detail'}));
-  });
-
-  it('will handle remote event listeners', function(done) {
-    const proxy = Comlink.proxy(this.port1);
-    const target = eventTarget();
-    Comlink.expose(e => {
-      expect(e.detail).to.equal('detail');
-      done();
-    }, this.port2);
-    target.addEventListener('my-event', Comlink.eventListener(proxy));
-    target.dispatchEvent(new CustomEvent('my-event', {detail: 'detail'}));
-  });
-
   it('will undefined parameters', async function () {
     const proxy = Comlink.proxy(this.port1);
     Comlink.expose({f: _ => 4}, this.port2);
     expect(await proxy.f(undefined)).to.equal(4);
   });
-
-  if (asyncGeneratorSupport())
-    eval(`
-      it('can work with async generators', async function() {
-        const proxy = Comlink.proxy(this.port1);
-        Comlink.expose(async function* () {
-          yield 1;
-          yield 2;
-          yield 3;
-          yield 4;
-        }, this.port2);
-        const it = await proxy();
-
-        expect(await it.next()).to.deep.equal({value: 1, done: false});
-        expect(await it.next()).to.deep.equal({value: 2, done: false});
-        expect(await it.next()).to.deep.equal({value: 3, done: false});
-        expect(await it.next()).to.deep.equal({value: 4, done: false});
-        expect((await it.next()).done).to.equal(true);
-      });
-
-      it('can work with async generators that use the yield value', async function() {
-        const proxy = Comlink.proxy(this.port1);
-        Comlink.expose(async function* () {
-          let str = yield;
-          while(str !== '')
-            str = yield str.length;
-        }, this.port2);
-        const it = await proxy();
-
-        await it.next();
-        expect(await it.next('1')).to.deep.equal({value: 1, done: false});
-        expect(await it.next('22')).to.deep.equal({value: 2, done: false});
-        expect(await it.next('333')).to.deep.equal({value: 3, done: false});
-        expect((await it.next('')).done).to.equal(true);
-      });
-
-      it('can work with async generators that yield a promise', async function() {
-        const proxy = Comlink.proxy(this.port1);
-        Comlink.expose(async function* () {
-          yield new Promise(resolve => setTimeout(_ => resolve(4), 100));
-        }, this.port2);
-        const it = await proxy();
-
-        expect(await it.next()).to.deep.equal({value: 4, done: false});
-        expect((await it.next()).done).to.equal(true);
-      });
-    `);
-
-  if (asyncGeneratorSupport() && forAwaitSupport())
-    eval(`
-      it('can invoke an exported generator with for-await', async function() {
-        const proxy = Comlink.proxy(this.port1);
-        Comlink.expose(async function* () {
-          yield 1;
-          yield 2;
-          yield 3;
-          yield 4;
-        }, this.port2);
-        const it = await proxy();
-
-        let counter = 1;
-        for await(let i of it) {
-          expect(i).to.equal(counter++);
-        }
-      });
-
-      it('can invoke an exported generator with for-await without a temp variable', async function() {
-        const proxy = Comlink.proxy(this.port1);
-        Comlink.expose(async function* () {
-          yield 1;
-          yield 2;
-          yield 3;
-          yield 4;
-        }, this.port2);
-
-        let counter = 1;
-        for await(let i of await proxy()) {
-          expect(i).to.equal(counter++);
-        }
-      });
-    `);
 });

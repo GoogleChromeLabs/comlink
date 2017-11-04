@@ -17,44 +17,36 @@ export interface Endpoint {
   removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: {}): void;
 }
 export type Proxy = Function;
-type InvocationResult = InvocationProxyResult | InvocationObjectResult | InvocationErrorResult;
 type BatchingProxyCallback = (bpcd: BatchingProxyCallbackDescriptor) => {}; // eslint-disable-line no-unused-vars
 type Transferable = MessagePort | ArrayBuffer; // eslint-disable-line no-unused-vars
 type Exposable = Function | Object; // eslint-disable-line no-unused-vars
 
-interface InvocationProxyResult {
+interface InvocationResult {
   id?: string;
-  type: 'PROXY';
-  endpoint: Endpoint;
+  value: WrappedValue;
 }
 
-interface InvocationObjectResult {
-  id?: string;
-  type: 'OBJECT';
-  obj: {};
+type WrappedValue = RawWrappedValue | HandledWrappedValue;
+
+interface PropertyIteratorEntry {
+  value: {};
+  path: string[];
 }
 
-interface InvocationErrorResult {
-  id?: string;
-  type: 'ERROR';
-  error: string;
+interface WrappedChildValue {
+  path: string[];
+  wrappedValue: HandledWrappedValue;
 }
 
-type WrappedArgument = WrappedRawValue | WrappedProxyValue | WrappedEventListener;
-
-interface WrappedRawValue {
+interface RawWrappedValue {
   type: 'RAW';
   value: {};
+  wrappedChildren?: WrappedChildValue[];
 }
 
-interface WrappedProxyValue {
-  type: 'PROXY';
-  endpoint: MessagePort;
-}
-
-interface WrappedEventListener {
-  type: 'EVENTLISTENER';
-  endpoint: MessagePort;
+interface HandledWrappedValue {
+  type: string;
+  value: {};
 }
 
 type BatchingProxyCallbackDescriptor = BPCDGet | BPCDApply | BPCDConstruct | BPCDSet; // eslint-disable-line no-unused-vars
@@ -95,14 +87,14 @@ interface ApplyInvocationRequest {
   id?: string;
   type: 'APPLY';
   callPath: PropertyKey[];
-  argumentsList: WrappedArgument[];
+  argumentsList: WrappedValue[];
 }
 
 interface ConstructInvocationRequest {
   id?: string;
   type: 'CONSTRUCT';
   callPath: PropertyKey[];
-  argumentsList: WrappedArgument[];
+  argumentsList: WrappedValue[];
 }
 
 interface SetInvocationRequest {
@@ -110,59 +102,63 @@ interface SetInvocationRequest {
   type: 'SET';
   callPath: PropertyKey[];
   property: PropertyKey;
-  value: {};
+  value: WrappedValue;
+}
+
+export interface TransferHandler {
+  canHandle: (obj: {}) => Boolean;
+  serialize: (obj: {}) => {};
+  deserialize: (obj: {}) => {};
 }
 
 export const Comlink = (function() {
-  const uid: number = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
-  let pingPongMessageCounter: number = 0;
   const TRANSFERABLE_TYPES = [ArrayBuffer, MessagePort];
+  const uid: number = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
+
   const proxyValueSymbol = Symbol('proxyValue');
-  const eventListenerSymbol = Symbol('eventListener');
+  const proxyTransferHandler: TransferHandler = {
+    canHandle: (obj: {}): Boolean => obj && (obj as any)[proxyValueSymbol],
+    serialize: (obj: {}): {} => {
+      const {port1, port2} = new MessageChannel();
+      expose(obj, port1);
+      return port2;
+    },
+    deserialize: (obj: {}): {} => {
+      return proxy(obj as MessagePort);
+    },
+  };
+
+  const errorTransferHandler = {
+    canHandle: (obj: {}): Boolean => obj && obj instanceof Error,
+    serialize: (obj: {}): {} => (obj as Error).stack || obj.toString(),
+    deserialize: (obj: {}): {} => Error(obj as string),
+  };
+
+  /* export */ const transferHandlers: Map<string, TransferHandler> = new Map([
+    ['PROXY', proxyTransferHandler],
+    ['ERROR', errorTransferHandler],
+  ]);
+
+  let pingPongMessageCounter: number = 0;
 
   /* export */ function proxy(endpoint: Endpoint | Window): Proxy {
     if (isWindow(endpoint))
       endpoint = windowEndpoint(endpoint);
     if (!isEndpoint(endpoint))
       throw Error('endpoint does not have all of addEventListener, removeEventListener and postMessage defined');
+
     activateEndpoint(endpoint);
     return batchingProxy(async (irequest) => {
-      let args: WrappedArgument[] = [];
-      if (irequest.type === 'APPLY' || irequest.type === 'CONSTRUCT') {
-        args = irequest.argumentsList.map((arg: {}): WrappedArgument => {
-          if (isProxyValue(arg)) {
-            const {port1, port2} = new MessageChannel();
-            expose(arg, port1);
-            return {
-              type: 'PROXY',
-              endpoint: port2,
-            };
-          }
-          if (isEventListener(arg)) {
-            const {port1, port2} = new MessageChannel();
-            expose(arg, port1);
-            return {
-              type: 'EVENTLISTENER',
-              endpoint: port2,
-            };
-          }
-          return {
-            type: 'RAW',
-            value: arg,
-          };
-        });
-      }
+      let args: WrappedValue[] = [];
+      if (irequest.type === 'APPLY' || irequest.type === 'CONSTRUCT')
+        args = irequest.argumentsList.map(wrapValue);
       const response = await pingPongMessage(
         endpoint as Endpoint,
         Object.assign({}, irequest, {argumentsList: args}),
         transferableProperties(args)
       );
       const result = response.data as InvocationResult;
-      if (result.type === 'ERROR')
-        throw Error(result.error);
-      if (result.type === 'PROXY')
-        return proxy(result.endpoint);
-      return result.obj;
+      return unwrapValue(result.value);
     });
   }
 
@@ -171,18 +167,12 @@ export const Comlink = (function() {
     return obj;
   }
 
-  // Intentionally undocumented for now!
-  /* export */ function eventListener(f: Function) {
-    const newF: EventListener = (ev: CustomEvent): Object => f(mangleEvent(ev));
-    (newF as any)[eventListenerSymbol] = true;
-    return newF;
-  }
-
   /* export */ function expose(rootObj: Exposable, endpoint: Endpoint | Window): void {
     if (isWindow(endpoint))
       endpoint = windowEndpoint(endpoint);
     if (!isEndpoint(endpoint))
       throw Error('endpoint does not have all of addEventListener, removeEventListener and postMessage defined');
+
     activateEndpoint(endpoint);
     attachMessageHandler(endpoint, async function(event: MessageEvent) {
       if (!event.data.id)
@@ -190,25 +180,12 @@ export const Comlink = (function() {
       const irequest = event.data as InvocationRequest;
       let that = await irequest.callPath.slice(0, -1).reduce((obj, propName) => obj[propName], rootObj as any);
       let obj = await irequest.callPath.reduce((obj, propName) => obj[propName], rootObj as any);
-      const isAsyncGenerator = obj && obj.constructor.name === 'AsyncGeneratorFunction';
       let iresult = obj;
       let ierror;
       let args: {}[] = [];
 
-      // If there is an arguments list, proxy-fy parameters as necessary
-      if (irequest.type === 'APPLY' || irequest.type === 'CONSTRUCT') {
-        args = irequest.argumentsList.map((arg: WrappedArgument): {} => {
-          if (arg.type === 'PROXY')
-            return proxy(arg.endpoint);
-          if (arg.type === 'EVENTLISTENER') {
-            const f = proxy(arg.endpoint);
-            return (e: CustomEvent) => f(mangleEvent(e));
-          }
-          if (arg.type === 'RAW')
-            return arg.value;
-          throw Error('Unknown type');
-        });
-      }
+      if (irequest.type === 'APPLY' || irequest.type === 'CONSTRUCT')
+        args = irequest.argumentsList.map(unwrapValue);
       if (irequest.type === 'APPLY') {
         try {
           iresult = await obj.apply(that, args);
@@ -216,11 +193,9 @@ export const Comlink = (function() {
           ierror = e;
         }
       }
-      if (isAsyncGenerator)
-        iresult = proxyValue(iresult);
       if (irequest.type === 'CONSTRUCT') {
         try {
-          iresult = new obj(...(args || [])); // eslint-disable-line new-cap
+          iresult = new obj(...args); // eslint-disable-line new-cap
           iresult = proxyValue(iresult);
         } catch (e) {
           ierror = e;
@@ -233,18 +208,74 @@ export const Comlink = (function() {
         iresult = true;
       }
 
+      if (ierror)
+        iresult = ierror;
       iresult = makeInvocationResult(iresult, ierror);
       iresult.id = irequest.id;
       return (endpoint as Endpoint).postMessage(iresult, transferableProperties([iresult]));
     });
   }
 
-  function mangleEvent(e: CustomEvent): Object {
+  function wrapValue(arg: {}): WrappedValue {
+    // Is arg itself handled by a TransferHandler?
+    for (const [key, transferHandler] of transferHandlers.entries()) {
+      if (transferHandler.canHandle(arg)) {
+        return {
+          type: key,
+
+          value: transferHandler.serialize(arg),
+        };
+      }
+    }
+
+    // If not, traverse the entire object and find handled values.
+    let wrappedChildren: WrappedChildValue[] = [];
+    for (const item of iterateAllProperties(arg)) {
+      for (const [key, transferHandler] of transferHandlers.entries()) {
+        if (transferHandler.canHandle(item.value)) {
+          wrappedChildren.push({
+            path: item.path,
+            wrappedValue: {
+              type: key,
+              value: item.value,
+            },
+          });
+        }
+      }
+    }
     return {
-      targetId: e.target && (e.target as any).id,
-      targetClassList: e.target && (e.target as any).classList,
-      detail: e.detail,
+      type: 'RAW',
+      value: arg,
+      wrappedChildren,
     };
+  }
+
+  function unwrapValue(arg: WrappedValue): {} {
+    if (transferHandlers.has(arg.type)) {
+      const transferHandler = transferHandlers.get(arg.type)!;
+      return transferHandler.deserialize(arg.value);
+    } else if (isRawWrappedValue(arg)) {
+      for (const wrappedChildValue of (arg.wrappedChildren || [])) {
+        if (!transferHandlers.has(wrappedChildValue.wrappedValue.type))
+          throw Error(`Unknown value type "${arg.type}" at ${wrappedChildValue.path.join('.')}`);
+        const transferHandler = transferHandlers.get(wrappedChildValue.wrappedValue.type)!;
+        const newValue = transferHandler.deserialize(wrappedChildValue.wrappedValue.value);
+        replaceValueInObjectAtPath(arg.value, wrappedChildValue.path, newValue);
+      }
+      return arg.value;
+    } else {
+      throw Error(`Unknown value type "${arg.type}"`);
+    }
+  }
+
+  function replaceValueInObjectAtPath(obj: {}, path: string[], newVal: {}) {
+    const lastKey = path.slice(-1)[0];
+    const lastObj = path.slice(0, -1).reduce((obj: any, key: string) => obj[key], obj);
+    lastObj[lastKey] = newVal;
+  }
+
+  function isRawWrappedValue(arg: WrappedValue): arg is RawWrappedValue {
+    return arg.type === 'RAW';
   }
 
   function windowEndpoint(w: Window): Endpoint {
@@ -276,7 +307,7 @@ export const Comlink = (function() {
     //   endpoint.addEventListener('message', f);
     // if(isOtherWindow(endpoint))
     //   endpoint.addEventListener('message', f);
-    (<any>endpoint).addEventListener('message', f);
+    (endpoint as any).addEventListener('message', f);
   }
 
   function detachMessageHandler(endpoint: Endpoint, f: (e: MessageEvent) => void): void {
@@ -390,67 +421,50 @@ export const Comlink = (function() {
     return TRANSFERABLE_TYPES.some(type => thing instanceof type);
   }
 
-  function* iterateAllProperties(obj: {} | undefined): Iterable<{}> {
-    if (!obj)
+  function* iterateAllProperties(value: {} | undefined, path: string[] = [], visited: WeakSet<{}> | null = null): Iterable<PropertyIteratorEntry> {
+    if (!value)
       return;
-    if (typeof obj === 'string')
+    if (!visited)
+      visited = new WeakSet<{}>();
+    if (visited.has(value))
       return;
-    yield obj;
-    let vals = Object.values(obj);
-    if (Array.isArray(obj))
-      vals = obj;
+    if (typeof value === 'string')
+      return;
+    if (typeof value === 'object')
+      visited.add(value);
+    yield {value, path};
 
-    for (const val of vals)
-      yield* iterateAllProperties(val);
+    let keys = Object.keys(value);
+    for (const key of keys)
+      yield* iterateAllProperties((value as any)[key], [...path, key], visited);
   }
 
   function transferableProperties(obj: {}[] | undefined): Transferable[] {
     const r: Transferable[] = [];
     for (const prop of iterateAllProperties(obj)) {
-      if (isTransferable(prop))
-        r.push(prop);
+      if (isTransferable(prop.value))
+        r.push(prop.value);
     }
     return r;
   }
 
-  function isProxyValue(obj: {}): Boolean {
-    return obj && (obj as any)[proxyValueSymbol];
-  }
-
-  function isEventListener(obj: {}): Boolean {
-    return obj && (obj as any)[eventListenerSymbol];
-  }
-
   function makeInvocationResult(obj: {}, err: Error | null = null): InvocationResult {
-    if (err) {
-      return {
-        type: 'ERROR',
-        error: ('stack' in err) ? err.stack! : err.toString(),
-      };
-    }
-    // TODO We actually need to perform a structured clone tree
-    // walk of the data as we want to allow:
-    // return {foo: proxyValue(foo)};
-    // We also don't want to directly mutate the data as:
-    // class A {
-    //   constructor() { this.b = {b: proxyValue(new B())} }
-    //   method1() { return this.b; }
-    //   method2() { this.b.foo; /* should work */ }
-    // }
-    if (isProxyValue(obj)) {
-      const {port1, port2} = new MessageChannel();
-      expose(obj, port1);
-      return {
-        type: 'PROXY',
-        endpoint: port2,
-      };
+    for (const [type, transferHandler] of transferHandlers.entries()) {
+      if (transferHandler.canHandle(obj)) {
+        const value = transferHandler.serialize(obj);
+        return {
+          value: {type, value},
+        };
+      }
     }
 
     return {
-      type: 'OBJECT',
-      obj,
+      value: {
+        type: 'RAW',
+        value: obj,
+      },
     };
   }
 
-  return {proxy, proxyValue, eventListener, expose};
+  return {proxy, proxyValue, transferHandlers, expose};
 })();
