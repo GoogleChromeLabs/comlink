@@ -1,0 +1,13 @@
+<!doctype html>
+
+<!-- <script src="https://cdn.jsdelivr.net/npm/comlinkjs/comlink.global.min.js"></script> -->
+<script src="../../../dist/comlink.global.min.js"></script>
+<script src="event.transferhandler.js"></script>
+<script>
+  const worker = new Worker('worker.js');
+  const api = Comlink.proxy(worker);
+
+  api.addEventListener('my-event', Comlink.proxyValue(ev => {
+    alert(ev.detail);
+  }));
+</script>
