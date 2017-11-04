@@ -11,8 +11,8 @@
  * limitations under the License.
  */
 
-// importScripts('https://cdn.jsdelivr.net/npm/comlinkjs/comlink.global.min.js');
-importScripts('../../../dist/comlink.global.min.js');
+importScripts('https://cdn.jsdelivr.net/npm/comlinkjs/comlink.global.min.js');
+// importScripts('/dist/comlink.global.min.js');
 importScripts('event.transferhandler.js');
 
 function eventtarget() {

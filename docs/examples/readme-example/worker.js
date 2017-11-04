@@ -12,6 +12,7 @@
  */
 
 importScripts('https://cdn.jsdelivr.net/npm/comlinkjs/comlink.global.min.js');
+// importScripts('/dist/comlink.global.min.js');
 
 class App {
   constructor() {
