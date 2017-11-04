@@ -19,7 +19,7 @@ export interface Endpoint {
 export type Proxy = Function;
 type BatchingProxyCallback = (bpcd: BatchingProxyCallbackDescriptor) => {}; // eslint-disable-line no-unused-vars
 type Transferable = MessagePort | ArrayBuffer; // eslint-disable-line no-unused-vars
-type Exposable = Function | Object; // eslint-disable-line no-unused-vars
+export type Exposable = Function | Object; // eslint-disable-line no-unused-vars
 
 interface InvocationResult {
   id?: string;
