@@ -1,0 +1,15 @@
+<!doctype html>
+Open DevTools
+<script src="https://cdn.jsdelivr.net/npm/comlinkjs/comlink.global.min.js"></script>
+<!-- <script src="/dist/comlink.global.min.js"></script> -->
+<script src="class.transferhandler.js"></script>
+<script src="testclass.js"></script>
+<script>
+  initClassTransferHandler([TestClass]);
+
+  const worker = new Worker('worker.js');
+  const api = Comlink.proxy(worker);
+  const instance = new TestClass();
+
+  api.log(instance);
+</script>
