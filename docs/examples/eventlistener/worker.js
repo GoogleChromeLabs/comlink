@@ -15,18 +15,8 @@ importScripts('https://cdn.jsdelivr.net/npm/comlinkjs/comlink.global.min.js');
 // importScripts('/dist/comlink.global.min.js');
 importScripts('event.transferhandler.js');
 
-function eventtarget() {
-  const {port1} = new MessageChannel();
-  return {
-    addEventListener: port1.addEventListener.bind(port1),
-    removeEventListener: port1.removeEventListener.bind(port1),
-    dispatchEvent: port1.dispatchEvent.bind(port1),
-  };
-}
-
-const thing = eventtarget();
-Comlink.expose(thing, self);
-
-setTimeout(_ => {
-  thing.dispatchEvent(new CustomEvent('my-event', {detail: 'This text was put in an event created in a worker'}));
-}, 2000);
+Comlink.expose({
+  onclick(ev) {
+    console.log(`Click! Button id: ${ev.targetId}, Button classes: ${JSON.stringify(ev.targetClassList)}`);
+  },
+}, self);

@@ -1,1 +1,1 @@
-This example is similar to the one in the top-level README. It shows how to setup Comlink between a website and a worker.
+This example shows how a simple `TransferHandler` can allow to use remote event listeners or event targets.
