@@ -116,6 +116,7 @@ export const Comlink = (function() {
   const uid: number = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
 
   const proxyValueSymbol = Symbol('proxyValue');
+  const throwSymbol = Symbol('throw');
   const proxyTransferHandler: TransferHandler = {
     canHandle: (obj: {}): Boolean => obj && (obj as any)[proxyValueSymbol],
     serialize: (obj: {}): {} => {
@@ -128,15 +129,17 @@ export const Comlink = (function() {
     },
   };
 
-  const errorTransferHandler = {
-    canHandle: (obj: {}): Boolean => obj && obj instanceof Error,
-    serialize: (obj: {}): {} => (obj as Error).stack || obj.toString(),
-    deserialize: (obj: {}): {} => Error(obj as string),
+  const throwTransferHandler = {
+    canHandle: (obj: {}): Boolean => obj && (obj as any)[throwSymbol],
+    serialize: (obj: {}): {} => obj.toString() + '\n' + (obj as any).stack,
+    deserialize: (obj: {}): {} => {
+      throw Error(obj as string);
+    },
   };
 
   /* export */ const transferHandlers: Map<string, TransferHandler> = new Map([
     ['PROXY', proxyTransferHandler],
-    ['ERROR', errorTransferHandler],
+    ['THROW', throwTransferHandler],
   ]);
 
   let pingPongMessageCounter: number = 0;
@@ -181,7 +184,6 @@ export const Comlink = (function() {
       let that = await irequest.callPath.slice(0, -1).reduce((obj, propName) => obj[propName], rootObj as any);
       let obj = await irequest.callPath.reduce((obj, propName) => obj[propName], rootObj as any);
       let iresult = obj;
-      let ierror;
       let args: {}[] = [];
 
       if (irequest.type === 'APPLY' || irequest.type === 'CONSTRUCT')
@@ -190,7 +192,8 @@ export const Comlink = (function() {
         try {
           iresult = await obj.apply(that, args);
         } catch (e) {
-          ierror = e;
+          iresult = e;
+          iresult[throwSymbol] = true;
         }
       }
       if (irequest.type === 'CONSTRUCT') {
@@ -198,7 +201,8 @@ export const Comlink = (function() {
           iresult = new obj(...args); // eslint-disable-line new-cap
           iresult = proxyValue(iresult);
         } catch (e) {
-          ierror = e;
+          iresult = e;
+          iresult[throwSymbol] = true;
         }
       }
       if (irequest.type === 'SET') {
@@ -208,9 +212,7 @@ export const Comlink = (function() {
         iresult = true;
       }
 
-      if (ierror)
-        iresult = ierror;
-      iresult = makeInvocationResult(iresult, ierror);
+      iresult = makeInvocationResult(iresult);
       iresult.id = irequest.id;
       return (endpoint as Endpoint).postMessage(iresult, transferableProperties([iresult]));
     });
@@ -448,7 +450,7 @@ export const Comlink = (function() {
     return r;
   }
 
-  function makeInvocationResult(obj: {}, err: Error | null = null): InvocationResult {
+  function makeInvocationResult(obj: {}): InvocationResult {
     for (const [type, transferHandler] of transferHandlers.entries()) {
       if (transferHandler.canHandle(obj)) {
         const value = transferHandler.serialize(obj);

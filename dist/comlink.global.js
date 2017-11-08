@@ -16,6 +16,7 @@ self.Comlink = (function () {
     const TRANSFERABLE_TYPES = [ArrayBuffer, MessagePort];
     const uid = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
     const proxyValueSymbol = Symbol('proxyValue');
+    const throwSymbol = Symbol('throw');
     const proxyTransferHandler = {
         canHandle: (obj) => obj && obj[proxyValueSymbol],
         serialize: (obj) => {
@@ -27,14 +28,16 @@ self.Comlink = (function () {
             return proxy(obj);
         },
     };
-    const errorTransferHandler = {
-        canHandle: (obj) => obj && obj instanceof Error,
-        serialize: (obj) => obj.stack || obj.toString(),
-        deserialize: (obj) => Error(obj),
+    const throwTransferHandler = {
+        canHandle: (obj) => obj && obj[throwSymbol],
+        serialize: (obj) => obj.toString() + '\n' + obj.stack,
+        deserialize: (obj) => {
+            throw Error(obj);
+        },
     };
     /* export */ const transferHandlers = new Map([
         ['PROXY', proxyTransferHandler],
-        ['ERROR', errorTransferHandler],
+        ['THROW', throwTransferHandler],
     ]);
     let pingPongMessageCounter = 0;
     /* export */ function proxy(endpoint) {
@@ -69,7 +72,6 @@ self.Comlink = (function () {
             let that = await irequest.callPath.slice(0, -1).reduce((obj, propName) => obj[propName], rootObj);
             let obj = await irequest.callPath.reduce((obj, propName) => obj[propName], rootObj);
             let iresult = obj;
-            let ierror;
             let args = [];
             if (irequest.type === 'APPLY' || irequest.type === 'CONSTRUCT')
                 args = irequest.argumentsList.map(unwrapValue);
@@ -78,7 +80,8 @@ self.Comlink = (function () {
                     iresult = await obj.apply(that, args);
                 }
                 catch (e) {
-                    ierror = e;
+                    iresult = e;
+                    iresult[throwSymbol] = true;
                 }
             }
             if (irequest.type === 'CONSTRUCT') {
@@ -87,7 +90,8 @@ self.Comlink = (function () {
                     iresult = proxyValue(iresult);
                 }
                 catch (e) {
-                    ierror = e;
+                    iresult = e;
+                    iresult[throwSymbol] = true;
                 }
             }
             if (irequest.type === 'SET') {
@@ -96,9 +100,7 @@ self.Comlink = (function () {
                 // boolean. To show good will, we return true asynchronously ¯\_(ツ)_/¯
                 iresult = true;
             }
-            if (ierror)
-                iresult = ierror;
-            iresult = makeInvocationResult(iresult, ierror);
+            iresult = makeInvocationResult(iresult);
             iresult.id = irequest.id;
             return endpoint.postMessage(iresult, transferableProperties([iresult]));
         });
@@ -318,7 +320,7 @@ self.Comlink = (function () {
         }
         return r;
     }
-    function makeInvocationResult(obj, err = null) {
+    function makeInvocationResult(obj) {
         for (const [type, transferHandler] of transferHandlers.entries()) {
             if (transferHandler.canHandle(obj)) {
                 const value = transferHandler.serialize(obj);
