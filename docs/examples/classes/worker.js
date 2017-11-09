@@ -13,19 +13,14 @@
 
 importScripts('https://cdn.jsdelivr.net/npm/comlinkjs/comlink.global.min.js');
 // importScripts('/dist/comlink.global.min.js');
+importScripts('class.transferhandler.js');
+importScripts('testclass.js');
 
-class App {
-  constructor() {
-    this._counter = 0;
+initClassTransferHandler([TestClass]);
+
+Comlink.expose({
+  log(instance) {
+    console.log(`instance.x = ${instance.x}`);
+    console.log(`instance.square() = ${instance.square()}`);
   }
-
-  get count() {
-    return this._counter;
-  }
-
-  inc() {
-    this._counter++;
-  }
-}
-
-Comlink.expose({App}, self);
+}, self);

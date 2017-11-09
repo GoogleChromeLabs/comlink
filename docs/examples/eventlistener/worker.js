@@ -13,19 +13,10 @@
 
 importScripts('https://cdn.jsdelivr.net/npm/comlinkjs/comlink.global.min.js');
 // importScripts('/dist/comlink.global.min.js');
+importScripts('event.transferhandler.js');
 
-class App {
-  constructor() {
-    this._counter = 0;
-  }
-
-  get count() {
-    return this._counter;
-  }
-
-  inc() {
-    this._counter++;
-  }
-}
-
-Comlink.expose({App}, self);
+Comlink.expose({
+  onclick(ev) {
+    console.log(`Click! Button id: ${ev.targetId}, Button classes: ${JSON.stringify(ev.targetClassList)}`);
+  },
+}, self);
