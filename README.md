@@ -114,14 +114,14 @@ pass use functions as parameters (e.g. callbacks), make sure to wrap them with
 *) Technically it can be any object with `postMessage`, `addEventListener` and
 `removeEventListener`.
 
-### `expose(rootObj, endpoint)`
+### `Comlink.expose(rootObj, endpoint)`
 
 `expose` is the counter-part to `proxy`. It listens for RPC messages on
 `endpoint` and applies the operations to `rootObj`. Return values of functions
 will be structurally cloned or transfered if they are [transferable]. The same
 restrictions as for `proxy` apply.
 
-### `proxyValue(value)`
+### `Comlink.proxyValue(value)`
 
 If structurally cloning a value is undesired (either for a function parameter or
 a function’s return value), wrapping the value in a `proxyValue` call will proxy
@@ -153,7 +153,7 @@ Comlink. `TransferHandler`s must fulfill the following interface:
 
 - `canHandle(obj)`: Should `true` if this `TransferHandler` is capable of
   (de)serializing the given object.
-- `serialize(obj)`: Serializes `obj` to something structurally cloneable
+- `serialize(obj)`: Serializes `obj` to something structurally cloneable.
 - `deserialize(obj)`: The inverse of `serialize`.
 
 ## Example
