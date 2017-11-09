@@ -223,5 +223,6 @@ have `send` and `addEventListener`.
 [PresentationConnection]: https://developer.mozilla.org/en-US/docs/Web/API/PresentationConnection
 [EventListener example]: https://github.com/GoogleChromeLabs/comlink/tree/master/docs/examples/eventlistener
 [Classes example]: https://github.com/GoogleChromeLabs/comlink/tree/master/docs/examples/classes
+
 ---
 License Apache-2.0
