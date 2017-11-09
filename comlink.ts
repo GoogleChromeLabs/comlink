@@ -17,7 +17,7 @@ export interface Endpoint {
   removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: {}): void;
 }
 export type Proxy = Function;
-type BatchingProxyCallback = (bpcd: BatchingProxyCallbackDescriptor) => {}; // eslint-disable-line no-unused-vars
+type CBProxyCallback = (bpcd: CBProxyCallbackDescriptor) => {}; // eslint-disable-line no-unused-vars
 type Transferable = MessagePort | ArrayBuffer; // eslint-disable-line no-unused-vars
 export type Exposable = Function | Object; // eslint-disable-line no-unused-vars
 
@@ -49,26 +49,26 @@ interface HandledWrappedValue {
   value: {};
 }
 
-type BatchingProxyCallbackDescriptor = BPCDGet | BPCDApply | BPCDConstruct | BPCDSet; // eslint-disable-line no-unused-vars
+type CBProxyCallbackDescriptor = CBPCDGet | CBPCDApply | CBPCDConstruct | CBPCDSet; // eslint-disable-line no-unused-vars
 
-interface BPCDGet {
+interface CBPCDGet {
   type: 'GET';
   callPath: PropertyKey[];
 }
 
-interface BPCDApply {
+interface CBPCDApply {
   type: 'APPLY';
   callPath: PropertyKey[];
   argumentsList: {}[];
 }
 
-interface BPCDConstruct {
+interface CBPCDConstruct {
   type: 'CONSTRUCT';
   callPath: PropertyKey[];
   argumentsList: {}[];
 }
 
-interface BPCDSet {
+interface CBPCDSet {
   type: 'SET';
   callPath: PropertyKey[];
   property: PropertyKey;
@@ -151,7 +151,7 @@ export const Comlink = (function() {
       throw Error('endpoint does not have all of addEventListener, removeEventListener and postMessage defined');
 
     activateEndpoint(endpoint);
-    return batchingProxy(async (irequest) => {
+    return cbProxy(async (irequest) => {
       let args: WrappedValue[] = [];
       if (irequest.type === 'APPLY' || irequest.type === 'CONSTRUCT')
         args = irequest.argumentsList.map(wrapValue);
@@ -348,64 +348,37 @@ export const Comlink = (function() {
     });
   }
 
-  function asyncIteratorSupport(): Boolean {
-    return 'asyncIterator' in Symbol;
-  }
-
-  /**
-   * `batchingProxy` creates a ES6 Proxy that batches `get`s until either
-   * `construct` or `apply` is called. At that point the callback is invoked with
-   * the accumulated call path.
-   */
-  function batchingProxy(cb: BatchingProxyCallback): Proxy {
-    let callPath: PropertyKey[] = [];
+  function cbProxy(cb: CBProxyCallback, callPath: PropertyKey[] = []): Proxy {
     return new Proxy(function() {}, {
       construct(_target, argumentsList, proxy) {
-        const r = cb({
+        return cb({
           type: 'CONSTRUCT',
           callPath,
           argumentsList,
         });
-        callPath = [];
-        return r;
       },
       apply(_target, _thisArg, argumentsList) {
         // We use `bind` as an indicator to have a remote function bound locally.
         // The actual target for `bind()` is currently ignored.
-        if (callPath[callPath.length - 1] === 'bind') {
-          const localCallPath = callPath.slice();
-          callPath = [];
-          return (...args: {}[]) => cb({
-            type: 'APPLY',
-            callPath: localCallPath.slice(0, -1),
-            argumentsList: args,
-          });
-        }
-        const r = cb({
+        if (callPath[callPath.length - 1] === 'bind')
+          return cbProxy(cb, callPath.slice(0, -1));
+        return cb({
           type: 'APPLY',
           callPath,
           argumentsList,
         });
-        callPath = [];
-        return r;
       },
       get(_target, property, proxy) {
         if (property === 'then' && callPath.length === 0) {
           return {then: () => proxy};
-        } else if (asyncIteratorSupport() && property === Symbol.asyncIterator) {
-          // For now, only async generators use `Symbol.asyncIterator` and they
-          // return themselves, so we emulate that behavior here.
-          return () => proxy;
         } else if (property === 'then') {
           const r = cb({
             type: 'GET',
             callPath,
           });
-          callPath = [];
           return Promise.resolve(r).then.bind(r);
         } else {
-          callPath.push(property);
-          return proxy;
+          return cbProxy(cb, callPath.concat(property));
         }
       },
       set(_target, property, value, _proxy): boolean {

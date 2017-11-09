@@ -353,4 +353,20 @@ describe('Comlink in the same realm', function () {
     Comlink.expose({f: _ => 4}, this.port2);
     expect(await proxy.f(undefined)).to.equal(4);
   });
+
+  it('can handle destructuring on the proxy side', async function () {
+    Comlink.expose({
+      a: 4,
+      get b() {
+        return 5
+      },
+      c() {
+        return 6;
+      }
+    }, this.port2);
+    const {a, b, c} = Comlink.proxy(this.port1);
+    expect(await a).to.equal(4);
+    expect(await b).to.equal(5);
+    expect(await c()).to.equal(6);
+  });
 });

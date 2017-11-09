@@ -46,7 +46,7 @@ self.Comlink = (function () {
         if (!isEndpoint(endpoint))
             throw Error('endpoint does not have all of addEventListener, removeEventListener and postMessage defined');
         activateEndpoint(endpoint);
-        return batchingProxy(async (irequest) => {
+        return cbProxy(async (irequest) => {
             let args = [];
             if (irequest.type === 'APPLY' || irequest.type === 'CONSTRUCT')
                 args = irequest.argumentsList.map(wrapValue);
@@ -221,66 +221,39 @@ self.Comlink = (function () {
             endpoint.postMessage(msg, transferables);
         });
     }
-    function asyncIteratorSupport() {
-        return 'asyncIterator' in Symbol;
-    }
-    /**
-     * `batchingProxy` creates a ES6 Proxy that batches `get`s until either
-     * `construct` or `apply` is called. At that point the callback is invoked with
-     * the accumulated call path.
-     */
-    function batchingProxy(cb) {
-        let callPath = [];
+    function cbProxy(cb, callPath = []) {
         return new Proxy(function () { }, {
             construct(_target, argumentsList, proxy) {
-                const r = cb({
+                return cb({
                     type: 'CONSTRUCT',
                     callPath,
                     argumentsList,
                 });
-                callPath = [];
-                return r;
             },
             apply(_target, _thisArg, argumentsList) {
                 // We use `bind` as an indicator to have a remote function bound locally.
                 // The actual target for `bind()` is currently ignored.
-                if (callPath[callPath.length - 1] === 'bind') {
-                    const localCallPath = callPath.slice();
-                    callPath = [];
-                    return (...args) => cb({
-                        type: 'APPLY',
-                        callPath: localCallPath.slice(0, -1),
-                        argumentsList: args,
-                    });
-                }
-                const r = cb({
+                if (callPath[callPath.length - 1] === 'bind')
+                    return cbProxy(cb, callPath.slice(0, -1));
+                return cb({
                     type: 'APPLY',
                     callPath,
                     argumentsList,
                 });
-                callPath = [];
-                return r;
             },
             get(_target, property, proxy) {
                 if (property === 'then' && callPath.length === 0) {
                     return { then: () => proxy };
-                }
-                else if (asyncIteratorSupport() && property === Symbol.asyncIterator) {
-                    // For now, only async generators use `Symbol.asyncIterator` and they
-                    // return themselves, so we emulate that behavior here.
-                    return () => proxy;
                 }
                 else if (property === 'then') {
                     const r = cb({
                         type: 'GET',
                         callPath,
                     });
-                    callPath = [];
                     return Promise.resolve(r).then.bind(r);
                 }
                 else {
-                    callPath.push(property);
-                    return proxy;
+                    return cbProxy(cb, callPath.concat(property));
                 }
             },
             set(_target, property, value, _proxy) {
