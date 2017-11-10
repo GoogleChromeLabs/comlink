@@ -23,7 +23,7 @@ or use a CDN like [delivrjs]:
 https://cdn.jsdelivr.net/npm/comlinkjs@2.3.0/comlink.es6.min.js
 ```
 
-**Size**: ~3.1k, ~1.3k gzip’d.
+**Size**: ~4.0k, ~1.6k gzip’d.
 
 ## Example
 
