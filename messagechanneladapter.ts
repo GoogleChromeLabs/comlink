@@ -43,8 +43,8 @@ export const MessageChannelAdapter = (function() {
       smc.send(payload);
     };
 
-    smc.addEventListener('message', (event: MessageEvent) => {
-      const data = JSON.parse(event.data) as Message;
+    smc.addEventListener('message', (event: Event): void => {
+      const data = JSON.parse((event as MessageEvent).data) as Message;
       if (!id)
         id = data.id;
       if (id !== data.id)

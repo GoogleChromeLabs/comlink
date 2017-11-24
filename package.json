@@ -6,7 +6,7 @@
   "module": "comlink.es6.js",
   "typings": "comlink.d.ts",
   "scripts": {
-    "test": "npm run linter && npm run unittest",
+    "test": "npm run linter && npm run unittest && npm run build",
     "unittest": "karma start",
     "linter": "eslint comlink.ts && eslint messagechanneladapter.ts",
     "watchtest": "karma start --no-single-run --browsers ChromeHeadless",
