@@ -131,16 +131,19 @@ around:
 ```js
 // main.js
 const worker = new Worker('worker.js');
-const doStuff = Comlink.proxy(worker);
-await doStuff(result => console.log(result));
+const doStuffInWorker = Comlink.proxy(worker);
+function callback (result) {
+  console.log(result);
+}
+await doStuffInWorker(proxyValue(callback));
 ```
 
 ```js
 // worker.js
-Comlink.expose(async function (f) {
-  const result = /* omg so expensive */;
-  /* f is a proxy, as if created by proxy(). So we need to use `await. */
-  await f(result);
+Comlink.expose(async function (callback) {
+  const result = doSomethingTimeConsuming();
+  // `callback` is a proxy, created with proxyValue(), so it needs to be awaited.
+  await callback(result);
 }, self);
 ```
 
