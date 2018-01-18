@@ -46,7 +46,7 @@
     "karma-mocha": "1.3.0",
     "karma-safari-launcher": "1.0.0",
     "karma-typescript": "3.0.9",
-    "mocha": "4.1.0",
+    "mocha": "5.0.0",
     "typescript": "2.6.2",
     "typescript-eslint-parser": "12.0.0"
   },
