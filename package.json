@@ -37,7 +37,7 @@
   "devDependencies": {
     "babili": "0.1.4",
     "chai": "4.1.2",
-    "eslint": "4.16.0",
+    "eslint": "4.17.0",
     "eslint-config-google": "0.9.1",
     "karma": "2.0.0",
     "karma-chai": "0.1.0",
