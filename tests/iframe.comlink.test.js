@@ -22,7 +22,7 @@ describe('Comlink across iframes', function () {
 
   afterEach(function () {
     this.ifr.remove();
-  })
+  });
 
   it('can communicate', async function () {
     const proxy = Comlink.proxy(this.ifr.contentWindow);
