@@ -1,0 +1,24 @@
+<!doctype html>
+
+<script src="https://cdn.jsdelivr.net/npm/comlinkjs/comlink.global.min.js"></script>
+<!-- <script src="/dist/comlink.global.min.js"></script> -->
+
+<script>
+  let instance1, instance2;
+  async function showState() {
+    alert(`instance1.counter = ${await instance1.counter},
+      instance2.counter = ${await instance2.counter}`);
+  }
+
+  async function init() {
+    const MyClass = Comlink.proxy(new Worker('worker.js'));
+    instance1 = await new MyClass();
+    instance2 = await new MyClass(42);
+    await showState();
+    await instance1.increment();
+    await instance2.increment(23);
+    await showState();
+  };
+
+  init();
+</script>

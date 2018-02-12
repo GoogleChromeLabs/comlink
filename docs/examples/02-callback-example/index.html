@@ -1,0 +1,17 @@
+<!doctype html>
+
+<script src="https://cdn.jsdelivr.net/npm/comlinkjs/comlink.global.min.js"></script>
+<!-- <script src="/dist/comlink.global.min.js"></script> -->
+
+<script>
+  function callback(value) {
+    alert(`Result: ${value}`);
+  }
+
+  async function init() {
+    const remoteFunction = Comlink.proxy(new Worker('worker.js'));
+    await remoteFunction(Comlink.proxyValue(callback))
+  };
+
+  init();
+</script>

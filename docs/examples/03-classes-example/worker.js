@@ -14,18 +14,18 @@
 importScripts('https://cdn.jsdelivr.net/npm/comlinkjs/comlink.global.min.js');
 // importScripts('/dist/comlink.global.min.js');
 
-class App {
-  constructor() {
-    this._counter = 0;
+class MyClass {
+  constructor(init = 0) {
+    this._counter = init;
   }
 
-  get count() {
+  get counter() {
     return this._counter;
   }
 
-  inc() {
-    this._counter++;
+  increment(delta = 1) {
+    this._counter += delta;
   }
 }
 
-Comlink.expose({App}, self);
+Comlink.expose(MyClass, self);

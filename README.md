@@ -4,15 +4,14 @@ Comlink’s goal is to make [WebWorkers][WebWorker] enjoyable. Instead of using 
 ```js
 // main.js
 const MyClass = Comlink.proxy(new Worker('worker.js'));
-// `instance` is an instance of `MyClass`
-// that lives in the worker!
+// `instance` is an instance of `MyClass` that lives in the worker!
 const instance = await new MyClass();
-await instance.logSomething(); // logs “myValue = 4”
+await instance.logSomething(); // logs “myValue = 42”
 ```
 
 ```js
 // worker.js
-const myValue = 4;
+const myValue = 42;
 class MyClass {
   logSomething() {
     console.log(`myValue = ${myValue}`);
@@ -35,9 +34,9 @@ Comlink.expose(MyClass, self);
 ## Introduction
 WebWorkers are a web API that allow you to run code in a separate thread. To communicate with another thread, WebWorkers offer the `postMessage` API. You can send messages in form of [transferable] JavaScript objects using `myWorker.postMessage(someObject)`, triggering a `message` event inside the worker.
 
-Comlink turns this messaged-based API into a something more developer-friendly: Values from one thread can be used within the other thread and vice versa.
+Comlink turns this messaged-based API into a something more developer-friendly: Values from one thread can be used within the other thread (and vice versa) just like local values.
 
-Comlink can be used with anything that works with `postMessage` like windows, iframes and ServiceWorkers.
+Comlink can be used with anything that offers `postMessage` like windows, iframes and ServiceWorkers.
 
 ## Download
 You can download Comlink from the [dist folder][dist]. Alternatively, you can
@@ -69,13 +68,9 @@ The Comlink module is provided in 3 different formats:
   // ...
   ```
 
-* **“global”**: This package adds a `Comlink` to the global scope (i.e. `self`). Useful for workers or projects without a module loader.
+* **“global”**: This package adds `Comlink` to the global scope (i.e. `self`). Useful for workers or projects without a module loader.
 
 * **“umd”**: This package uses [UMD] so it is compatible with AMD, CommonJS and requireJS.
-
-These packages can be mixed and matched. A worker using `global` can be
-connected to a window using `es6`. For the sake of network conservation, I do
-recommend sticking to one format, though.
 
 ## API
 
@@ -112,16 +107,16 @@ await api.setXto4(obj);
 console.log(obj.x); // logs 0
 ```
 
-If the value should not be copied but instead be proxied, use `Comlink.proxyValue`:
+The worker receives a copy of `obj`, so any mutation of `obj` done by the worker won’t affect the original object. If the value should _not_ be copied but instead be proxied, use `Comlink.proxyValue`:
 
 ```diff
 - await api.setXto4(obj);
 + await api.setXto4(Comlink.proxyValue(obj));
 ```
 
-`console.log(obj.x);` will now log 4.
+`console.log(obj.x)` will now log 4.
 
-Keep in mind that functions cannot be copied. So unless they are used in combination with `Comlink.proxyValue`, they will get discarded during copy.
+Keep in mind that functions cannot be copied. Unless they are used in combination with `Comlink.proxyValue`, they will get discarded during copy.
 
 [WebWorker]: https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API
 [UMD]: https://github.com/umdjs/umd
