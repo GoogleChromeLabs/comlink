@@ -1,0 +1,18 @@
+<!doctype html>
+
+<script src="https://cdn.jsdelivr.net/npm/comlinkjs/comlink.global.min.js"></script>
+<!-- <script src="/dist/comlink.global.min.js"></script> -->
+
+<script>
+  async function init() {
+    const worker = new Worker('worker.js');
+    // WebWorkers use `postMessage` and therefore work with Comlink.
+    const obj = Comlink.proxy(worker);
+
+    alert(`Counter: ${await obj.counter}`);
+    await obj.inc();
+    alert(`Counter: ${await obj.counter}`);
+  };
+
+  init();
+</script>

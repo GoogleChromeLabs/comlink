@@ -1,15 +1,44 @@
 # Comlink
-A tiny RPC library that works on windows, iframes, WebWorkers and
-ServiceWorkers.
+Comlink’s goal is to make [WebWorkers][WebWorker] enjoyable. Instead of using `postMessage` to send messages back and forth, Comlink allows you to invoke functions, pass callbacks, add event listeners and create new instances of classes.
 
-**With Comlink you can work on values from another JavaScript realm
-(like a Worker or an iframe) as if it was a local value. Just use `await`
-whenever using the remote value.**
+```js
+// main.js
+const MyClass = Comlink.proxy(new Worker('worker.js'));
+// `instance` is an instance of `MyClass` that lives in the worker!
+const instance = await new MyClass();
+await instance.logSomething(); // logs “myValue = 42”
+```
 
-Anything that works with `postMessage` can be used as a communication channel.
+```js
+// worker.js
+const myValue = 42;
+class MyClass {
+  logSomething() {
+    console.log(`myValue = ${myValue}`);
+  }
+}
+Comlink.expose(MyClass, self);
+```
 
-## Usage
+## Browsers support & bundle size
 
+![Chrome 56+](https://img.shields.io/badge/Chrome-56+-green.svg?style=flat-square)
+![Edge 15+](https://img.shields.io/badge/Edge-15+-green.svg?style=flat-square)
+![Firefox 52+](https://img.shields.io/badge/Firefox-52+-green.svg?style=flat-square)
+![Opera 43+](https://img.shields.io/badge/Opera-43+-green.svg?style=flat-square)
+![Safari 10.1+](https://img.shields.io/badge/Safari-10.1+-green.svg?style=flat-square)
+![Samsung Internet 6.0+](https://img.shields.io/badge/Samsung_Internet-6.0+-green.svg?style=flat-square)
+
+**Size**: ~3.9k, ~1.6k gzip’d
+
+## Introduction
+WebWorkers are a web API that allow you to run code in a separate thread. To communicate with another thread, WebWorkers offer the `postMessage` API. You can send messages in form of [transferable] JavaScript objects using `myWorker.postMessage(someObject)`, triggering a `message` event inside the worker.
+
+Comlink turns this messaged-based API into a something more developer-friendly: Values from one thread can be used within the other thread (and vice versa) just like local values.
+
+Comlink can be used with anything that offers `postMessage` like windows, iframes and ServiceWorkers.
+
+## Download
 You can download Comlink from the [dist folder][dist]. Alternatively, you can
 install it via npm
 
@@ -23,62 +52,15 @@ or use a CDN like [delivrjs]:
 https://cdn.jsdelivr.net/npm/comlinkjs@2.3.0/comlink.es6.min.js
 ```
 
-**Size**: ~4.0k, ~1.6k gzip’d.
+## Examples
 
-## Example
-
-There’s more examples in the [examples directory][examples].
-
-```html
-<-- index.html -->
-<!doctype html>
-<script src="../../dist/comlink.global.js"></script>
-<script>
-  const worker = new Worker('worker.js');
-  // WebWorkers use `postMessage` and therefore work with Comlink.
-  const api = Comlink.proxy(worker);
-
-  async function init() {
-    // Note the usage of `await`:
-    const app = await new api.App();
-
-    alert(`Counter: ${await app.count}`);
-    await app.inc();
-    alert(`Counter: ${await app.count}`);
-  };
-
-  init();
-</script>
-```
-
-```js
-// worker.js
-importScripts('../dist/comlink.global.js');
-
-class App {
-  constructor() {
-    this._counter = 0;
-  }
-
-  get count() {
-    return this._counter;
-  }
-
-  inc() {
-    this._counter++;
-  }
-}
-
-Comlink.expose({App}, self);
-```
+There’s a collection of examples in the [examples directory][examples].
 
 ## Module formats
 
 The Comlink module is provided in 3 different formats:
 
-* **“es6”**: This package uses the native ES6 module format. Due to some
-  necessary hackery, the module exports a `Comlink` object. Import it as
-  follows:
+* **“es6”**: This package uses the native ES6 module format. Import it as follows:
 
   ```js
   import {Comlink} from '../dist/comlink.es6.js';
@@ -86,14 +68,9 @@ The Comlink module is provided in 3 different formats:
   // ...
   ```
 
-* **“global”**: This package adds a `Comlink` namespace on `self`. Useful for
-  workers or projects without a module loader.
-* **“umd”**: This package uses [UMD] so it is compatible with AMD, CommonJS
-  and requireJS.
+* **“global”**: This package adds `Comlink` to the global scope (i.e. `self`). Useful for workers or projects without a module loader.
 
-These packages can be mixed and matched. A worker using `global` can be
-connected to a window using `es6`. For the sake of network conservation, I do
-recommend sticking to one format, though.
+* **“umd”**: This package uses [UMD] so it is compatible with AMD, CommonJS and requireJS.
 
 ## API
 
@@ -101,131 +78,53 @@ The Comlink module exports 3 functions:
 
 ### `Comlink.proxy(endpoint)`
 
-`proxy` creates an ES6 proxy and sends all operations performed on that proxy
-through the channel behind `endpoint`. `endpoint` can be a `Window`, a `Worker`
-or a `MessagePort`.* The other endpoint of the channel should be passed to
-`expose`.
+> Returns the value that is exposed on the other side of `endpoint`.
 
-Note that all parameters for a function or method invocations will be
-structurally cloned or transferred if they are [transferable]. If you want to
-pass use functions as parameters (e.g. callbacks), make sure to wrap them with
-`proxyValue` (see below).
+`proxy` creates an ES6 proxy and sends all operations performed on that proxy through `endpoint`. `endpoint` can be a `Window`, a `Worker` or a `MessagePort`.* The other endpoint of the channel should be passed to `Comlink.expose`.
+
+If you invoke function, all parameters will be structurally cloned or transferred if they are [transferable]. If you want to pass a function as a parameters (e.g. callbacks), make sure to use `proxyValue` (see below). Same applies to the return value of a function.
 
 *) Technically it can be any object with `postMessage`, `addEventListener` and
 `removeEventListener`.
 
-### `Comlink.expose(rootObj, endpoint)`
+### `Comlink.expose(obj, endpoint)`
 
-`expose` is the counter-part to `proxy`. It listens for RPC messages on
-`endpoint` and applies the operations to `rootObj`. Return values of functions
-will be structurally cloned or transfered if they are [transferable]. The same
-restrictions as for `proxy` apply.
+> Exposes `obj` to `endpoint`. Use `Comlink.proxy` on the other end of `endpoint`.
+
+`expose` is the counter-part to `proxy`. It listens for RPC messages on `endpoint` and applies the operations to `obj`. Return values of functions will be structurally cloned or transfered if they are [transferable].
 
 ### `Comlink.proxyValue(value)`
 
-If structurally cloning a value is undesired (either for a function parameter or
-a function’s return value), wrapping the value in a `proxyValue` call will proxy
-that value instead. This is necessary for callback functions being passed
-around:
+> Makes sure a parameter or return value is proxied, not copied.
+
+By default, all parameters to a function are copied (structural clone):
 
 ```js
 // main.js
-const worker = new Worker('worker.js');
-const doStuffInWorker = Comlink.proxy(worker);
-function callback (result) {
-  console.log(result);
-}
-await doStuffInWorker(proxyValue(callback));
+const api = Comlink.proxy(new Worker('worker.js'));
+const obj = {x: 0};
+await api.setXto4(obj);
+console.log(obj.x); // logs 0
 ```
 
-```js
-// worker.js
-Comlink.expose(async function (callback) {
-  const result = doSomethingTimeConsuming();
-  // `callback` is a proxy, created with proxyValue(), so it needs to be awaited.
-  await callback(result);
-}, self);
+The worker receives a copy of `obj`, so any mutation of `obj` done by the worker won’t affect the original object. If the value should _not_ be copied but instead be proxied, use `Comlink.proxyValue`:
+
+```diff
+- await api.setXto4(obj);
++ await api.setXto4(Comlink.proxyValue(obj));
 ```
 
-# TransferHandler
+`console.log(obj.x)` will now log 4.
 
-Some types are neither transferable not structurally cloneable and can therefore
-not be `postMessage`’d. To remedy this, a `TransferHandler` offers a hook into the
-serialization and deserialization process to allow these types to be used with
-Comlink. `TransferHandler`s must fulfill the following interface:
+Keep in mind that functions cannot be copied. Unless they are used in combination with `Comlink.proxyValue`, they will get discarded during copy.
 
-- `canHandle(obj)`: Should `true` if this `TransferHandler` is capable of
-  (de)serializing the given object.
-- `serialize(obj)`: Serializes `obj` to something structurally cloneable.
-- `deserialize(obj)`: The inverse of `serialize`.
-
-## Example
-
-One example would be that using an instance of a class as a parameter to a remote
-function will invoke the function with a simple JSON object. The prototype gets
-lost when the instance gets structurally cloned. Let’s say the class
-`ComplexNumber` is used for some calculations. To make sure instances
-of `ComplexNumber` are handled correctly, the following `TransferHandler` can be
-used:
-
-```js
-const complexNumberTransferHandler = {
-  canHandle(obj) {
-    return obj instanceof ComplexNumber;
-  },
-  serialize(obj) {
-    return {re: obj.re, im: obj.im};
-  }
-  deserialize(obj) {
-    return new ComplexNumber(obj.re, obj.im);
-  }
-};
-```
-
-This new `TransferHandler` can be registered with Comlink like this:
-
-```js
-Comlink.transferHandlers.set('COMPLEX', complexNumberTransferHandler);
-```
-
-The string can be arbitrary but must be unique across all `TransferHandler`s.
-
-**Note:** The `TransferHandler` must be registered on _both_ sides of the
-Comlink channel.
-
-To see a more generic example see the [EventListener example] or the
-[Classes example].
-
-# MessageChannelAdapter
-
-`MessageChannelAdapter` is a small utility function that turns string-based
-communication channels – like a [WebSocket], [RTCDataChannel] or
-[PresentationConnection] – into a Comlink-compatible `postMessage`-based API
-that can transfer `MessagePorts`.
-
-## Usage
-
-See the [examples], specifically WebRTC and Presentation API.
-
-## API
-
-### `MessageChannelAdapter.wrap(endpoint)`
-
-`wrap` returns a `MessagePort` that serializes messages using `JSON.stringify`
-and handles transferred `MessagePort`s automatically. `endpoint` is expected to
-have `send` and `addEventListener`.
-
+[WebWorker]: https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API
 [UMD]: https://github.com/umdjs/umd
 [transferable]: https://developer.mozilla.org/en-US/docs/Web/API/Transferable
 [MessagePort]: https://developer.mozilla.org/en-US/docs/Web/API/MessagePort
 [examples]: https://github.com/GoogleChromeLabs/comlink/tree/master/docs/examples
 [dist]: https://github.com/GoogleChromeLabs/comlink/tree/master/dist
 [delivrjs]: https://cdn.jsdelivr.net/
-[WebSocket]: https://developer.mozilla.org/en-US/docs/Web/API/WebSocket
-[RTCDataChannel]: https://developer.mozilla.org/en-US/docs/Web/API/RTCDataChannel
-[PresentationConnection]: https://developer.mozilla.org/en-US/docs/Web/API/PresentationConnection
-[EventListener example]: https://github.com/GoogleChromeLabs/comlink/tree/master/docs/examples/eventlistener
-[Classes example]: https://github.com/GoogleChromeLabs/comlink/tree/master/docs/examples/classes
 
 ---
 License Apache-2.0
