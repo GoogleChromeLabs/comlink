@@ -165,7 +165,7 @@ export const Comlink = (function() {
     });
   }
 
-  /* export */ function proxyValue(obj: {}): {} {
+  /* export */ function proxyValue<T>(obj: T): T {
     (obj as any)[proxyValueSymbol] = true;
     return obj;
   }

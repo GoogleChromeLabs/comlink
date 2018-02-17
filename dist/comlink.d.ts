@@ -24,7 +24,7 @@ export interface TransferHandler {
 }
 export declare const Comlink: {
     proxy: (endpoint: Window | Endpoint) => Function;
-    proxyValue: (obj: {}) => {};
+    proxyValue: <T>(obj: T) => T;
     transferHandlers: Map<string, TransferHandler>;
     expose: (rootObj: Exposable, endpoint: Window | Endpoint) => void;
 };
