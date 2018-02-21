@@ -48,7 +48,7 @@
     "karma-typescript": "3.0.12",
     "mocha": "5.0.1",
     "typescript": "2.7.2",
-    "typescript-eslint-parser": "13.0.0"
+    "typescript-eslint-parser": "14.0.0"
   },
   "dependencies": {}
 }
