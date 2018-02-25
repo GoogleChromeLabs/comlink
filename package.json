@@ -1,6 +1,6 @@
 {
   "name": "comlinkjs",
-  "version": "2.3.2",
+  "version": "2.3.3",
   "description": "",
   "main": "comlink.umd.js",
   "module": "comlink.es6.js",
