@@ -239,11 +239,15 @@ export const Comlink = (function() {
             path: item.path,
             wrappedValue: {
               type: key,
-              value: item.value,
+              value: transferHandler.serialize(item.value),
             },
           });
         }
       }
+    }
+    for (const wrappedChild of wrappedChildren) {
+      const container = wrappedChild.path.slice(0, -1).reduce((obj, key) => obj[key], arg as any);
+      container[wrappedChild.path[wrappedChild.path.length - 1]] = null;
     }
     return {
       type: 'RAW',

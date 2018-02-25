@@ -348,6 +348,18 @@ describe('Comlink in the same realm', function () {
 
   });
 
+  it('will proxy values in an array', function(done) {
+    const proxy = Comlink.proxy(this.port1);
+    const obj = {
+      async someFunc(v) {
+        await v[0]();
+      }
+    };
+    Comlink.expose(obj, this.port2);
+
+    proxy.someFunc([Comlink.proxyValue(_ => done())]);
+  });
+
   it('will handle undefined parameters', async function () {
     const proxy = Comlink.proxy(this.port1);
     Comlink.expose({f: _ => 4}, this.port2);
