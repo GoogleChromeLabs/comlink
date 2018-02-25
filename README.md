@@ -1,6 +1,8 @@
 # Comlink
 Comlink’s goal is to make [WebWorkers][WebWorker] enjoyable. Instead of using `postMessage` to send messages back and forth, Comlink allows you to invoke functions, pass callbacks, add event listeners and create new instances of classes.
 
+> Note: Comlink’s goal is to be a building-block for higher-level abstraction libraries. For example, take a look at [Clooney].
+
 ```js
 // main.js
 const MyClass = Comlink.proxy(new Worker('worker.js'));
@@ -118,6 +120,7 @@ The worker receives a copy of `obj`, so any mutation of `obj` done by the worker
 
 Keep in mind that functions cannot be copied. Unless they are used in combination with `Comlink.proxyValue`, they will get discarded during copy.
 
+[Clooney]: https://github.com/GoogleChromeLabs/clooney
 [WebWorker]: https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API
 [UMD]: https://github.com/umdjs/umd
 [transferable]: https://developer.mozilla.org/en-US/docs/Web/API/Transferable
