@@ -33,6 +33,10 @@
       "email": "ikilpatrick@google.com"
     }
   ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/GoogleChromeLabs/comlink.git"
+  },
   "license": "Apache-2.0",
   "devDependencies": {
     "babel-minify": "0.3.0",
