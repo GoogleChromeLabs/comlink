@@ -413,7 +413,7 @@ export const Comlink = (function() {
       visited.add(value);
     yield {value, path};
 
-    let keys = Object.keys(value);
+    const keys = ArrayBuffer.isView(value) ? [] : Object.keys(value);
     for (const key of keys)
       yield* iterateAllProperties((value as any)[key], [...path, key], visited);
   }
