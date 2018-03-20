@@ -293,8 +293,10 @@
                 return;
             if (typeof value === 'object')
                 visited.add(value);
+            if (ArrayBuffer.isView(value))
+                return;
             yield { value, path };
-            let keys = Object.keys(value);
+            const keys = Object.keys(value);
             for (const key of keys)
                 yield* iterateAllProperties(value[key], [...path, key], visited);
         }
