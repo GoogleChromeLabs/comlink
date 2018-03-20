@@ -4,7 +4,7 @@
   "description": "",
   "main": "comlink.umd.js",
   "module": "comlink.es6.js",
-  "typings": "comlink.d.ts",
+  "types": "comlink.d.ts",
   "scripts": {
     "test": "npm run linter && npm run unittest && npm run build",
     "unittest": "karma start",
