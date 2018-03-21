@@ -1,5 +1,5 @@
 # Comlink
-Comlink’s goal is to make [WebWorkers][WebWorker] enjoyable. Instead of using `postMessage` to send messages back and forth, Comlink allows you to invoke functions, pass callbacks, add event listeners and create new instances of classes.
+Comlink’s goal is to make [WebWorkers][WebWorker] enjoyable. Comlink removes the mental barrier of thinking about `postMessage` and hides the fact that you are working with workers.
 
 > Note: Comlink’s goal is to be a building-block for higher-level abstraction libraries. For example, take a look at [Clooney].
 
