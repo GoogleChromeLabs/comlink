@@ -24,8 +24,8 @@
     exports.Comlink = (function () {
         const TRANSFERABLE_TYPES = [ArrayBuffer, MessagePort];
         const uid = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
-        const proxyValueSymbol = Symbol('proxyValue');
-        const throwSymbol = Symbol('throw');
+        const proxyValueSymbol = Symbol("proxyValue");
+        const throwSymbol = Symbol("throw");
         const proxyTransferHandler = {
             canHandle: (obj) => obj && obj[proxyValueSymbol],
             serialize: (obj) => {
@@ -35,29 +35,29 @@
             },
             deserialize: (obj) => {
                 return proxy(obj);
-            },
+            }
         };
         const throwTransferHandler = {
             canHandle: (obj) => obj && obj[throwSymbol],
-            serialize: (obj) => obj.toString() + '\n' + obj.stack,
+            serialize: (obj) => obj.toString() + "\n" + obj.stack,
             deserialize: (obj) => {
                 throw Error(obj);
-            },
+            }
         };
         /* export */ const transferHandlers = new Map([
-            ['PROXY', proxyTransferHandler],
-            ['THROW', throwTransferHandler],
+            ["PROXY", proxyTransferHandler],
+            ["THROW", throwTransferHandler]
         ]);
         let pingPongMessageCounter = 0;
         /* export */ function proxy(endpoint) {
             if (isWindow(endpoint))
                 endpoint = windowEndpoint(endpoint);
             if (!isEndpoint(endpoint))
-                throw Error('endpoint does not have all of addEventListener, removeEventListener and postMessage defined');
+                throw Error("endpoint does not have all of addEventListener, removeEventListener and postMessage defined");
             activateEndpoint(endpoint);
             return cbProxy(async (irequest) => {
                 let args = [];
-                if (irequest.type === 'APPLY' || irequest.type === 'CONSTRUCT')
+                if (irequest.type === "APPLY" || irequest.type === "CONSTRUCT")
                     args = irequest.argumentsList.map(wrapValue);
                 const response = await pingPongMessage(endpoint, Object.assign({}, irequest, { argumentsList: args }), transferableProperties(args));
                 const result = response.data;
@@ -72,19 +72,21 @@
             if (isWindow(endpoint))
                 endpoint = windowEndpoint(endpoint);
             if (!isEndpoint(endpoint))
-                throw Error('endpoint does not have all of addEventListener, removeEventListener and postMessage defined');
+                throw Error("endpoint does not have all of addEventListener, removeEventListener and postMessage defined");
             activateEndpoint(endpoint);
             attachMessageHandler(endpoint, async function (event) {
                 if (!event.data.id)
                     return;
                 const irequest = event.data;
-                let that = await irequest.callPath.slice(0, -1).reduce((obj, propName) => obj[propName], rootObj);
+                let that = await irequest.callPath
+                    .slice(0, -1)
+                    .reduce((obj, propName) => obj[propName], rootObj);
                 let obj = await irequest.callPath.reduce((obj, propName) => obj[propName], rootObj);
                 let iresult = obj;
                 let args = [];
-                if (irequest.type === 'APPLY' || irequest.type === 'CONSTRUCT')
+                if (irequest.type === "APPLY" || irequest.type === "CONSTRUCT")
                     args = irequest.argumentsList.map(unwrapValue);
-                if (irequest.type === 'APPLY') {
+                if (irequest.type === "APPLY") {
                     try {
                         iresult = await obj.apply(that, args);
                     }
@@ -93,7 +95,7 @@
                         iresult[throwSymbol] = true;
                     }
                 }
-                if (irequest.type === 'CONSTRUCT') {
+                if (irequest.type === "CONSTRUCT") {
                     try {
                         iresult = new obj(...args); // eslint-disable-line new-cap
                         iresult = proxyValue(iresult);
@@ -103,7 +105,7 @@
                         iresult[throwSymbol] = true;
                     }
                 }
-                if (irequest.type === 'SET') {
+                if (irequest.type === "SET") {
                     obj[irequest.property] = irequest.value;
                     // FIXME: ES6 Proxy Handler `set` methods are supposed to return a
                     // boolean. To show good will, we return true asynchronously ¯\_(ツ)_/¯
@@ -120,7 +122,7 @@
                 if (transferHandler.canHandle(arg)) {
                     return {
                         type: key,
-                        value: transferHandler.serialize(arg),
+                        value: transferHandler.serialize(arg)
                     };
                 }
             }
@@ -133,20 +135,22 @@
                             path: item.path,
                             wrappedValue: {
                                 type: key,
-                                value: transferHandler.serialize(item.value),
-                            },
+                                value: transferHandler.serialize(item.value)
+                            }
                         });
                     }
                 }
             }
             for (const wrappedChild of wrappedChildren) {
-                const container = wrappedChild.path.slice(0, -1).reduce((obj, key) => obj[key], arg);
+                const container = wrappedChild.path
+                    .slice(0, -1)
+                    .reduce((obj, key) => obj[key], arg);
                 container[wrappedChild.path[wrappedChild.path.length - 1]] = null;
             }
             return {
-                type: 'RAW',
+                type: "RAW",
                 value: arg,
-                wrappedChildren,
+                wrappedChildren
             };
         }
         function unwrapValue(arg) {
@@ -155,9 +159,9 @@
                 return transferHandler.deserialize(arg.value);
             }
             else if (isRawWrappedValue(arg)) {
-                for (const wrappedChildValue of (arg.wrappedChildren || [])) {
+                for (const wrappedChildValue of arg.wrappedChildren || []) {
                     if (!transferHandlers.has(wrappedChildValue.wrappedValue.type))
-                        throw Error(`Unknown value type "${arg.type}" at ${wrappedChildValue.path.join('.')}`);
+                        throw Error(`Unknown value type "${arg.type}" at ${wrappedChildValue.path.join(".")}`);
                     const transferHandler = transferHandlers.get(wrappedChildValue.wrappedValue.type);
                     const newValue = transferHandler.deserialize(wrappedChildValue.wrappedValue.value);
                     replaceValueInObjectAtPath(arg.value, wrappedChildValue.path, newValue);
@@ -170,23 +174,27 @@
         }
         function replaceValueInObjectAtPath(obj, path, newVal) {
             const lastKey = path.slice(-1)[0];
-            const lastObj = path.slice(0, -1).reduce((obj, key) => obj[key], obj);
+            const lastObj = path
+                .slice(0, -1)
+                .reduce((obj, key) => obj[key], obj);
             lastObj[lastKey] = newVal;
         }
         function isRawWrappedValue(arg) {
-            return arg.type === 'RAW';
+            return arg.type === "RAW";
         }
         function windowEndpoint(w) {
-            if (self.constructor.name !== 'Window')
-                throw Error('self is not a window');
+            if (self.constructor.name !== "Window")
+                throw Error("self is not a window");
             return {
                 addEventListener: self.addEventListener.bind(self),
                 removeEventListener: self.removeEventListener.bind(self),
-                postMessage: (msg, transfer) => w.postMessage(msg, '*', transfer),
+                postMessage: (msg, transfer) => w.postMessage(msg, "*", transfer)
             };
         }
         function isEndpoint(endpoint) {
-            return 'addEventListener' in endpoint && 'removeEventListener' in endpoint && 'postMessage' in endpoint;
+            return ("addEventListener" in endpoint &&
+                "removeEventListener" in endpoint &&
+                "postMessage" in endpoint);
         }
         function activateEndpoint(endpoint) {
             if (isMessagePort(endpoint))
@@ -202,19 +210,19 @@
             //   endpoint.addEventListener('message', f);
             // if(isOtherWindow(endpoint))
             //   endpoint.addEventListener('message', f);
-            endpoint.addEventListener('message', f);
+            endpoint.addEventListener("message", f);
         }
         function detachMessageHandler(endpoint, f) {
             // Same as above.
-            endpoint.removeEventListener('message', f);
+            endpoint.removeEventListener("message", f);
         }
         function isMessagePort(endpoint) {
-            return endpoint.constructor.name === 'MessagePort';
+            return endpoint.constructor.name === "MessagePort";
         }
         function isWindow(endpoint) {
             // TODO: This doesn’t work on cross-origin iframes.
             // return endpoint.constructor.name === 'Window';
-            return ['window', 'length', 'location', 'parent', 'opener'].every(prop => prop in endpoint);
+            return ["window", "length", "location", "parent", "opener"].every(prop => prop in endpoint);
         }
         /**
          * `pingPongMessage` sends a `postMessage` and waits for a reply. Replies are
@@ -238,30 +246,30 @@
             return new Proxy(function () { }, {
                 construct(_target, argumentsList, proxy) {
                     return cb({
-                        type: 'CONSTRUCT',
+                        type: "CONSTRUCT",
                         callPath,
-                        argumentsList,
+                        argumentsList
                     });
                 },
                 apply(_target, _thisArg, argumentsList) {
                     // We use `bind` as an indicator to have a remote function bound locally.
                     // The actual target for `bind()` is currently ignored.
-                    if (callPath[callPath.length - 1] === 'bind')
+                    if (callPath[callPath.length - 1] === "bind")
                         return cbProxy(cb, callPath.slice(0, -1));
                     return cb({
-                        type: 'APPLY',
+                        type: "APPLY",
                         callPath,
-                        argumentsList,
+                        argumentsList
                     });
                 },
                 get(_target, property, proxy) {
-                    if (property === 'then' && callPath.length === 0) {
+                    if (property === "then" && callPath.length === 0) {
                         return { then: () => proxy };
                     }
-                    else if (property === 'then') {
+                    else if (property === "then") {
                         const r = cb({
-                            type: 'GET',
-                            callPath,
+                            type: "GET",
+                            callPath
                         });
                         return Promise.resolve(r).then.bind(r);
                     }
@@ -271,12 +279,12 @@
                 },
                 set(_target, property, value, _proxy) {
                     return cb({
-                        type: 'SET',
+                        type: "SET",
                         callPath,
                         property,
-                        value,
+                        value
                     });
-                },
+                }
             });
         }
         function isTransferable(thing) {
@@ -289,9 +297,9 @@
                 visited = new WeakSet();
             if (visited.has(value))
                 return;
-            if (typeof value === 'string')
+            if (typeof value === "string")
                 return;
-            if (typeof value === 'object')
+            if (typeof value === "object")
                 visited.add(value);
             if (ArrayBuffer.isView(value))
                 return;
@@ -313,15 +321,15 @@
                 if (transferHandler.canHandle(obj)) {
                     const value = transferHandler.serialize(obj);
                     return {
-                        value: { type, value },
+                        value: { type, value }
                     };
                 }
             }
             return {
                 value: {
-                    type: 'RAW',
-                    value: obj,
-                },
+                    type: "RAW",
+                    value: obj
+                }
             };
         }
         return { proxy, proxyValue, transferHandlers, expose };

@@ -11,55 +11,51 @@
  * limitations under the License.
  */
 
-describe('MessageChannelAdapter', function () {
-  beforeEach(function () {
+describe("MessageChannelAdapter", function() {
+  beforeEach(function() {
     let port1, port2;
     port1 = port2 = {
       get other() {
-        if (this === port1)
-          return port2;
-        else
-          return port1;
+        if (this === port1) return port2;
+        else return port1;
       },
       send(msg) {
-        for(const callback of this.other.callbacks)
-          callback({data: msg});
+        for (const callback of this.other.callbacks) callback({ data: msg });
       },
       addEventListener(type, callback) {
-        if (type.toLowerCase() !== 'message')
-          return;
+        if (type.toLowerCase() !== "message") return;
         this.callbacks.push(callback);
       }
     };
     port1.callbacks = [];
-    port2.callbacks = []
+    port2.callbacks = [];
     this.port1 = port1;
     this.port2 = port2;
     this.wrappedPort1 = MessageChannelAdapter.wrap(this.port1);
     this.wrappedPort2 = MessageChannelAdapter.wrap(this.port2);
   });
 
-  it('can send messages', function (done) {
-    this.wrappedPort2.addEventListener('message', event => {
-      expect(event.data).to.equal('ohai');
+  it("can send messages", function(done) {
+    this.wrappedPort2.addEventListener("message", event => {
+      expect(event.data).to.equal("ohai");
       done();
     });
     this.wrappedPort2.start();
-    this.wrappedPort1.postMessage('ohai');
+    this.wrappedPort1.postMessage("ohai");
   });
 
-  it('can send structurally cloneable objects', function (done) {
+  it("can send structurally cloneable objects", function(done) {
     const obj = {
       a: {
         b: {
           c: "hai"
         },
-        d: true,
+        d: true
       },
-      f: 0.2,
+      f: 0.2
     };
 
-    this.wrappedPort2.addEventListener('message', event => {
+    this.wrappedPort2.addEventListener("message", event => {
       expect(event.data).to.deep.equal(obj);
       done();
     });
@@ -67,26 +63,23 @@ describe('MessageChannelAdapter', function () {
     this.wrappedPort1.postMessage(obj);
   });
 
-  it('can transfer MessagePorts', function (done) {
+  it("can transfer MessagePorts", function(done) {
     let count = 0;
     function inc() {
       count++;
-      if (count == 2)
-        done();
+      if (count == 2) done();
     }
-    const {port1, port2} = new MessageChannel();
-    this.wrappedPort2.addEventListener('message', event => {
-      if (event.data === 'outer')
-        inc();
+    const { port1, port2 } = new MessageChannel();
+    this.wrappedPort2.addEventListener("message", event => {
+      if (event.data === "outer") inc();
       else if (event.data.port)
         event.data.port.onmessage = event => {
-          if (event.data === 'inner')
-            inc();
+          if (event.data === "inner") inc();
         };
     });
     this.wrappedPort2.start();
-    this.wrappedPort1.postMessage({port: port2}, [port2]);
-    port1.postMessage('inner');
-    this.wrappedPort1.postMessage('outer');
+    this.wrappedPort1.postMessage({ port: port2 }, [port2]);
+    port1.postMessage("inner");
+    this.wrappedPort1.postMessage("outer");
   });
 });

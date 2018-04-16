@@ -22,16 +22,22 @@ interface Message {
 }
 
 export const MessageChannelAdapter = (function() {
-  /* export */ function wrap(smc: StringMessageChannel, id: string | null = null): MessagePort {
-    const {port1, port2} = new MessageChannel();
+  /* export */ function wrap(
+    smc: StringMessageChannel,
+    id: string | null = null
+  ): MessagePort {
+    const { port1, port2 } = new MessageChannel();
     hookup(port2, smc, id);
     return port1;
   }
 
-  function hookup(internalPort: MessagePort, smc: StringMessageChannel, id: string | null = null): void {
+  function hookup(
+    internalPort: MessagePort,
+    smc: StringMessageChannel,
+    id: string | null = null
+  ): void {
     internalPort.onmessage = (event: MessageEvent) => {
-      if (!id)
-        id = generateUID();
+      if (!id) id = generateUID();
       const msg = event.data;
       const messageChannels = Array.from(findMessageChannels(event.data));
       for (const messageChannel of messageChannels) {
@@ -39,16 +45,14 @@ export const MessageChannelAdapter = (function() {
         const channel = replaceProperty(msg, messageChannel, id);
         hookup(channel, smc, id);
       }
-      const payload = JSON.stringify({id, msg, messageChannels});
+      const payload = JSON.stringify({ id, msg, messageChannels });
       smc.send(payload);
     };
 
-    smc.addEventListener('message', (event: Event): void => {
+    smc.addEventListener("message", (event: Event): void => {
       const data = JSON.parse((event as MessageEvent).data) as Message;
-      if (!id)
-        id = data.id;
-      if (id !== data.id)
-        return;
+      if (!id) id = data.id;
+      if (id !== data.id) return;
       const mcs = data.messageChannels.map(messageChannel => {
         const id = messageChannel.reduce((obj, key) => obj[key], data.msg);
         const port = wrap(smc, id);
@@ -60,19 +64,19 @@ export const MessageChannelAdapter = (function() {
   }
 
   function replaceProperty(obj: any, path: string[], newVal: any): any {
-    for (const key of path.slice(0, -1))
-      obj = obj[key];
+    for (const key of path.slice(0, -1)) obj = obj[key];
     const key = path[path.length - 1];
     const orig = obj[key];
     obj[key] = newVal;
     return orig;
   }
 
-  function* findMessageChannels(obj: any, path: string[] = []): Iterable<string[]> {
-    if (!obj)
-      return;
-    if (typeof obj === 'string')
-      return;
+  function* findMessageChannels(
+    obj: any,
+    path: string[] = []
+  ): Iterable<string[]> {
+    if (!obj) return;
+    if (typeof obj === "string") return;
     if (obj instanceof MessagePort) {
       yield path.slice();
       return;
@@ -92,8 +96,11 @@ export const MessageChannelAdapter = (function() {
 
   const bits = 128;
   function generateUID(): string {
-    return new Array(bits / 16).fill(0).map(_ => hex4()).join('');
+    return new Array(bits / 16)
+      .fill(0)
+      .map(_ => hex4())
+      .join("");
   }
 
-  return {wrap};
+  return { wrap };
 })();

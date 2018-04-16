@@ -30,7 +30,7 @@ export const MessageChannelAdapter = (function () {
             const payload = JSON.stringify({ id, msg, messageChannels });
             smc.send(payload);
         };
-        smc.addEventListener('message', (event) => {
+        smc.addEventListener("message", (event) => {
             const data = JSON.parse(event.data);
             if (!id)
                 id = data.id;
@@ -56,7 +56,7 @@ export const MessageChannelAdapter = (function () {
     function* findMessageChannels(obj, path = []) {
         if (!obj)
             return;
-        if (typeof obj === 'string')
+        if (typeof obj === "string")
             return;
         if (obj instanceof MessagePort) {
             yield path.slice();
@@ -75,7 +75,10 @@ export const MessageChannelAdapter = (function () {
     }
     const bits = 128;
     function generateUID() {
-        return new Array(bits / 16).fill(0).map(_ => hex4()).join('');
+        return new Array(bits / 16)
+            .fill(0)
+            .map(_ => hex4())
+            .join("");
     }
     return { wrap };
 })();
