@@ -248,7 +248,7 @@ export const Comlink = (function() {
 
   function wrapValue(arg: {}): WrappedValue {
     // Is arg itself handled by a TransferHandler?
-    for (const [key, transferHandler] of transferHandlers.entries()) {
+    for (const [key, transferHandler] of transferHandlers) {
       if (transferHandler.canHandle(arg)) {
         return {
           type: key,
@@ -261,7 +261,7 @@ export const Comlink = (function() {
     // If not, traverse the entire object and find handled values.
     let wrappedChildren: WrappedChildValue[] = [];
     for (const item of iterateAllProperties(arg)) {
-      for (const [key, transferHandler] of transferHandlers.entries()) {
+      for (const [key, transferHandler] of transferHandlers) {
         if (transferHandler.canHandle(item.value)) {
           wrappedChildren.push({
             path: item.path,
@@ -480,7 +480,7 @@ export const Comlink = (function() {
   }
 
   function makeInvocationResult(obj: {}): InvocationResult {
-    for (const [type, transferHandler] of transferHandlers.entries()) {
+    for (const [type, transferHandler] of transferHandlers) {
       if (transferHandler.canHandle(obj)) {
         const value = transferHandler.serialize(obj);
         return {
