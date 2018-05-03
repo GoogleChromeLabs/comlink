@@ -160,7 +160,11 @@ export const Comlink = (function() {
 
   let pingPongMessageCounter: number = 0;
 
-  /* export */ function proxy(endpoint: Endpoint | Window): Proxy {
+  /* export */ function proxy(
+    endpoint: Endpoint | Window,
+    callPath?: PropertyKey[],
+    target?: any
+  ): Proxy {
     if (isWindow(endpoint)) endpoint = windowEndpoint(endpoint);
     if (!isEndpoint(endpoint))
       throw Error(
@@ -168,18 +172,22 @@ export const Comlink = (function() {
       );
 
     activateEndpoint(endpoint);
-    return cbProxy(async irequest => {
-      let args: WrappedValue[] = [];
-      if (irequest.type === "APPLY" || irequest.type === "CONSTRUCT")
-        args = irequest.argumentsList.map(wrapValue);
-      const response = await pingPongMessage(
-        endpoint as Endpoint,
-        Object.assign({}, irequest, { argumentsList: args }),
-        transferableProperties(args)
-      );
-      const result = response.data as InvocationResult;
-      return unwrapValue(result.value);
-    });
+    return cbProxy(
+      async irequest => {
+        let args: WrappedValue[] = [];
+        if (irequest.type === "APPLY" || irequest.type === "CONSTRUCT")
+          args = irequest.argumentsList.map(wrapValue);
+        const response = await pingPongMessage(
+          endpoint as Endpoint,
+          Object.assign({}, irequest, { argumentsList: args }),
+          transferableProperties(args)
+        );
+        const result = response.data as InvocationResult;
+        return unwrapValue(result.value);
+      },
+      callPath,
+      target
+    );
   }
 
   /* export */ function proxyValue<T>(obj: T): T {
@@ -405,8 +413,12 @@ export const Comlink = (function() {
     });
   }
 
-  function cbProxy(cb: CBProxyCallback, callPath: PropertyKey[] = []): Proxy {
-    return new Proxy(function() {}, {
+  function cbProxy(
+    cb: CBProxyCallback,
+    callPath: PropertyKey[] = [],
+    target = function() {}
+  ): Proxy {
+    return new Proxy(target, {
       construct(_target, argumentsList, proxy) {
         return cb({
           type: "CONSTRUCT",
