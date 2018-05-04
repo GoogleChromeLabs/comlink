@@ -162,7 +162,6 @@ export const Comlink = (function() {
 
   /* export */ function proxy(
     endpoint: Endpoint | Window,
-    callPath?: PropertyKey[],
     target?: any
   ): Proxy {
     if (isWindow(endpoint)) endpoint = windowEndpoint(endpoint);
@@ -185,7 +184,7 @@ export const Comlink = (function() {
         const result = response.data as InvocationResult;
         return unwrapValue(result.value);
       },
-      callPath,
+      [],
       target
     );
   }
@@ -447,7 +446,11 @@ export const Comlink = (function() {
           });
           return Promise.resolve(r).then.bind(r);
         } else {
-          return cbProxy(cb, callPath.concat(property));
+          return cbProxy(
+            cb,
+            callPath.concat(property),
+            (<any>_target)[property]
+          );
         }
       },
       set(_target, property, value, _proxy): boolean {
