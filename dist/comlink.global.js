@@ -66,7 +66,7 @@ self.Comlink = (function () {
             throw Error("endpoint does not have all of addEventListener, removeEventListener and postMessage defined");
         activateEndpoint(endpoint);
         attachMessageHandler(endpoint, async function (event) {
-            if (!event.data.id)
+            if (!event.data || !event.data.id)
                 return;
             const irequest = event.data;
             let that = await irequest.callPath
@@ -109,7 +109,7 @@ self.Comlink = (function () {
     }
     function wrapValue(arg) {
         // Is arg itself handled by a TransferHandler?
-        for (const [key, transferHandler] of transferHandlers.entries()) {
+        for (const [key, transferHandler] of transferHandlers) {
             if (transferHandler.canHandle(arg)) {
                 return {
                     type: key,
@@ -120,7 +120,7 @@ self.Comlink = (function () {
         // If not, traverse the entire object and find handled values.
         let wrappedChildren = [];
         for (const item of iterateAllProperties(arg)) {
-            for (const [key, transferHandler] of transferHandlers.entries()) {
+            for (const [key, transferHandler] of transferHandlers) {
                 if (transferHandler.canHandle(item.value)) {
                     wrappedChildren.push({
                         path: item.path,
@@ -308,7 +308,7 @@ self.Comlink = (function () {
         return r;
     }
     function makeInvocationResult(obj) {
-        for (const [type, transferHandler] of transferHandlers.entries()) {
+        for (const [type, transferHandler] of transferHandlers) {
             if (transferHandler.canHandle(obj)) {
                 const value = transferHandler.serialize(obj);
                 return {
