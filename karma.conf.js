@@ -43,7 +43,7 @@ module.exports = function(config) {
       autoWatch: true,
       singleRun: true,
       concurrency: Infinity,
-      browsers: ['Chrome', 'ChromeCanaryHarmony', 'Firefox', 'Safari'],
+      browsers: ['Chrome', 'ChromeCanaryHarmony', 'Firefox', /*'Safari'*/],
       customLaunchers: {
         ChromeCanaryHarmony: {
           base: 'ChromeCanary',
