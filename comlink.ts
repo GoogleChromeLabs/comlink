@@ -200,6 +200,7 @@ export const Comlink = (function() {
     activateEndpoint(endpoint);
     attachMessageHandler(endpoint, async function(event: MessageEvent) {
       if (!event.data.id) return;
+      if (!(event.data.msg && event.data.msg.callPath)) return;
       const irequest = event.data as InvocationRequest;
       let that = await irequest.callPath
         .slice(0, -1)
