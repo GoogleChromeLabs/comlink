@@ -31,6 +31,8 @@ Comlink.expose(MyClass, self);
 ![Safari 10.1+](https://img.shields.io/badge/Safari-10.1+-green.svg?style=flat-square)
 ![Samsung Internet 6.0+](https://img.shields.io/badge/Samsung_Internet-6.0+-green.svg?style=flat-square)
 
+Browsers without [ES6 Proxy] support can use the [proxy-polyfill].
+
 **Size**: ~3.9k, ~1.6k gzip’d
 
 ## Introduction
@@ -128,6 +130,8 @@ Keep in mind that functions cannot be copied. Unless they are used in combinatio
 [examples]: https://github.com/GoogleChromeLabs/comlink/tree/master/docs/examples
 [dist]: https://github.com/GoogleChromeLabs/comlink/tree/master/dist
 [delivrjs]: https://cdn.jsdelivr.net/
+[ES6 Proxy]: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Proxy
+[proxy-polyfill]: https://github.com/GoogleChrome/proxy-polyfill
 
 ---
 License Apache-2.0
