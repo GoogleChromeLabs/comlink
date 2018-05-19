@@ -1,5 +1,6 @@
 # Comlink
-Comlink’s goal is to make [WebWorkers][WebWorker] enjoyable. Comlink removes the mental barrier of thinking about `postMessage` and hides the fact that you are working with workers.
+
+Comlink’s goal is to make [WebWorkers][webworker] enjoyable. Comlink removes the mental barrier of thinking about `postMessage` and hides the fact that you are working with workers.
 
 > Note: Comlink’s goal is to be a building-block for higher-level abstraction libraries. For example, take a look at [Clooney].
 
@@ -36,6 +37,7 @@ Browsers without [ES6 Proxy] support can use the [proxy-polyfill].
 **Size**: ~3.9k, ~1.6k gzip’d
 
 ## Introduction
+
 WebWorkers are a web API that allow you to run code in a separate thread. To communicate with another thread, WebWorkers offer the `postMessage` API. You can send messages in form of [transferable] JavaScript objects using `myWorker.postMessage(someObject)`, triggering a `message` event inside the worker.
 
 Comlink turns this messaged-based API into a something more developer-friendly: Values from one thread can be used within the other thread (and vice versa) just like local values.
@@ -43,6 +45,7 @@ Comlink turns this messaged-based API into a something more developer-friendly: 
 Comlink can be used with anything that offers `postMessage` like windows, iframes and ServiceWorkers.
 
 ## Download
+
 You can download Comlink from the [dist folder][dist]. Alternatively, you can
 install it via npm
 
@@ -67,7 +70,7 @@ The Comlink module is provided in 3 different formats:
 * **“es6”**: This package uses the native ES6 module format. Import it as follows:
 
   ```js
-  import {Comlink} from '../dist/comlink.es6.js';
+  import { Comlink } from "../dist/comlink.es6.js";
 
   // ...
   ```
@@ -84,11 +87,11 @@ The Comlink module exports 3 functions:
 
 > Returns the value that is exposed on the other side of `endpoint`.
 
-`proxy` creates an ES6 proxy and sends all operations performed on that proxy through `endpoint`. `endpoint` can be a `Window`, a `Worker` or a `MessagePort`.* The other endpoint of the channel should be passed to `Comlink.expose`.
+`proxy` creates an ES6 proxy and sends all operations performed on that proxy through `endpoint`. `endpoint` can be a `Window`, a `Worker` or a `MessagePort`.\* The other endpoint of the channel should be passed to `Comlink.expose`.
 
 If you invoke function, all parameters will be structurally cloned or transferred if they are [transferable]. If you want to pass a function as a parameters (e.g. callbacks), make sure to use `proxyValue` (see below). Same applies to the return value of a function.
 
-*) Technically it can be any object with `postMessage`, `addEventListener` and
+\*) Technically it can be any object with `postMessage`, `addEventListener` and
 `removeEventListener`.
 
 ### `Comlink.expose(obj, endpoint)`
@@ -122,16 +125,17 @@ The worker receives a copy of `obj`, so any mutation of `obj` done by the worker
 
 Keep in mind that functions cannot be copied. Unless they are used in combination with `Comlink.proxyValue`, they will get discarded during copy.
 
-[Clooney]: https://github.com/GoogleChromeLabs/clooney
-[WebWorker]: https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API
-[UMD]: https://github.com/umdjs/umd
+[clooney]: https://github.com/GoogleChromeLabs/clooney
+[webworker]: https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API
+[umd]: https://github.com/umdjs/umd
 [transferable]: https://developer.mozilla.org/en-US/docs/Web/API/Transferable
-[MessagePort]: https://developer.mozilla.org/en-US/docs/Web/API/MessagePort
+[messageport]: https://developer.mozilla.org/en-US/docs/Web/API/MessagePort
 [examples]: https://github.com/GoogleChromeLabs/comlink/tree/master/docs/examples
 [dist]: https://github.com/GoogleChromeLabs/comlink/tree/master/dist
 [delivrjs]: https://cdn.jsdelivr.net/
-[ES6 Proxy]: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Proxy
+[es6 proxy]: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Proxy
 [proxy-polyfill]: https://github.com/GoogleChrome/proxy-polyfill
 
 ---
+
 License Apache-2.0

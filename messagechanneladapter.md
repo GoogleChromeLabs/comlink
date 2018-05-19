@@ -18,6 +18,6 @@ and handles transferred `MessagePort`s automatically. `endpoint` is expected to
 have `send` and `addEventListener`.
 
 [examples]: https://github.com/GoogleChromeLabs/comlink/tree/master/docs/examples
-[WebSocket]: https://developer.mozilla.org/en-US/docs/Web/API/WebSocket
-[RTCDataChannel]: https://developer.mozilla.org/en-US/docs/Web/API/RTCDataChannel
-[PresentationConnection]: https://developer.mozilla.org/en-US/docs/Web/API/PresentationConnection
+[websocket]: https://developer.mozilla.org/en-US/docs/Web/API/WebSocket
+[rtcdatachannel]: https://developer.mozilla.org/en-US/docs/Web/API/RTCDataChannel
+[presentationconnection]: https://developer.mozilla.org/en-US/docs/Web/API/PresentationConnection

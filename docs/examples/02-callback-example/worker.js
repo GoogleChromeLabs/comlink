@@ -11,11 +11,11 @@
  * limitations under the License.
  */
 
-importScripts('https://cdn.jsdelivr.net/npm/comlinkjs/comlink.global.min.js');
+importScripts("https://cdn.jsdelivr.net/npm/comlinkjs/comlink.global.min.js");
 // importScripts('/dist/comlink.global.min.js');
 
 async function remoteFunction(cb) {
-  await cb('A string from a worker');
+  await cb("A string from a worker");
 }
 
 Comlink.expose(remoteFunction, self);
