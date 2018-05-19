@@ -1,6 +1,6 @@
 {
   "name": "comlinkjs",
-  "version": "2.3.5",
+  "version": "2.3.6",
   "description": "",
   "main": "comlink.umd.js",
   "module": "comlink.es6.js",
@@ -47,6 +47,7 @@
     "karma-firefox-launcher": "1.1.0",
     "karma-mocha": "1.3.0",
     "karma-safari-launcher": "1.0.0",
+    "karma-safaritechpreview-launcher": "0.0.6",
     "karma-typescript": "3.0.12",
     "mocha": "5.2.0",
     "typescript": "2.8.3",
