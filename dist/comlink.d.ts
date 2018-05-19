@@ -23,7 +23,7 @@ export interface TransferHandler {
     deserialize: (obj: {}) => {};
 }
 export declare const Comlink: {
-    proxy: (endpoint: Window | Endpoint) => Function;
+    proxy: (endpoint: Window | Endpoint, target?: any) => Function;
     proxyValue: <T>(obj: T) => T;
     transferHandlers: Map<string, TransferHandler>;
     expose: (rootObj: Exposable, endpoint: Window | Endpoint) => void;

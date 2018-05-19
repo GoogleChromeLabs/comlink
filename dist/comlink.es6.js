@@ -38,7 +38,7 @@ export const Comlink = (function () {
         ["THROW", throwTransferHandler]
     ]);
     let pingPongMessageCounter = 0;
-    /* export */ function proxy(endpoint) {
+    /* export */ function proxy(endpoint, target) {
         if (isWindow(endpoint))
             endpoint = windowEndpoint(endpoint);
         if (!isEndpoint(endpoint))
@@ -51,7 +51,7 @@ export const Comlink = (function () {
             const response = await pingPongMessage(endpoint, Object.assign({}, irequest, { argumentsList: args }), transferableProperties(args));
             const result = response.data;
             return unwrapValue(result.value);
-        });
+        }, [], target);
     }
     /* export */ function proxyValue(obj) {
         obj[proxyValueSymbol] = true;
@@ -64,7 +64,7 @@ export const Comlink = (function () {
             throw Error("endpoint does not have all of addEventListener, removeEventListener and postMessage defined");
         activateEndpoint(endpoint);
         attachMessageHandler(endpoint, async function (event) {
-            if (!event.data.id)
+            if (!event.data.id || !event.data.callPath)
                 return;
             const irequest = event.data;
             let that = await irequest.callPath
@@ -107,7 +107,7 @@ export const Comlink = (function () {
     }
     function wrapValue(arg) {
         // Is arg itself handled by a TransferHandler?
-        for (const [key, transferHandler] of transferHandlers.entries()) {
+        for (const [key, transferHandler] of transferHandlers) {
             if (transferHandler.canHandle(arg)) {
                 return {
                     type: key,
@@ -118,7 +118,7 @@ export const Comlink = (function () {
         // If not, traverse the entire object and find handled values.
         let wrappedChildren = [];
         for (const item of iterateAllProperties(arg)) {
-            for (const [key, transferHandler] of transferHandlers.entries()) {
+            for (const [key, transferHandler] of transferHandlers) {
                 if (transferHandler.canHandle(item.value)) {
                     wrappedChildren.push({
                         path: item.path,
@@ -231,8 +231,8 @@ export const Comlink = (function () {
             endpoint.postMessage(msg, transferables);
         });
     }
-    function cbProxy(cb, callPath = []) {
-        return new Proxy(function () { }, {
+    function cbProxy(cb, callPath = [], target = function () { }) {
+        return new Proxy(target, {
             construct(_target, argumentsList, proxy) {
                 return cb({
                     type: "CONSTRUCT",
@@ -263,7 +263,7 @@ export const Comlink = (function () {
                     return Promise.resolve(r).then.bind(r);
                 }
                 else {
-                    return cbProxy(cb, callPath.concat(property));
+                    return cbProxy(cb, callPath.concat(property), _target[property]);
                 }
             },
             set(_target, property, value, _proxy) {
@@ -306,7 +306,7 @@ export const Comlink = (function () {
         return r;
     }
     function makeInvocationResult(obj) {
-        for (const [type, transferHandler] of transferHandlers.entries()) {
+        for (const [type, transferHandler] of transferHandlers) {
             if (transferHandler.canHandle(obj)) {
                 const value = transferHandler.serialize(obj);
                 return {
