@@ -391,4 +391,10 @@ describe("Comlink in the same realm", function() {
     expect(await b).to.equal(5);
     expect(await c()).to.equal(6);
   });
+
+  it("can proxy with a given target", async function() {
+    const proxy = Comlink.proxy(this.port1, { value: {} });
+    Comlink.expose({ value: 4 }, this.port2);
+    expect(await proxy.value).to.equal(4);
+  });
 });
