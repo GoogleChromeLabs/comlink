@@ -51,7 +51,7 @@
     "karma-typescript": "3.0.12",
     "mocha": "5.2.0",
     "typescript": "2.8.3",
-    "prettier": "1.13.0"
+    "prettier": "1.13.2"
   },
   "dependencies": {}
 }
