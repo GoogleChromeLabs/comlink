@@ -2,9 +2,9 @@
 
 Some types are neither transferable not structurally cloneable and can therefore not be `postMessage`’d. To remedy this, a `TransferHandler` offers a hook into the serialization and deserialization process to allow these types to be used with Comlink. `TransferHandler`s must fulfill the following interface:
 
-* `canHandle(obj)`: Should `true` if this `TransferHandler` is capable of (de)serializing the given object.
-* `serialize(obj)`: Serializes `obj` to something structurally cloneable.
-* `deserialize(obj)`: The inverse of `serialize`.
+- `canHandle(obj)`: Should `true` if this `TransferHandler` is capable of (de)serializing the given object.
+- `serialize(obj)`: Serializes `obj` to something structurally cloneable.
+- `deserialize(obj)`: The inverse of `serialize`.
 
 ## Example
 

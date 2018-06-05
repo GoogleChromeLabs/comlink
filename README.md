@@ -67,7 +67,7 @@ There’s a collection of examples in the [examples directory][examples].
 
 The Comlink module is provided in 3 different formats:
 
-* **“es6”**: This package uses the native ES6 module format. Import it as follows:
+- **“es6”**: This package uses the native ES6 module format. Import it as follows:
 
   ```js
   import { Comlink } from "../dist/comlink.es6.js";
@@ -75,9 +75,9 @@ The Comlink module is provided in 3 different formats:
   // ...
   ```
 
-* **“global”**: This package adds `Comlink` to the global scope (i.e. `self`). Useful for workers or projects without a module loader.
+- **“global”**: This package adds `Comlink` to the global scope (i.e. `self`). Useful for workers or projects without a module loader.
 
-* **“umd”**: This package uses [UMD] so it is compatible with AMD, CommonJS and requireJS.
+- **“umd”**: This package uses [UMD] so it is compatible with AMD, CommonJS and requireJS.
 
 ## API
 
