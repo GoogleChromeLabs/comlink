@@ -39,7 +39,7 @@
   },
   "license": "Apache-2.0",
   "devDependencies": {
-    "babel-minify": "0.4.0",
+    "babel-minify": "0.4.3",
     "chai": "4.1.2",
     "karma": "2.0.2",
     "karma-chai": "0.1.0",
