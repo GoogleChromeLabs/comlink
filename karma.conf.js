@@ -14,29 +14,22 @@
 module.exports = function(config) {
   const configuration = {
     basePath: "",
-    frameworks: ["mocha", "chai", "karma-typescript"],
+    frameworks: ["mocha", "chai"],
     files: [
       {
         pattern: "tests/fixtures/*",
         included: false
       },
-      "tests/prelude.js",
-      "comlink.ts",
-      "tests/comlink_postlude.js",
-      "messagechanneladapter.ts",
-      "tests/messagechanneladapter_postlude.js",
-      "tests/*.test.js"
-    ],
-    preprocessors: {
-      "*.ts": ["karma-typescript"]
-    },
-    karmaTypescriptConfig: {
-      tsconfig: "./tsconfig.json",
-      coverageOptions: {
-        instrumentation: false
+      {
+        pattern: "dist/*.js",
+        included: false
+      },
+      {
+        pattern: "tests/*.test.js",
+        type: "module"
       }
-    },
-    reporters: ["progress", "karma-typescript"],
+    ],
+    reporters: ["progress"],
     port: 9876,
     colors: true,
     logLevel: config.LOG_INFO,
@@ -64,7 +57,11 @@ module.exports = function(config) {
         base: "ChromeHeadless",
         flags: ["--no-sandbox"]
       }
-    }
+    },
+    // Remove these 2 lines once this PR lands
+    // https://github.com/karma-runner/karma/pull/2834
+    customContextFile: "tests/context.html",
+    customDebugFile: "tests/debug.html"
   };
 
   if (process.env.INSIDE_DOCKER) configuration.browsers = ["DockerChrome"];

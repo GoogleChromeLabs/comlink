@@ -11,6 +11,8 @@
  * limitations under the License.
  */
 
+import * as Comlink from "/base/dist/comlink.js";
+
 class SampleClass {
   constructor() {
     this._counter = 1;

@@ -11,6 +11,8 @@
  * limitations under the License.
  */
 
+import * as MessageChannelAdapter from "/base/dist/messagechanneladapter.js";
+
 describe("MessageChannelAdapter", function() {
   beforeEach(function() {
     let port1, port2;

@@ -11,10 +11,12 @@
  * limitations under the License.
  */
 
+import * as Comlink from "/base/dist/comlink.js";
+
 describe("Comlink across iframes", function() {
   beforeEach(function() {
     this.ifr = document.createElement("iframe");
-    this.ifr.sandbox.add("allow-scripts");
+    this.ifr.sandbox.add("allow-scripts", "allow-same-origin");
     this.ifr.src = "/base/tests/fixtures/iframe.html";
     document.body.appendChild(this.ifr);
     return new Promise(resolve => (this.ifr.onload = resolve));
