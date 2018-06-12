@@ -11,7 +11,9 @@
  * limitations under the License.
  */
 
-xdescribe("Comlink across workers", function() {
+import * as Comlink from "/base/dist/comlink.js";
+
+describe("Comlink across workers", function() {
   beforeEach(function() {
     this.worker = new Worker("/base/tests/fixtures/worker.js");
   });

@@ -18,6 +18,7 @@
     else if (typeof define === "function" && define.amd) {
         define(["require", "exports"], factory);
     }
+else {factory([], self.Comlink={});}
 })(function (require, exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });

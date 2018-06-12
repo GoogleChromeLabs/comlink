@@ -21,7 +21,7 @@ module.exports = function(config) {
         included: false
       },
       {
-        pattern: "dist/*.js",
+        pattern: "dist/**/*.js",
         included: false
       },
       {
