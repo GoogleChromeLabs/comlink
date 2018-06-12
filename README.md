@@ -56,28 +56,12 @@ $ npm install --save comlinkjs
 or use a CDN like [delivrjs]:
 
 ```
-https://cdn.jsdelivr.net/npm/comlinkjs@2.3.0/comlink.es6.min.js
+https://cdn.jsdelivr.net/npm/comlinkjs@3.0.0/comlink.js
 ```
 
 ## Examples
 
 There’s a collection of examples in the [examples directory][examples].
-
-## Module formats
-
-The Comlink module is provided in 3 different formats:
-
-- **“es6”**: This package uses the native ES6 module format. Import it as follows:
-
-  ```js
-  import { Comlink } from "../dist/comlink.es6.js";
-
-  // ...
-  ```
-
-- **“global”**: This package adds `Comlink` to the global scope (i.e. `self`). Useful for workers or projects without a module loader.
-
-- **“umd”**: This package uses [UMD] so it is compatible with AMD, CommonJS and requireJS.
 
 ## API
 
