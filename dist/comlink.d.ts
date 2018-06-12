@@ -11,20 +11,29 @@
  * limitations under the License.
  */
 export interface Endpoint {
-    postMessage(message: any, transfer?: any[]): void;
-    addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: {}): void;
-    removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: {}): void;
+  postMessage(message: any, transfer?: any[]): void;
+  addEventListener(
+    type: string,
+    listener: EventListenerOrEventListenerObject,
+    options?: {}
+  ): void;
+  removeEventListener(
+    type: string,
+    listener: EventListenerOrEventListenerObject,
+    options?: {}
+  ): void;
 }
 export declare type Proxy = Function;
 export declare type Exposable = Function | Object;
 export interface TransferHandler {
-    canHandle: (obj: {}) => Boolean;
-    serialize: (obj: {}) => {};
-    deserialize: (obj: {}) => {};
+  canHandle: (obj: {}) => Boolean;
+  serialize: (obj: {}) => {};
+  deserialize: (obj: {}) => {};
 }
-export declare const Comlink: {
-    proxy: (endpoint: Window | Endpoint, target?: any) => Function;
-    proxyValue: <T>(obj: T) => T;
-    transferHandlers: Map<string, TransferHandler>;
-    expose: (rootObj: Exposable, endpoint: Window | Endpoint) => void;
-};
+export declare const transferHandlers: Map<string, TransferHandler>;
+export declare function proxy(endpoint: Endpoint | Window, target?: any): Proxy;
+export declare function proxyValue<T>(obj: T): T;
+export declare function expose(
+  rootObj: Exposable,
+  endpoint: Endpoint | Window
+): void;

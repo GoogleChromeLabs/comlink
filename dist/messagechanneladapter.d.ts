@@ -11,8 +11,9 @@
  * limitations under the License.
  */
 export interface StringMessageChannel extends EventTarget {
-    send(data: string): void;
+  send(data: string): void;
 }
-export declare const MessageChannelAdapter: {
-    wrap: (smc: StringMessageChannel, id?: string | null) => MessagePort;
-};
+export declare function wrap(
+  smc: StringMessageChannel,
+  id?: string | null
+): MessagePort;
