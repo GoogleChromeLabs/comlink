@@ -1,4 +1,3 @@
-"use strict";
 /**
  * Copyright 2017 Google Inc. All Rights Reserved.
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -11,13 +10,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-self.MessageChannelAdapter = (function () {
-    /* export */ function wrap(smc, id = null) {
+(function (factory) {
+    if (typeof module === "object" && typeof module.exports === "object") {
+        var v = factory(require, exports);
+        if (v !== undefined) module.exports = v;
+    }
+    else if (typeof define === "function" && define.amd) {
+        define(["require", "exports"], factory);
+    }
+})(function (require, exports) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    function wrap(smc, id = null) {
         const { port1, port2 } = new MessageChannel();
         hookup(port2, smc, id);
         return port1;
     }
+    exports.wrap = wrap;
     function hookup(internalPort, smc, id = null) {
         internalPort.onmessage = (event) => {
             if (!id)
@@ -82,5 +91,4 @@ self.MessageChannelAdapter = (function () {
             .map(_ => hex4())
             .join("");
     }
-    return { wrap };
-})();
+});

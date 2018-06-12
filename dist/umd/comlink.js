@@ -1,4 +1,3 @@
-"use strict";
 /**
  * Copyright 2017 Google Inc. All Rights Reserved.
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -11,8 +10,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-self.Comlink = (function () {
+(function (factory) {
+    if (typeof module === "object" && typeof module.exports === "object") {
+        var v = factory(require, exports);
+        if (v !== undefined) module.exports = v;
+    }
+    else if (typeof define === "function" && define.amd) {
+        define(["require", "exports"], factory);
+    }
+})(function (require, exports) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
     const TRANSFERABLE_TYPES = [ArrayBuffer, MessagePort];
     const uid = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
     const proxyValueSymbol = Symbol("proxyValue");
@@ -35,12 +43,12 @@ self.Comlink = (function () {
             throw Error(obj);
         }
     };
-    /* export */ const transferHandlers = new Map([
+    exports.transferHandlers = new Map([
         ["PROXY", proxyTransferHandler],
         ["THROW", throwTransferHandler]
     ]);
     let pingPongMessageCounter = 0;
-    /* export */ function proxy(endpoint, target) {
+    function proxy(endpoint, target) {
         if (isWindow(endpoint))
             endpoint = windowEndpoint(endpoint);
         if (!isEndpoint(endpoint))
@@ -55,11 +63,13 @@ self.Comlink = (function () {
             return unwrapValue(result.value);
         }, [], target);
     }
-    /* export */ function proxyValue(obj) {
+    exports.proxy = proxy;
+    function proxyValue(obj) {
         obj[proxyValueSymbol] = true;
         return obj;
     }
-    /* export */ function expose(rootObj, endpoint) {
+    exports.proxyValue = proxyValue;
+    function expose(rootObj, endpoint) {
         if (isWindow(endpoint))
             endpoint = windowEndpoint(endpoint);
         if (!isEndpoint(endpoint))
@@ -107,9 +117,10 @@ self.Comlink = (function () {
             return endpoint.postMessage(iresult, transferableProperties([iresult]));
         });
     }
+    exports.expose = expose;
     function wrapValue(arg) {
         // Is arg itself handled by a TransferHandler?
-        for (const [key, transferHandler] of transferHandlers) {
+        for (const [key, transferHandler] of exports.transferHandlers) {
             if (transferHandler.canHandle(arg)) {
                 return {
                     type: key,
@@ -120,7 +131,7 @@ self.Comlink = (function () {
         // If not, traverse the entire object and find handled values.
         let wrappedChildren = [];
         for (const item of iterateAllProperties(arg)) {
-            for (const [key, transferHandler] of transferHandlers) {
+            for (const [key, transferHandler] of exports.transferHandlers) {
                 if (transferHandler.canHandle(item.value)) {
                     wrappedChildren.push({
                         path: item.path,
@@ -145,15 +156,15 @@ self.Comlink = (function () {
         };
     }
     function unwrapValue(arg) {
-        if (transferHandlers.has(arg.type)) {
-            const transferHandler = transferHandlers.get(arg.type);
+        if (exports.transferHandlers.has(arg.type)) {
+            const transferHandler = exports.transferHandlers.get(arg.type);
             return transferHandler.deserialize(arg.value);
         }
         else if (isRawWrappedValue(arg)) {
             for (const wrappedChildValue of arg.wrappedChildren || []) {
-                if (!transferHandlers.has(wrappedChildValue.wrappedValue.type))
+                if (!exports.transferHandlers.has(wrappedChildValue.wrappedValue.type))
                     throw Error(`Unknown value type "${arg.type}" at ${wrappedChildValue.path.join(".")}`);
-                const transferHandler = transferHandlers.get(wrappedChildValue.wrappedValue.type);
+                const transferHandler = exports.transferHandlers.get(wrappedChildValue.wrappedValue.type);
                 const newValue = transferHandler.deserialize(wrappedChildValue.wrappedValue.value);
                 replaceValueInObjectAtPath(arg.value, wrappedChildValue.path, newValue);
             }
@@ -308,7 +319,7 @@ self.Comlink = (function () {
         return r;
     }
     function makeInvocationResult(obj) {
-        for (const [type, transferHandler] of transferHandlers) {
+        for (const [type, transferHandler] of exports.transferHandlers) {
             if (transferHandler.canHandle(obj)) {
                 const value = transferHandler.serialize(obj);
                 return {
@@ -323,5 +334,4 @@ self.Comlink = (function () {
             }
         };
     }
-    return { proxy, proxyValue, transferHandlers, expose };
-})();
+});

@@ -10,6 +10,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-self.MessageChannelAdapter = exports.MessageChannelAdapter;
-delete exports.MessageChannelAdapter;
+export interface StringMessageChannel extends EventTarget {
+    send(data: string): void;
+}
+export declare function wrap(smc: StringMessageChannel, id?: string | null): MessagePort;

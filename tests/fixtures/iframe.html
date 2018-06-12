@@ -1,6 +1,5 @@
-<script src='/base/tests/prelude.js'></script>
-<script src='/base/comlink.js'></script>
-<script src='/base/tests/comlink_postlude.js'></script>
-<script>
+<script type="module">
+  import * as Comlink from "/base/dist/comlink.js";
+
   Comlink.expose((a, b) => a + b, self.parent);
 </script>
