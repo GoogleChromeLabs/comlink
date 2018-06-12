@@ -56,7 +56,7 @@ $ npm install --save comlinkjs
 or use a CDN like [delivrjs]:
 
 ```
-https://cdn.jsdelivr.net/npm/comlinkjs@3.0.0/umd/comlink.js
+https://cdn.jsdelivr.net/npm/comlinkjs@3.0.1/umd/comlink.js
 ```
 
 ## Examples
