@@ -1,9 +1,8 @@
 <!doctype html>
 
 <iframe src="iframe.html"></iframe>
-<script src="https://cdn.jsdelivr.net/npm/comlinkjs/comlink.global.min.js"></script>
-<!-- <script src="/dist/comlink.global.min.js"></script> -->
-<script>
+<script type="module">
+  import * as Comlink from "https://cdn.jsdelivr.net/npm/comlinkjs@3/comlink.js";
   async function main() {
     const ifr = document.querySelector('iframe');
     await new Promise(resolve => ifr.onload = resolve);

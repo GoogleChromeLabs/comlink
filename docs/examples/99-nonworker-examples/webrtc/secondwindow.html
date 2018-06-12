@@ -3,10 +3,8 @@
 <textarea></textarea>
 <button id="genanswer">Generate answer</button>
 <pre></pre>
-<script src="https://cdn.jsdelivr.net/npm/comlinkjs/comlink.global.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/comlinkjs/messagechanneladapter.global.js"></script>
-<!-- <script src="/dist/comlink.global.js"></script>
-<script src="/dist/messagechanneladapter.global.js"></script> -->
+<script src="https://cdn.jsdelivr.net/npm/comlinkjs@3/umd/comlink.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/comlinkjs@3/umd/messagechanneladapter.js"></script>
 <script>
   const connection = new RTCPeerConnection(null, null);
   const channelPromise = new Promise(resolve => {
