@@ -261,7 +261,7 @@ describe("Comlink in the same realm", function() {
   });
 
   // Buffer transfers seem to have regressed in Safari 11.1, it’s fixed in 11.2.
-  const isNotSafari11_1 = _ => !navigator.userAgent.includes("11.1 Safari");
+  const isNotSafari11_1 = _ => !/11\.1(\.[0-9]+)? Safari/.test(navigator.userAgent);
   guardedIt(isNotSafari11_1)("will transfer buffers", async function() {
     const proxy = Comlink.proxy(this.port1);
     Comlink.expose(b => b.byteLength, this.port2);

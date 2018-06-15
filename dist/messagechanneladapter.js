@@ -30,7 +30,13 @@ function hookup(internalPort, smc, id = null) {
         smc.send(payload);
     };
     smc.addEventListener("message", (event) => {
-        const data = JSON.parse(event.data);
+        let data = {};
+        try {
+            data = JSON.parse(event.data);
+        }
+        catch (e) {
+            return;
+        }
         if (!id)
             id = data.id;
         if (id !== data.id)
