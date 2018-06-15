@@ -49,7 +49,12 @@ function hookup(
   };
 
   smc.addEventListener("message", (event: Event): void => {
-    const data = JSON.parse((event as MessageEvent).data) as Message;
+    let data = {} as Message;
+    try {
+      data = JSON.parse((event as MessageEvent).data) as Message;
+    } catch (e) {
+      return;
+    }
     if (!id) id = data.id;
     if (id !== data.id) return;
     const mcs = data.messageChannels.map(messageChannel => {
