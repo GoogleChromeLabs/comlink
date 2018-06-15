@@ -1,0 +1,25 @@
+<!doctype html>
+
+
+<script type="module">
+  import * as Comlink from "https://cdn.jsdelivr.net/npm/comlinkjs@3/comlink.js";
+  async function init() {
+    navigator.serviceWorker.register('worker.js');
+    const registration = await navigator.serviceWorker.ready;
+    const sw = registration.active;
+    // Announce this client to the ServiceWorker
+    sw.postMessage("HOOK_ME_UP");
+
+    const obj = Comlink.proxy({
+      postMessage: sw.postMessage.bind(sw),
+      addEventListener: navigator.serviceWorker.addEventListener.bind(navigator.serviceWorker),
+      removeEventListener: navigator.serviceWorker.removeEventListener.bind(navigator.serviceWorker),
+    });
+
+    alert(`Counter: ${await obj.counter}`);
+    await obj.inc();
+    alert(`Counter: ${await obj.counter}`);
+  };
+
+  init();
+</script>
