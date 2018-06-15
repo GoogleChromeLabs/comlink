@@ -37,9 +37,7 @@ function hookup(internalPort, smc, id = null) {
         catch (e) {
             return;
         }
-        if (!id)
-            id = data.id;
-        if (id !== data.id)
+        if (id && id !== data.id)
             return;
         const mcs = data.messageChannels.map(messageChannel => {
             const id = messageChannel.reduce((obj, key) => obj[key], data.msg);
