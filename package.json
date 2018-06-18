@@ -6,15 +6,21 @@
   "module": "comlink.js",
   "types": "comlink.d.ts",
   "scripts": {
-    "test": "npm run linter && npm run unittest && npm run build",
+    "test": "npm run fmt_test && npm run unittest && npm run build",
     "unittest": "karma start",
-    "linter": "prettier --write ./*.js ./docs/**/*.js ./tests/**/*.js ./**/*.ts ./**/*.md ./**/*.json",
+    "fmt_test": "test $(prettier -l ./{.,docs,test}/*.{js,ts,json,md} | wc -l) -eq 0",
+    "fmt": "prettier --write ./{.,docs,test}/*.{js,ts,json,md}",
     "watchtest": "karma start --no-single-run --browsers ChromeHeadless",
     "watchtestharmony": "karma start --no-single-run --browsers ChromeCanaryHeadlessHarmony",
     "version": "sed -i.bak -e 's!comlinkjs@[0-9.]*!comlinkjs@'${npm_package_version}'!' README.md && git add README.md",
     "mypublish": "npm run build && npm run test && cp README.md package.json dist && npm publish dist",
     "build": "rm -rf dist && mkdir dist && npm run compile",
     "compile": "tsc --outDir dist && tsc -m umd --outDir dist/umd && node ./mangle_umd.js"
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "npm test"
+    }
   },
   "keywords": [],
   "author": {
@@ -38,6 +44,7 @@
   "license": "Apache-2.0",
   "devDependencies": {
     "chai": "4.1.2",
+    "husky": "^0.14.3",
     "karma": "2.0.2",
     "karma-chai": "0.1.0",
     "karma-chrome-launcher": "2.2.0",

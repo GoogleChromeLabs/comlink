@@ -48,9 +48,12 @@ else {factory([], self.Comlink={});}
                 data = JSON.parse(event.data);
             }
             catch (e) {
+                console.log('NOT SENDING', e);
                 return;
             }
-            if (id && id !== data.id)
+            if (!id)
+                id = data.id;
+            if (id !== data.id)
                 return;
             const mcs = data.messageChannels.map(messageChannel => {
                 const id = messageChannel.reduce((obj, key) => obj[key], data.msg);

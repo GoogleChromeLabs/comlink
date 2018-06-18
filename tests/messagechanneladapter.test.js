@@ -85,7 +85,7 @@ describe("MessageChannelAdapter", function() {
     this.wrappedPort1.postMessage("outer");
   });
 
-  const hasBroadcastChannel = _ => 'BroadcastChannel' in self;
+  const hasBroadcastChannel = _ => "BroadcastChannel" in self;
   guardedIt(hasBroadcastChannel)("works with BroadcastChannel", function(done) {
     function augmentPort(name) {
       const bc = new BroadcastChannel(name);
@@ -98,19 +98,18 @@ describe("MessageChannelAdapter", function() {
     [b1, b2, b3].forEach(b => b.start());
 
     let count = 1;
-    b3.addEventListener('message', ev => {
+    b3.addEventListener("message", ev => {
       expect(ev.data).to.equal(`hai${count}`);
       count++;
-      if(count === 3) {
+      if (count === 3) {
         done();
       }
     });
-    b1.postMessage('hai1');
-    b2.postMessage('hai2');
+    b1.postMessage("hai1");
+    b2.postMessage("hai2");
   });
 });
 
 function guardedIt(f) {
   return f() ? it : xit;
 }
-

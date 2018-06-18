@@ -10,7 +10,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-export interface StringMessageChannel extends EventTarget {
+export interface StringMessageChannel {
     send(data: string): void;
+    addEventListener(typ: string, listener: (ev: MessageEvent) => void | Promise<void>): void;
+    removeEventListener(typ: string, listener: (ev: MessageEvent) => void | Promise<void>): void;
 }
 export declare function wrap(smc: StringMessageChannel, id?: string | null): MessagePort;

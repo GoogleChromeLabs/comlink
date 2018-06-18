@@ -159,10 +159,7 @@ export const transferHandlers: Map<string, TransferHandler> = new Map([
 
 let pingPongMessageCounter: number = 0;
 
-export function proxy(
-  endpoint: Endpoint | Window,
-  target?: any
-): Proxy {
+export function proxy(endpoint: Endpoint | Window, target?: any): Proxy {
   if (isWindow(endpoint)) endpoint = windowEndpoint(endpoint);
   if (!isEndpoint(endpoint))
     throw Error(
@@ -193,10 +190,7 @@ export function proxyValue<T>(obj: T): T {
   return obj;
 }
 
-export function expose(
-  rootObj: Exposable,
-  endpoint: Endpoint | Window
-): void {
+export function expose(rootObj: Exposable, endpoint: Endpoint | Window): void {
   if (isWindow(endpoint)) endpoint = windowEndpoint(endpoint);
   if (!isEndpoint(endpoint))
     throw Error(
@@ -445,11 +439,7 @@ function cbProxy(
         });
         return Promise.resolve(r).then.bind(r);
       } else {
-        return cbProxy(
-          cb,
-          callPath.concat(property),
-          (<any>_target)[property]
-        );
+        return cbProxy(cb, callPath.concat(property), (<any>_target)[property]);
       }
     },
     set(_target, property, value, _proxy): boolean {
@@ -510,4 +500,3 @@ function makeInvocationResult(obj: {}): InvocationResult {
     }
   };
 }
-

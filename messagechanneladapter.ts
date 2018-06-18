@@ -13,8 +13,14 @@
 
 export interface StringMessageChannel {
   send(data: string): void;
-  addEventListener(typ: string, listener: (ev: MessageEvent) => void | Promise<void>): void;
-  removeEventListener(typ: string, listener: (ev: MessageEvent) => void | Promise<void>): void;
+  addEventListener(
+    typ: string,
+    listener: (ev: MessageEvent) => void | Promise<void>
+  ): void;
+  removeEventListener(
+    typ: string,
+    listener: (ev: MessageEvent) => void | Promise<void>
+  ): void;
 }
 
 interface Message {
@@ -69,16 +75,7 @@ function hookup(
       });
       internalPort.postMessage(data.msg, mcs);
     }
-    if (!id) id = data.id;
-    if (id !== data.id) return;
-    const mcs = data.messageChannels.map(messageChannel => {
-      const id = messageChannel.reduce((obj, key) => obj[key], data.msg);
-      const port = wrap(smc, id);
-      replaceProperty(data.msg, messageChannel, port);
-      return port;
-    });
-    internalPort.postMessage(data.msg, mcs);
-  });
+  );
 }
 
 function replaceProperty(obj: any, path: string[], newVal: any): any {
@@ -119,4 +116,3 @@ function generateUID(): string {
     .map(_ => hex4())
     .join("");
 }
-
