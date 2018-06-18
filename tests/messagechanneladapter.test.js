@@ -90,7 +90,7 @@ describe("MessageChannelAdapter", function() {
     function augmentPort(name) {
       const bc = new BroadcastChannel(name);
       bc.send = msg => bc.postMessage(msg);
-      return MessageChannelAdapter.wrap(bc);
+      return MessageChannelAdapter.wrap(bc, 'broadcast');
     }
     const b1 = augmentPort("topic");
     const b2 = augmentPort("topic");
