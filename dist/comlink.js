@@ -27,9 +27,13 @@ const proxyTransferHandler = {
 };
 const throwTransferHandler = {
     canHandle: (obj) => obj && obj[throwSymbol],
-    serialize: (obj) => obj.toString() + "\n" + obj.stack,
+    serialize: (obj) => {
+        const message = obj && obj.message;
+        const stack = obj && obj.stack;
+        return Object.assign({}, obj, { message, stack });
+    },
     deserialize: (obj) => {
-        throw Error(obj);
+        throw Object.assign(Error(), obj);
     }
 };
 export const transferHandlers = new Map([
