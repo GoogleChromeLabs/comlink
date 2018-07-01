@@ -101,19 +101,17 @@ describe("Comlink in the same realm", function() {
     expect(await proxy.x).to.be.undefined;
   });
 
-  it("can handle throwing functions", function(done) {
+  it("can handle throwing functions", async function() {
     const proxy = Comlink.proxy(this.port1);
     Comlink.expose(_ => {
       throw Error("OMG");
     }, this.port2);
-    proxy()
-      .then(_ => {
-        done(Error("Should have thrown"));
-      })
-      .catch(err => {
-        expect(err.toString()).to.contain("OMG");
-        done();
-      });
+    try {
+      await proxy();
+      fail("Should have thrown");
+    } catch (err) {
+      expect(err.toString()).to.contain("OMG");
+    }
   });
 
   it("can work with parameterized functions", async function() {
