@@ -146,9 +146,13 @@ const proxyTransferHandler: TransferHandler = {
 
 const throwTransferHandler = {
   canHandle: (obj: {}): Boolean => obj && (obj as any)[throwSymbol],
-  serialize: (obj: {}): {} => obj.toString() + "\n" + (obj as any).stack,
+  serialize: (obj: any): {} => {
+    const message = obj && obj.message;
+    const stack = obj && obj.stack;
+    return Object.assign({}, obj, { message, stack });
+  },
   deserialize: (obj: {}): {} => {
-    throw Error(obj as string);
+    throw Object.assign(Error(), obj);
   }
 };
 

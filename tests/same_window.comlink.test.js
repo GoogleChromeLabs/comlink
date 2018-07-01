@@ -101,19 +101,34 @@ describe("Comlink in the same realm", function() {
     expect(await proxy.x).to.be.undefined;
   });
 
-  it("can handle throwing functions", function(done) {
+  it("can keep the stack and message of thrown errors", async function() {
+    let stack;
     const proxy = Comlink.proxy(this.port1);
     Comlink.expose(_ => {
-      throw Error("OMG");
+      const error = Error("OMG");
+      stack = error.stack;
+      throw error;
     }, this.port2);
-    proxy()
-      .then(_ => {
-        done(Error("Should have thrown"));
-      })
-      .catch(err => {
-        expect(err.toString()).to.contain("OMG");
-        done();
-      });
+    try {
+      await proxy();
+      fail("Should have thrown");
+    } catch (err) {
+      expect(err.message).to.equal("OMG");
+      expect(err.stack).to.equal(stack);
+    }
+  });
+
+  it("can rethrow non-error objects", async function() {
+    const proxy = Comlink.proxy(this.port1);
+    Comlink.expose(_ => {
+      throw {test: true};
+    }, this.port2);
+    try {
+      await proxy();
+      fail("Should have thrown");
+    } catch (err) {
+      expect(err.test).to.equal(true);
+    }
   });
 
   it("can work with parameterized functions", async function() {
