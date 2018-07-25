@@ -7,7 +7,7 @@ Comlink’s goal is to make [WebWorkers][webworker] enjoyable. Comlink removes t
 ```js
 // main.js
 const MyClass = Comlink.proxy(new Worker('worker.js'));
-// `instance` is an instance of `MyClass` that lives in the worker!
+// `instance` is an instance of the `MyClass` from inside the worker!
 const instance = await new MyClass();
 await instance.logSomething(); // logs “myValue = 42”
 ```
