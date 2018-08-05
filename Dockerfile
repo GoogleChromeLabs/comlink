@@ -1,4 +1,4 @@
-FROM selenium/node-chrome:latest@sha256:e635cd3a1d7e7b638a38ade1c153698f734e86bbca8b0bf11ac6e239c4938558
+FROM selenium/node-chrome:latest@sha256:37e33d39b15848f9a37750d6ea58d161f282fdd0864d86f933dfa652409ebbdd
 
 USER root
 
