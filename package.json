@@ -46,7 +46,7 @@
     "karma-safari-launcher": "1.0.0",
     "karma-safaritechpreview-launcher": "0.0.6",
     "mocha": "5.2.0",
-    "prettier": "1.14.0",
+    "prettier": "1.14.1",
     "typescript": "3.0.1"
   },
   "dependencies": {}
