@@ -47,7 +47,7 @@
     "karma-safaritechpreview-launcher": "0.0.6",
     "mocha": "5.2.0",
     "prettier": "1.14.2",
-    "typescript": "3.0.1"
+    "typescript": "3.0.3"
   },
   "dependencies": {}
 }
