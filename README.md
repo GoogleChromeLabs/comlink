@@ -88,7 +88,7 @@ If you invoke function, all parameters will be structurally cloned or transferre
 
 > Makes sure a parameter or return value is proxied, not copied.
 
-By default, all parameters to a function are copied (structural clone):
+By default, all parameters to a function that are not [transferable] are copied (structural clone):
 
 ```js
 // main.js
