@@ -23,7 +23,7 @@ const obj = {
   }
 };
 
-self.addEventListener('message', (event) => {
+self.addEventListener("message", event => {
   if (event.data.comlinkInit) {
     Comlink.expose(obj, event.data.port);
     return;

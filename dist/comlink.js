@@ -10,7 +10,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-const TRANSFERABLE_TYPES = [ArrayBuffer, MessagePort];
+const TRANSFERABLE_TYPES = ["ArrayBuffer", "MessagePort", "OffscreenCanvas"]
+    .filter(f => f in self).map(f => self[f]);
 const uid = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
 const proxyValueSymbol = Symbol("proxyValue");
 const throwSymbol = Symbol("throw");

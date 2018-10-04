@@ -127,7 +127,8 @@ export interface TransferHandler {
   deserialize: (obj: {}) => {};
 }
 
-const TRANSFERABLE_TYPES = [ArrayBuffer, MessagePort];
+const TRANSFERABLE_TYPES = ["ArrayBuffer", "MessagePort", "OffscreenCanvas"]
+  .filter(f => f in self).map(f => (self as any)[f]);
 const uid: number = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
 
 const proxyValueSymbol = Symbol("proxyValue");
