@@ -13,8 +13,8 @@
 
 importScripts("https://cdn.jsdelivr.net/npm/comlinkjs@3/umd/comlink.js");
 
-addEventListener("install", evt => skipWaiting());
-addEventListener("activate", evt => clients.claim());
+addEventListener("install", () => skipWaiting());
+addEventListener("activate", () => clients.claim());
 
 const obj = {
   counter: 0,
@@ -23,19 +23,9 @@ const obj = {
   }
 };
 
-// We can’t add new listeners after the inital evaluation of the script. So we
-// are cheating a bit with an intermediate `MessagePort`.
-const { port1, port2 } = new MessageChannel();
-addEventListener("message", evt => {
-  // Forward all the messages to the message port.
-  port1.postMessage(evt.data);
-  if (evt.data === "HOOK_ME_UP") {
-    const client = evt.source;
-    Comlink.expose(obj, {
-      postMessage: client.postMessage.bind(client),
-      addEventListener: port2.addEventListener.bind(port2),
-      removeEventListener: port2.removeEventListener.bind(port2)
-    });
-    port2.start();
+self.addEventListener('message', (event) => {
+  if (event.data.comlinkInit) {
+    Comlink.expose(obj, event.data.port);
+    return;
   }
 });
