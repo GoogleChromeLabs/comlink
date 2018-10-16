@@ -12,7 +12,6 @@
  */
 
 /// <reference lib="dom" />
-/// <reference lib="webworker" />
 
 export interface Endpoint {
   postMessage(message: any, transfer?: any[]): void;
