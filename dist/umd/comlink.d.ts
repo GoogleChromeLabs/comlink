@@ -10,11 +10,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+/// <reference lib="dom" />
 export interface Endpoint {
     postMessage(message: any, transfer?: any[]): void;
     addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: {}): void;
     removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: {}): void;
 }
+declare type Promised<T> = {
+    [P in keyof T]: T[P] extends (...args: infer A) => infer R ? (...args: A) => Promise<R> : Promise<T[P]>;
+};
+declare type PromisedConstructor<T> = {
+    new (...args: any): Promise<Promised<T>>;
+};
 export declare type Proxy = Function;
 export declare type Exposable = Function | Object;
 export interface TransferHandler {
@@ -23,6 +30,7 @@ export interface TransferHandler {
     deserialize: (obj: {}) => {};
 }
 export declare const transferHandlers: Map<string, TransferHandler>;
-export declare function proxy(endpoint: Endpoint | Window, target?: any): Proxy;
+export declare function proxy<T = any>(endpoint: Endpoint | Window, target?: any): PromisedConstructor<T>;
 export declare function proxyValue<T>(obj: T): T;
 export declare function expose(rootObj: Exposable, endpoint: Endpoint | Window): void;
+export {};

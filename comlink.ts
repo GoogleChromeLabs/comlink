@@ -26,6 +26,15 @@ export interface Endpoint {
     options?: {}
   ): void;
 }
+type Promised<T> = {
+  [P in keyof T]: T[P] extends (...args: infer A) => infer R
+  ? (...args: A) => Promise<R>
+  : Promise<T[P]>
+};
+type PromisedConstructor<T>  = {
+  new(...args: any): Promise<Promised<T>>;
+};
+
 export type Proxy = Function;
 type CBProxyCallback = (bpcd: CBProxyCallbackDescriptor) => {}; // eslint-disable-line no-unused-vars
 type Transferable = MessagePort | ArrayBuffer; // eslint-disable-line no-unused-vars
@@ -166,10 +175,10 @@ export const transferHandlers: Map<string, TransferHandler> = new Map([
 
 let pingPongMessageCounter: number = 0;
 
-export function proxy(
+export function proxy<T = any>(
   endpoint: Endpoint | Window,
   target?: any
-): Proxy {
+): PromisedConstructor<T> {
   if (isWindow(endpoint)) endpoint = windowEndpoint(endpoint);
   if (!isEndpoint(endpoint))
     throw Error(
@@ -192,7 +201,7 @@ export function proxy(
     },
     [],
     target
-  );
+  ) as PromisedConstructor<T>;
 }
 
 export function proxyValue<T>(obj: T): T {
