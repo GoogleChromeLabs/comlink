@@ -16,12 +16,13 @@ export interface Endpoint {
     addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: {}): void;
     removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: {}): void;
 }
-declare type Promised<T> = {
-    [P in keyof T]: T[P] extends (...args: infer A) => infer R ? (...args: A) => Promise<R> : Promise<T[P]>;
-};
-declare type PromisedConstructor<T> = {
-    new (...args: any): Promise<Promised<T>>;
-};
+declare type ProxyResult<T> = T extends {
+    new (...args: infer Arguments): infer R;
+} ? {
+    new (...args: Arguments): Promise<R>;
+} : T extends (...args: infer Arguments) => infer R ? (...args: Arguments) => Promise<R> : T extends Object ? {
+    [P in keyof T]: T[P] extends (...args: infer Arguments) => infer R ? (...args: Arguments) => Promise<R> : never;
+} : never;
 export declare type Proxy = Function;
 export declare type Exposable = Function | Object;
 export interface TransferHandler {
@@ -30,7 +31,7 @@ export interface TransferHandler {
     deserialize: (obj: {}) => {};
 }
 export declare const transferHandlers: Map<string, TransferHandler>;
-export declare function proxy<T = any>(endpoint: Endpoint | Window, target?: any): PromisedConstructor<T>;
+export declare function proxy<T = any>(endpoint: Endpoint | Window, target?: any): ProxyResult<T>;
 export declare function proxyValue<T>(obj: T): T;
 export declare function expose(rootObj: Exposable, endpoint: Endpoint | Window): void;
 export {};

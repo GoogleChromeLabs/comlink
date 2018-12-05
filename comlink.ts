@@ -26,15 +26,17 @@ export interface Endpoint {
     options?: {}
   ): void;
 }
-type Promised<T> = {
-  [P in keyof T]: T[P] extends (...args: infer A) => infer R
-  ? (...args: A) => Promise<R>
-  : Promise<T[P]>
-};
-type PromisedConstructor<T>  = {
-  new(...args: any): Promise<Promised<T>>;
-};
-
+type ProxyResult<T> =
+  // T is a class
+  T extends { new (...args: infer Arguments): infer R } ? { new (...args: Arguments): Promise<R> } :
+  // T is a function
+  T extends (...args: infer Arguments) => infer R ? (...args: Arguments) => Promise<R> :
+  // T is an object with methods
+  T extends Object ? {
+    [P in keyof T]: T[P] extends (...args: infer Arguments) => infer R ? (...args: Arguments) => Promise<R> : never
+  } :
+  // T is anything else
+  never;
 export type Proxy = Function;
 type CBProxyCallback = (bpcd: CBProxyCallbackDescriptor) => {}; // eslint-disable-line no-unused-vars
 type Transferable = MessagePort | ArrayBuffer; // eslint-disable-line no-unused-vars
@@ -178,7 +180,7 @@ let pingPongMessageCounter: number = 0;
 export function proxy<T = any>(
   endpoint: Endpoint | Window,
   target?: any
-): PromisedConstructor<T> {
+): ProxyResult<T> {
   if (isWindow(endpoint)) endpoint = windowEndpoint(endpoint);
   if (!isEndpoint(endpoint))
     throw Error(
@@ -201,7 +203,7 @@ export function proxy<T = any>(
     },
     [],
     target
-  ) as PromisedConstructor<T>;
+  ) as ProxyResult<T>;
 }
 
 export function proxyValue<T>(obj: T): T {
