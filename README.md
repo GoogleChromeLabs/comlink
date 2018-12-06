@@ -6,7 +6,7 @@ Comlink’s goal is to make [WebWorkers][webworker] enjoyable. Comlink removes t
 
 ```js
 // main.js
-const MyClass = Comlink.proxy(new Worker('worker.js'));
+const MyClass = Comlink.proxy(new Worker("worker.js"));
 // `instance` is an instance of `MyClass` that lives in the worker!
 const instance = await new MyClass();
 await instance.logSomething(); // logs “myValue = 42”
@@ -92,8 +92,8 @@ By default, all parameters to a function that are not [transferable] are copied 
 
 ```js
 // main.js
-const api = Comlink.proxy(new Worker('worker.js'));
-const obj = {x: 0};
+const api = Comlink.proxy(new Worker("worker.js"));
+const obj = { x: 0 };
 await api.setXto4(obj);
 console.log(obj.x); // logs 0
 ```

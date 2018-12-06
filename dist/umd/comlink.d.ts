@@ -10,20 +10,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-/// <reference lib="dom" />
 export interface Endpoint {
     postMessage(message: any, transfer?: any[]): void;
     addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: {}): void;
     removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: {}): void;
 }
 declare type ProxiedObject<T> = {
-    [P in keyof T]: T[P] extends (...args: infer Arguments) => infer R ? (...args: Arguments) => Promise<R> : never;
+    [P in keyof T]: T[P] extends (...args: infer Arguments) => infer R ? (...args: Arguments) => Promise<R> : Promise<T[P]>;
 };
-declare type ProxyResult<T> = T extends {
+declare type ProxyResult<T> = ProxiedObject<T> & (T extends (...args: infer Arguments) => infer R ? (...args: Arguments) => Promise<R> : unknown) & (T extends {
     new (...args: infer ArgumentsType): infer InstanceType;
 } ? {
     new (...args: ArgumentsType): Promise<ProxiedObject<InstanceType>>;
-} : T extends (...args: infer Arguments) => infer R ? (...args: Arguments) => Promise<R> : T extends Object ? ProxiedObject<T> : never;
+} : unknown);
 export declare type Proxy = Function;
 export declare type Exposable = Function | Object;
 export interface TransferHandler {
