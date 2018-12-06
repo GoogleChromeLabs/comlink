@@ -16,13 +16,14 @@ export interface Endpoint {
     addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: {}): void;
     removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: {}): void;
 }
-declare type ProxyResult<T> = T extends {
-    new (...args: infer Arguments): infer R;
-} ? {
-    new (...args: Arguments): Promise<R>;
-} : T extends (...args: infer Arguments) => infer R ? (...args: Arguments) => Promise<R> : T extends Object ? {
+declare type ProxiedObject<T> = {
     [P in keyof T]: T[P] extends (...args: infer Arguments) => infer R ? (...args: Arguments) => Promise<R> : never;
-} : never;
+};
+declare type ProxyResult<T> = T extends {
+    new (...args: infer ArgumentsType): infer InstanceType;
+} ? {
+    new (...args: ArgumentsType): Promise<ProxiedObject<InstanceType>>;
+} : T extends (...args: infer Arguments) => infer R ? (...args: Arguments) => Promise<R> : T extends Object ? ProxiedObject<T> : never;
 export declare type Proxy = Function;
 export declare type Exposable = Function | Object;
 export interface TransferHandler {

@@ -26,15 +26,16 @@ export interface Endpoint {
     options?: {}
   ): void;
 }
+type ProxiedObject<T> = {
+  [P in keyof T]: T[P] extends (...args: infer Arguments) => infer R ? (...args: Arguments) => Promise<R> : never
+};
 type ProxyResult<T> =
   // T is a class
-  T extends { new (...args: infer Arguments): infer R } ? { new (...args: Arguments): Promise<R> } :
+  T extends { new (...args: infer ArgumentsType): infer InstanceType } ? { new (...args: ArgumentsType): Promise<ProxiedObject<InstanceType>> } :
   // T is a function
   T extends (...args: infer Arguments) => infer R ? (...args: Arguments) => Promise<R> :
-  // T is an object with methods
-  T extends Object ? {
-    [P in keyof T]: T[P] extends (...args: infer Arguments) => infer R ? (...args: Arguments) => Promise<R> : never
-  } :
+  // T is an object
+  T extends Object ? ProxiedObject<T> :
   // T is anything else
   never;
 export type Proxy = Function;
