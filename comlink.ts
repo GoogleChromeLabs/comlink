@@ -11,8 +11,6 @@
  * limitations under the License.
  */
 
-/// <reference lib="dom" />
-
 export interface Endpoint {
   postMessage(message: any, transfer?: any[]): void;
   addEventListener(
@@ -26,6 +24,24 @@ export interface Endpoint {
     options?: {}
   ): void;
 }
+// ProxiedObject<T> is equivalent to T, except that all properties are now promises and
+// all functions now return promises. It effectively async-ifies an object.
+type ProxiedObject<T> = {
+  [P in keyof T]: T[P] extends (...args: infer Arguments) => infer R
+    ? (...args: Arguments) => Promise<R>
+    : Promise<T[P]>
+};
+
+// ProxyResult<T> is an augmentation of ProxyObject<T> that also handles raw functions
+// and classes correctly.
+export type ProxyResult<T> = ProxiedObject<T> &
+  (T extends (...args: infer Arguments) => infer R
+    ? (...args: Arguments) => Promise<R>
+    : unknown) &
+  (T extends { new (...args: infer ArgumentsType): infer InstanceType }
+    ? { new (...args: ArgumentsType): Promise<ProxiedObject<InstanceType>> }
+    : unknown);
+
 export type Proxy = Function;
 type CBProxyCallback = (bpcd: CBProxyCallbackDescriptor) => {}; // eslint-disable-line no-unused-vars
 type Transferable = MessagePort | ArrayBuffer; // eslint-disable-line no-unused-vars
@@ -130,7 +146,8 @@ export interface TransferHandler {
 }
 
 const TRANSFERABLE_TYPES = ["ArrayBuffer", "MessagePort", "OffscreenCanvas"]
-  .filter(f => f in self).map(f => (self as any)[f]);
+  .filter(f => f in self)
+  .map(f => (self as any)[f]);
 const uid: number = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
 
 const proxyValueSymbol = Symbol("proxyValue");
@@ -166,10 +183,10 @@ export const transferHandlers: Map<string, TransferHandler> = new Map([
 
 let pingPongMessageCounter: number = 0;
 
-export function proxy(
+export function proxy<T = any>(
   endpoint: Endpoint | Window,
   target?: any
-): Proxy {
+): ProxyResult<T> {
   if (isWindow(endpoint)) endpoint = windowEndpoint(endpoint);
   if (!isEndpoint(endpoint))
     throw Error(
@@ -192,7 +209,7 @@ export function proxy(
     },
     [],
     target
-  );
+  ) as ProxyResult<T>;
 }
 
 export function proxyValue<T>(obj: T): T {
@@ -200,10 +217,7 @@ export function proxyValue<T>(obj: T): T {
   return obj;
 }
 
-export function expose(
-  rootObj: Exposable,
-  endpoint: Endpoint | Window
-): void {
+export function expose(rootObj: Exposable, endpoint: Endpoint | Window): void {
   if (isWindow(endpoint)) endpoint = windowEndpoint(endpoint);
   if (!isEndpoint(endpoint))
     throw Error(
@@ -452,11 +466,7 @@ function cbProxy(
         });
         return Promise.resolve(r).then.bind(r);
       } else {
-        return cbProxy(
-          cb,
-          callPath.concat(property),
-          (<any>_target)[property]
-        );
+        return cbProxy(cb, callPath.concat(property), (<any>_target)[property]);
       }
     },
     set(_target, property, value, _proxy): boolean {
@@ -517,4 +527,3 @@ function makeInvocationResult(obj: {}): InvocationResult {
     }
   };
 }
-
