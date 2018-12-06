@@ -18,7 +18,7 @@ export interface Endpoint {
 declare type ProxiedObject<T> = {
     [P in keyof T]: T[P] extends (...args: infer Arguments) => infer R ? (...args: Arguments) => Promise<R> : Promise<T[P]>;
 };
-declare type ProxyResult<T> = ProxiedObject<T> & (T extends (...args: infer Arguments) => infer R ? (...args: Arguments) => Promise<R> : unknown) & (T extends {
+export declare type ProxyResult<T> = ProxiedObject<T> & (T extends (...args: infer Arguments) => infer R ? (...args: Arguments) => Promise<R> : unknown) & (T extends {
     new (...args: infer ArgumentsType): infer InstanceType;
 } ? {
     new (...args: ArgumentsType): Promise<ProxiedObject<InstanceType>>;

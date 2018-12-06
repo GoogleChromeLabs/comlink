@@ -28,7 +28,7 @@ declare type ProxiedObject<T> = {
     ? (...args: Arguments) => Promise<R>
     : Promise<T[P]>
 };
-declare type ProxyResult<T> = ProxiedObject<T> &
+export declare type ProxyResult<T> = ProxiedObject<T> &
   (T extends (...args: infer Arguments) => infer R
     ? (...args: Arguments) => Promise<R>
     : unknown) &
