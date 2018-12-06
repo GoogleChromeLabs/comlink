@@ -34,7 +34,7 @@ type ProxiedObject<T> = {
 
 // ProxyResult<T> is an augmentation of ProxyObject<T> that also handles raw functions
 // and classes correctly.
-type ProxyResult<T> = ProxiedObject<T> &
+export type ProxyResult<T> = ProxiedObject<T> &
   (T extends (...args: infer Arguments) => infer R
     ? (...args: Arguments) => Promise<R>
     : unknown) &
