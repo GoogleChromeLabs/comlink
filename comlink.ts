@@ -24,22 +24,26 @@ export interface Endpoint {
     options?: {}
   ): void;
 }
+
+// To avoid Promise<Promise<T>>
+type Promisify<T> = T extends Promise<any> ? T : Promise<T>;
+
 // ProxiedObject<T> is equivalent to T, except that all properties are now promises and
 // all functions now return promises. It effectively async-ifies an object.
 type ProxiedObject<T> = {
   [P in keyof T]: T[P] extends (...args: infer Arguments) => infer R
-    ? (...args: Arguments) => Promise<R>
-    : Promise<T[P]>
+    ? (...args: Arguments) => Promisify<R>
+    : Promisify<T[P]>
 };
 
 // ProxyResult<T> is an augmentation of ProxyObject<T> that also handles raw functions
 // and classes correctly.
 export type ProxyResult<T> = ProxiedObject<T> &
   (T extends (...args: infer Arguments) => infer R
-    ? (...args: Arguments) => Promise<R>
+    ? (...args: Arguments) => Promisify<R>
     : unknown) &
   (T extends { new (...args: infer ArgumentsType): infer InstanceType }
-    ? { new (...args: ArgumentsType): Promise<ProxiedObject<InstanceType>> }
+    ? { new (...args: ArgumentsType): Promisify<ProxiedObject<InstanceType>> }
     : unknown);
 
 export type Proxy = Function;
