@@ -10,52 +10,54 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-const TRANSFERABLE_TYPES = ["ArrayBuffer", "MessagePort", "OffscreenCanvas"]
-    .filter(f => f in self)
-    .map(f => self[f]);
-const uid = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
-const proxyValueSymbol = Symbol("proxyValue");
-const throwSymbol = Symbol("throw");
-const proxyTransferHandler = {
-    canHandle: (obj) => obj && obj[proxyValueSymbol],
-    serialize: (obj) => {
-        const { port1, port2 } = new MessageChannel();
+var TRANSFERABLE_TYPES = ["ArrayBuffer", "MessagePort", "OffscreenCanvas"]
+    .filter(function (f) { return f in self; })
+    .map(function (f) { return self[f]; });
+var uid = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
+var proxyValueSymbol = Symbol("proxyValue");
+var throwSymbol = Symbol("throw");
+var proxyTransferHandler = {
+    canHandle: function (obj) { return obj && obj[proxyValueSymbol]; },
+    serialize: function (obj) {
+        var _a = new MessageChannel(), port1 = _a.port1, port2 = _a.port2;
         expose(obj, port1);
         return port2;
     },
-    deserialize: (obj) => {
+    deserialize: function (obj) {
         return proxy(obj);
     }
 };
-const throwTransferHandler = {
-    canHandle: (obj) => obj && obj[throwSymbol],
-    serialize: (obj) => {
-        const message = obj && obj.message;
-        const stack = obj && obj.stack;
-        return Object.assign({}, obj, { message, stack });
+var throwTransferHandler = {
+    canHandle: function (obj) { return obj && obj[throwSymbol]; },
+    serialize: function (obj) {
+        var message = obj && obj.message;
+        var stack = obj && obj.stack;
+        return Object.assign({}, obj, { message: message, stack: stack });
     },
-    deserialize: (obj) => {
+    deserialize: function (obj) {
         throw Object.assign(Error(), obj);
     }
 };
-export const transferHandlers = new Map([
+export var transferHandlers = new Map([
     ["PROXY", proxyTransferHandler],
     ["THROW", throwTransferHandler]
 ]);
-let pingPongMessageCounter = 0;
+var pingPongMessageCounter = 0;
 export function proxy(endpoint, target) {
     if (isWindow(endpoint))
         endpoint = windowEndpoint(endpoint);
     if (!isEndpoint(endpoint))
         throw Error("endpoint does not have all of addEventListener, removeEventListener and postMessage defined");
     activateEndpoint(endpoint);
-    return cbProxy(async (irequest) => {
-        let args = [];
+    return cbProxy(function (irequest) {
+        var args = [];
         if (irequest.type === "APPLY" || irequest.type === "CONSTRUCT")
             args = irequest.argumentsList.map(wrapValue);
-        const response = await pingPongMessage(endpoint, Object.assign({}, irequest, { argumentsList: args }), transferableProperties(args));
-        const result = response.data;
-        return unwrapValue(result.value);
+        var responsePromise = pingPongMessage(endpoint, Object.assign({}, irequest, { argumentsList: args }), transferableProperties(args));
+        return responsePromise.then(function (response) {
+            var result = response.data;
+            return unwrapValue(result.value);
+        });
     }, [], target);
 }
 export function proxyValue(obj) {
@@ -68,51 +70,59 @@ export function expose(rootObj, endpoint) {
     if (!isEndpoint(endpoint))
         throw Error("endpoint does not have all of addEventListener, removeEventListener and postMessage defined");
     activateEndpoint(endpoint);
-    attachMessageHandler(endpoint, async function (event) {
+    attachMessageHandler(endpoint, function (event) {
         if (!event.data.id || !event.data.callPath)
             return;
-        const irequest = event.data;
-        let that = await irequest.callPath
+        var irequest = event.data;
+        var thatPromise = irequest.callPath
             .slice(0, -1)
-            .reduce((obj, propName) => obj[propName], rootObj);
-        let obj = await irequest.callPath.reduce((obj, propName) => obj[propName], rootObj);
-        let iresult = obj;
-        let args = [];
-        if (irequest.type === "APPLY" || irequest.type === "CONSTRUCT")
-            args = irequest.argumentsList.map(unwrapValue);
-        if (irequest.type === "APPLY") {
-            try {
-                iresult = await obj.apply(that, args);
+            .reduce(function (obj, propName) { return obj[propName]; }, rootObj);
+        var objPromise = irequest.callPath.reduce(function (obj, propName) { return obj[propName]; }, rootObj);
+        return Promise.all([thatPromise, objPromise])
+            .then(function (_a) {
+            var that = _a[0], obj = _a[1];
+            var iresult = obj;
+            var args = [];
+            if (irequest.type === "APPLY" || irequest.type === "CONSTRUCT")
+                args = irequest.argumentsList.map(unwrapValue);
+            if (irequest.type === "APPLY") {
+                try {
+                    iresult = obj.apply(that, args);
+                }
+                catch (e) {
+                    iresult = e;
+                    iresult[throwSymbol] = true;
+                }
             }
-            catch (e) {
-                iresult = e;
-                iresult[throwSymbol] = true;
+            if (irequest.type === "CONSTRUCT") {
+                try {
+                    iresult = new (obj.bind.apply(obj, [void 0].concat(args)))(); // eslint-disable-line new-cap
+                    iresult = proxyValue(iresult);
+                }
+                catch (e) {
+                    iresult = e;
+                    iresult[throwSymbol] = true;
+                }
             }
-        }
-        if (irequest.type === "CONSTRUCT") {
-            try {
-                iresult = new obj(...args); // eslint-disable-line new-cap
-                iresult = proxyValue(iresult);
+            if (irequest.type === "SET") {
+                obj[irequest.property] = irequest.value;
+                // FIXME: ES6 Proxy Handler `set` methods are supposed to return a
+                // boolean. To show good will, we return true asynchronously ¯\_(ツ)_/¯
+                iresult = true;
             }
-            catch (e) {
-                iresult = e;
-                iresult[throwSymbol] = true;
-            }
-        }
-        if (irequest.type === "SET") {
-            obj[irequest.property] = irequest.value;
-            // FIXME: ES6 Proxy Handler `set` methods are supposed to return a
-            // boolean. To show good will, we return true asynchronously ¯\_(ツ)_/¯
-            iresult = true;
-        }
-        iresult = makeInvocationResult(iresult);
-        iresult.id = irequest.id;
-        return endpoint.postMessage(iresult, transferableProperties([iresult]));
+            return iresult;
+        })
+            .then(function (iresult) {
+            iresult = makeInvocationResult(iresult);
+            iresult.id = irequest.id;
+            return endpoint.postMessage(iresult, transferableProperties([iresult]));
+        });
     });
 }
 function wrapValue(arg) {
     // Is arg itself handled by a TransferHandler?
-    for (const [key, transferHandler] of transferHandlers) {
+    for (var _i = 0, _a = Array.from(transferHandlers); _i < _a.length; _i++) {
+        var _b = _a[_i], key = _b[0], transferHandler = _b[1];
         if (transferHandler.canHandle(arg)) {
             return {
                 type: key,
@@ -121,9 +131,11 @@ function wrapValue(arg) {
         }
     }
     // If not, traverse the entire object and find handled values.
-    let wrappedChildren = [];
-    for (const item of iterateAllProperties(arg)) {
-        for (const [key, transferHandler] of transferHandlers) {
+    var wrappedChildren = [];
+    for (var _c = 0, _d = iterateAllProperties(arg); _c < _d.length; _c++) {
+        var item = _d[_c];
+        for (var _e = 0, _f = Array.from(transferHandlers); _e < _f.length; _e++) {
+            var _g = _f[_e], key = _g[0], transferHandler = _g[1];
             if (transferHandler.canHandle(item.value)) {
                 wrappedChildren.push({
                     path: item.path,
@@ -135,42 +147,44 @@ function wrapValue(arg) {
             }
         }
     }
-    for (const wrappedChild of wrappedChildren) {
-        const container = wrappedChild.path
+    for (var _h = 0, wrappedChildren_1 = wrappedChildren; _h < wrappedChildren_1.length; _h++) {
+        var wrappedChild = wrappedChildren_1[_h];
+        var container = wrappedChild.path
             .slice(0, -1)
-            .reduce((obj, key) => obj[key], arg);
+            .reduce(function (obj, key) { return obj[key]; }, arg);
         container[wrappedChild.path[wrappedChild.path.length - 1]] = null;
     }
     return {
         type: "RAW",
         value: arg,
-        wrappedChildren
+        wrappedChildren: wrappedChildren
     };
 }
 function unwrapValue(arg) {
     if (transferHandlers.has(arg.type)) {
-        const transferHandler = transferHandlers.get(arg.type);
+        var transferHandler = transferHandlers.get(arg.type);
         return transferHandler.deserialize(arg.value);
     }
     else if (isRawWrappedValue(arg)) {
-        for (const wrappedChildValue of arg.wrappedChildren || []) {
+        for (var _i = 0, _a = arg.wrappedChildren || []; _i < _a.length; _i++) {
+            var wrappedChildValue = _a[_i];
             if (!transferHandlers.has(wrappedChildValue.wrappedValue.type))
-                throw Error(`Unknown value type "${arg.type}" at ${wrappedChildValue.path.join(".")}`);
-            const transferHandler = transferHandlers.get(wrappedChildValue.wrappedValue.type);
-            const newValue = transferHandler.deserialize(wrappedChildValue.wrappedValue.value);
+                throw Error("Unknown value type \"" + arg.type + "\" at " + wrappedChildValue.path.join("."));
+            var transferHandler = transferHandlers.get(wrappedChildValue.wrappedValue.type);
+            var newValue = transferHandler.deserialize(wrappedChildValue.wrappedValue.value);
             replaceValueInObjectAtPath(arg.value, wrappedChildValue.path, newValue);
         }
         return arg.value;
     }
     else {
-        throw Error(`Unknown value type "${arg.type}"`);
+        throw Error("Unknown value type \"" + arg.type + "\"");
     }
 }
 function replaceValueInObjectAtPath(obj, path, newVal) {
-    const lastKey = path.slice(-1)[0];
-    const lastObj = path
+    var lastKey = path.slice(-1)[0];
+    var lastObj = path
         .slice(0, -1)
-        .reduce((obj, key) => obj[key], obj);
+        .reduce(function (obj, key) { return obj[key]; }, obj);
     lastObj[lastKey] = newVal;
 }
 function isRawWrappedValue(arg) {
@@ -182,7 +196,7 @@ function windowEndpoint(w) {
     return {
         addEventListener: self.addEventListener.bind(self),
         removeEventListener: self.removeEventListener.bind(self),
-        postMessage: (msg, transfer) => w.postMessage(msg, "*", transfer)
+        postMessage: function (msg, transfer) { return w.postMessage(msg, "*", transfer); }
     };
 }
 function isEndpoint(endpoint) {
@@ -216,15 +230,15 @@ function isMessagePort(endpoint) {
 function isWindow(endpoint) {
     // TODO: This doesn’t work on cross-origin iframes.
     // return endpoint.constructor.name === 'Window';
-    return ["window", "length", "location", "parent", "opener"].every(prop => prop in endpoint);
+    return ["window", "length", "location", "parent", "opener"].every(function (prop) { return prop in endpoint; });
 }
 /**
  * `pingPongMessage` sends a `postMessage` and waits for a reply. Replies are
  * identified by a unique id that is attached to the payload.
  */
 function pingPongMessage(endpoint, msg, transferables) {
-    const id = `${uid}-${pingPongMessageCounter++}`;
-    return new Promise(resolve => {
+    var id = uid + "-" + pingPongMessageCounter++;
+    return new Promise(function (resolve) {
         attachMessageHandler(endpoint, function handler(event) {
             if (event.data.id !== id)
                 return;
@@ -232,38 +246,40 @@ function pingPongMessage(endpoint, msg, transferables) {
             resolve(event);
         });
         // Copy msg and add `id` property
-        msg = Object.assign({}, msg, { id });
+        msg = Object.assign({}, msg, { id: id });
         endpoint.postMessage(msg, transferables);
     });
 }
-function cbProxy(cb, callPath = [], target = function () { }) {
+function cbProxy(cb, callPath, target) {
+    if (callPath === void 0) { callPath = []; }
+    if (target === void 0) { target = function () { }; }
     return new Proxy(target, {
-        construct(_target, argumentsList, proxy) {
+        construct: function (_target, argumentsList, proxy) {
             return cb({
                 type: "CONSTRUCT",
-                callPath,
-                argumentsList
+                callPath: callPath,
+                argumentsList: argumentsList
             });
         },
-        apply(_target, _thisArg, argumentsList) {
+        apply: function (_target, _thisArg, argumentsList) {
             // We use `bind` as an indicator to have a remote function bound locally.
             // The actual target for `bind()` is currently ignored.
             if (callPath[callPath.length - 1] === "bind")
                 return cbProxy(cb, callPath.slice(0, -1));
             return cb({
                 type: "APPLY",
-                callPath,
-                argumentsList
+                callPath: callPath,
+                argumentsList: argumentsList
             });
         },
-        get(_target, property, proxy) {
+        get: function (_target, property, proxy) {
             if (property === "then" && callPath.length === 0) {
-                return { then: () => proxy };
+                return { then: function () { return proxy; } };
             }
             else if (property === "then") {
-                const r = cb({
+                var r = cb({
                     type: "GET",
-                    callPath
+                    callPath: callPath
                 });
                 return Promise.resolve(r).then.bind(r);
             }
@@ -271,51 +287,61 @@ function cbProxy(cb, callPath = [], target = function () { }) {
                 return cbProxy(cb, callPath.concat(property), _target[property]);
             }
         },
-        set(_target, property, value, _proxy) {
+        set: function (_target, property, value, _proxy) {
             return cb({
                 type: "SET",
-                callPath,
-                property,
-                value
+                callPath: callPath,
+                property: property,
+                value: value
             });
         }
     });
 }
 function isTransferable(thing) {
-    return TRANSFERABLE_TYPES.some(type => thing instanceof type);
+    return TRANSFERABLE_TYPES.some(function (type) { return thing instanceof type; });
 }
-function* iterateAllProperties(value, path = [], visited = null) {
+function iterateAllProperties(value, path, visited, properties) {
+    if (path === void 0) { path = []; }
+    if (visited === void 0) { visited = null; }
+    if (properties === void 0) { properties = null; }
     if (!value)
-        return;
+        return [];
     if (!visited)
         visited = new WeakSet();
+    if (!properties)
+        properties = [];
     if (visited.has(value))
-        return;
+        return [];
     if (typeof value === "string")
-        return;
+        return [];
     if (typeof value === "object")
         visited.add(value);
     if (ArrayBuffer.isView(value))
-        return;
-    yield { value, path };
-    const keys = Object.keys(value);
-    for (const key of keys)
-        yield* iterateAllProperties(value[key], [...path, key], visited);
+        return [];
+    properties.push({ value: value, path: path });
+    var keys = Object.keys(value);
+    for (var _i = 0, keys_1 = keys; _i < keys_1.length; _i++) {
+        var key = keys_1[_i];
+        iterateAllProperties(value[key], path.concat([key]), visited, properties);
+    }
+    return properties;
 }
 function transferableProperties(obj) {
-    const r = [];
-    for (const prop of iterateAllProperties(obj)) {
+    var r = [];
+    for (var _i = 0, _a = iterateAllProperties(obj); _i < _a.length; _i++) {
+        var prop = _a[_i];
         if (isTransferable(prop.value))
             r.push(prop.value);
     }
     return r;
 }
 function makeInvocationResult(obj) {
-    for (const [type, transferHandler] of transferHandlers) {
+    for (var _i = 0, _a = Array.from(transferHandlers); _i < _a.length; _i++) {
+        var _b = _a[_i], type = _b[0], transferHandler = _b[1];
         if (transferHandler.canHandle(obj)) {
-            const value = transferHandler.serialize(obj);
+            var value = transferHandler.serialize(obj);
             return {
-                value: { type, value }
+                value: { type: type, value: value }
             };
         }
     }

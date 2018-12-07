@@ -22,28 +22,31 @@ else {factory([], self.Comlink={});}
 })(function (require, exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
-    function wrap(smc, id = null) {
-        const { port1, port2 } = new MessageChannel();
+    function wrap(smc, id) {
+        if (id === void 0) { id = null; }
+        var _a = new MessageChannel(), port1 = _a.port1, port2 = _a.port2;
         hookup(port2, smc, id);
         return port1;
     }
     exports.wrap = wrap;
-    function hookup(internalPort, smc, id = null) {
-        internalPort.onmessage = (event) => {
+    function hookup(internalPort, smc, id) {
+        if (id === void 0) { id = null; }
+        internalPort.onmessage = function (event) {
             if (!id)
                 id = generateUID();
-            const msg = event.data;
-            const messageChannels = Array.from(findMessageChannels(event.data));
-            for (const messageChannel of messageChannels) {
-                const id = generateUID();
-                const channel = replaceProperty(msg, messageChannel, id);
-                hookup(channel, smc, id);
+            var msg = event.data;
+            var messageChannels = Array.from(findMessageChannels(event.data));
+            for (var _i = 0, messageChannels_1 = messageChannels; _i < messageChannels_1.length; _i++) {
+                var messageChannel = messageChannels_1[_i];
+                var id_1 = generateUID();
+                var channel = replaceProperty(msg, messageChannel, id_1);
+                hookup(channel, smc, id_1);
             }
-            const payload = JSON.stringify({ id, msg, messageChannels });
+            var payload = JSON.stringify({ id: id, msg: msg, messageChannels: messageChannels });
             smc.send(payload);
         };
-        smc.addEventListener("message", (event) => {
-            let data = {};
+        smc.addEventListener("message", function (event) {
+            var data = {};
             try {
                 data = JSON.parse(event.data);
             }
@@ -52,9 +55,9 @@ else {factory([], self.Comlink={});}
             }
             if (id && id !== data.id)
                 return;
-            const mcs = data.messageChannels.map(messageChannel => {
-                const id = messageChannel.reduce((obj, key) => obj[key], data.msg);
-                const port = wrap(smc, id);
+            var mcs = data.messageChannels.map(function (messageChannel) {
+                var id = messageChannel.reduce(function (obj, key) { return obj[key]; }, data.msg);
+                var port = wrap(smc, id);
                 replaceProperty(data.msg, messageChannel, port);
                 return port;
             });
@@ -62,38 +65,45 @@ else {factory([], self.Comlink={});}
         });
     }
     function replaceProperty(obj, path, newVal) {
-        for (const key of path.slice(0, -1))
-            obj = obj[key];
-        const key = path[path.length - 1];
-        const orig = obj[key];
+        for (var _i = 0, _a = path.slice(0, -1); _i < _a.length; _i++) {
+            var key_1 = _a[_i];
+            obj = obj[key_1];
+        }
+        var key = path[path.length - 1];
+        var orig = obj[key];
         obj[key] = newVal;
         return orig;
     }
-    function* findMessageChannels(obj, path = []) {
+    function findMessageChannels(obj, path, channels) {
+        if (path === void 0) { path = []; }
+        if (channels === void 0) { channels = []; }
         if (!obj)
-            return;
+            return [];
         if (typeof obj === "string")
-            return;
+            return [];
         if (obj instanceof MessagePort) {
-            yield path.slice();
-            return;
+            channels.push(path.slice());
         }
-        for (const key of Object.keys(obj)) {
-            path.push(key);
-            yield* findMessageChannels(obj[key], path);
-            path.pop();
+        else {
+            for (var _i = 0, _a = Object.keys(obj); _i < _a.length; _i++) {
+                var key = _a[_i];
+                path.push(key);
+                findMessageChannels(obj[key], path, channels);
+                path.pop();
+            }
         }
+        return channels;
     }
     function hex4() {
         return Math.floor((1 + Math.random()) * 0x10000)
             .toString(16)
             .substring(1);
     }
-    const bits = 128;
+    var bits = 128;
     function generateUID() {
         return new Array(bits / 16)
             .fill(0)
-            .map(_ => hex4())
+            .map(function (_) { return hex4(); })
             .join("");
     }
 });
