@@ -1,3 +1,4 @@
 {
-  "extends": [":library"]
+  "extends": [":library"],
+  "assignees": ["surma"]
 }
