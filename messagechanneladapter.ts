@@ -48,22 +48,25 @@ function hookup(
     smc.send(payload);
   };
 
-  smc.addEventListener("message", (event: Event): void => {
-    let data = {} as Message;
-    try {
-      data = JSON.parse((event as MessageEvent).data) as Message;
-    } catch (e) {
-      return;
+  smc.addEventListener(
+    "message",
+    (event: Event): void => {
+      let data = {} as Message;
+      try {
+        data = JSON.parse((event as MessageEvent).data) as Message;
+      } catch (e) {
+        return;
+      }
+      if (id && id !== data.id) return;
+      const mcs = data.messageChannels.map(messageChannel => {
+        const id = messageChannel.reduce((obj, key) => obj[key], data.msg);
+        const port = wrap(smc, id);
+        replaceProperty(data.msg, messageChannel, port);
+        return port;
+      });
+      internalPort.postMessage(data.msg, mcs);
     }
-    if (id && id !== data.id) return;
-    const mcs = data.messageChannels.map(messageChannel => {
-      const id = messageChannel.reduce((obj, key) => obj[key], data.msg);
-      const port = wrap(smc, id);
-      replaceProperty(data.msg, messageChannel, port);
-      return port;
-    });
-    internalPort.postMessage(data.msg, mcs);
-  });
+  );
 }
 
 function replaceProperty(obj: any, path: string[], newVal: any): any {
@@ -74,21 +77,23 @@ function replaceProperty(obj: any, path: string[], newVal: any): any {
   return orig;
 }
 
-function* findMessageChannels(
+function findMessageChannels(
   obj: any,
-  path: string[] = []
-): Iterable<string[]> {
-  if (!obj) return;
-  if (typeof obj === "string") return;
+  path: string[] = [],
+  channels: string[][] = []
+): string[][] {
+  if (!obj) return [];
+  if (typeof obj === "string") return [];
   if (obj instanceof MessagePort) {
-    yield path.slice();
-    return;
+    channels.push(path.slice());
+  } else {
+    for (const key of Object.keys(obj)) {
+      path.push(key);
+      findMessageChannels(obj[key], path, channels);
+      path.pop();
+    }
   }
-  for (const key of Object.keys(obj)) {
-    path.push(key);
-    yield* findMessageChannels(obj[key], path);
-    path.pop();
-  }
+  return channels;
 }
 
 function hex4(): string {
@@ -104,4 +109,3 @@ function generateUID(): string {
     .map(_ => hex4())
     .join("");
 }
-

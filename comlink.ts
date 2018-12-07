@@ -195,17 +195,19 @@ export function proxy<T = any>(
 
   activateEndpoint(endpoint);
   return cbProxy(
-    async irequest => {
+    irequest => {
       let args: WrappedValue[] = [];
       if (irequest.type === "APPLY" || irequest.type === "CONSTRUCT")
         args = irequest.argumentsList.map(wrapValue);
-      const response = await pingPongMessage(
+      const responsePromise = pingPongMessage(
         endpoint as Endpoint,
         Object.assign({}, irequest, { argumentsList: args }),
         transferableProperties(args)
       );
-      const result = response.data as InvocationResult;
-      return unwrapValue(result.value);
+      return responsePromise.then(response => {
+        const result = response.data as InvocationResult;
+        return unwrapValue(result.value);
+      });
     },
     [],
     target
@@ -225,57 +227,63 @@ export function expose(rootObj: Exposable, endpoint: Endpoint | Window): void {
     );
 
   activateEndpoint(endpoint);
-  attachMessageHandler(endpoint, async function(event: MessageEvent) {
+  attachMessageHandler(endpoint, function(event: MessageEvent) {
     if (!event.data.id || !event.data.callPath) return;
     const irequest = event.data as InvocationRequest;
-    let that = await irequest.callPath
+    let thatPromise = irequest.callPath
       .slice(0, -1)
       .reduce((obj, propName) => obj[propName], rootObj as any);
-    let obj = await irequest.callPath.reduce(
+    let objPromise = irequest.callPath.reduce(
       (obj, propName) => obj[propName],
       rootObj as any
     );
-    let iresult = obj;
-    let args: {}[] = [];
 
-    if (irequest.type === "APPLY" || irequest.type === "CONSTRUCT")
-      args = irequest.argumentsList.map(unwrapValue);
-    if (irequest.type === "APPLY") {
-      try {
-        iresult = await obj.apply(that, args);
-      } catch (e) {
-        iresult = e;
-        iresult[throwSymbol] = true;
-      }
-    }
-    if (irequest.type === "CONSTRUCT") {
-      try {
-        iresult = new obj(...args); // eslint-disable-line new-cap
-        iresult = proxyValue(iresult);
-      } catch (e) {
-        iresult = e;
-        iresult[throwSymbol] = true;
-      }
-    }
-    if (irequest.type === "SET") {
-      obj[irequest.property] = irequest.value;
-      // FIXME: ES6 Proxy Handler `set` methods are supposed to return a
-      // boolean. To show good will, we return true asynchronously ¯\_(ツ)_/¯
-      iresult = true;
-    }
+    return Promise.all([thatPromise, objPromise])
+      .then(([that, obj]) => {
+        let iresult = obj;
+        let args: {}[] = [];
 
-    iresult = makeInvocationResult(iresult);
-    iresult.id = irequest.id;
-    return (endpoint as Endpoint).postMessage(
-      iresult,
-      transferableProperties([iresult])
-    );
+        if (irequest.type === "APPLY" || irequest.type === "CONSTRUCT")
+          args = irequest.argumentsList.map(unwrapValue);
+        if (irequest.type === "APPLY") {
+          try {
+            iresult = obj.apply(that, args);
+          } catch (e) {
+            iresult = e;
+            iresult[throwSymbol] = true;
+          }
+        }
+        if (irequest.type === "CONSTRUCT") {
+          try {
+            iresult = new obj(...args); // eslint-disable-line new-cap
+            iresult = proxyValue(iresult);
+          } catch (e) {
+            iresult = e;
+            iresult[throwSymbol] = true;
+          }
+        }
+        if (irequest.type === "SET") {
+          obj[irequest.property] = irequest.value;
+          // FIXME: ES6 Proxy Handler `set` methods are supposed to return a
+          // boolean. To show good will, we return true asynchronously ¯\_(ツ)_/¯
+          iresult = true;
+        }
+        return iresult;
+      })
+      .then(iresult => {
+        iresult = makeInvocationResult(iresult);
+        iresult.id = irequest.id;
+        return (endpoint as Endpoint).postMessage(
+          iresult,
+          transferableProperties([iresult])
+        );
+      });
   });
 }
 
 function wrapValue(arg: {}): WrappedValue {
   // Is arg itself handled by a TransferHandler?
-  for (const [key, transferHandler] of transferHandlers) {
+  for (const [key, transferHandler] of Array.from(transferHandlers)) {
     if (transferHandler.canHandle(arg)) {
       return {
         type: key,
@@ -288,7 +296,7 @@ function wrapValue(arg: {}): WrappedValue {
   // If not, traverse the entire object and find handled values.
   let wrappedChildren: WrappedChildValue[] = [];
   for (const item of iterateAllProperties(arg)) {
-    for (const [key, transferHandler] of transferHandlers) {
+    for (const [key, transferHandler] of Array.from(transferHandlers)) {
       if (transferHandler.canHandle(item.value)) {
         wrappedChildren.push({
           path: item.path,
@@ -484,22 +492,30 @@ function isTransferable(thing: {}): thing is Transferable {
   return TRANSFERABLE_TYPES.some(type => thing instanceof type);
 }
 
-function* iterateAllProperties(
+function iterateAllProperties(
   value: {} | undefined,
   path: string[] = [],
-  visited: WeakSet<{}> | null = null
-): Iterable<PropertyIteratorEntry> {
-  if (!value) return;
+  visited: WeakSet<{}> | null = null,
+  properties: any[] | null = null
+): PropertyIteratorEntry[] {
+  if (!value) return [];
   if (!visited) visited = new WeakSet<{}>();
-  if (visited.has(value)) return;
-  if (typeof value === "string") return;
+  if (!properties) properties = [];
+  if (visited.has(value)) return [];
+  if (typeof value === "string") return [];
   if (typeof value === "object") visited.add(value);
-  if (ArrayBuffer.isView(value)) return;
-  yield { value, path };
+  if (ArrayBuffer.isView(value)) return [];
+  properties.push({ value, path });
 
   const keys = Object.keys(value);
   for (const key of keys)
-    yield* iterateAllProperties((value as any)[key], [...path, key], visited);
+    iterateAllProperties(
+      (value as any)[key],
+      [...path, key],
+      visited,
+      properties
+    );
+  return properties;
 }
 
 function transferableProperties(obj: {}[] | undefined): Transferable[] {
@@ -511,7 +527,7 @@ function transferableProperties(obj: {}[] | undefined): Transferable[] {
 }
 
 function makeInvocationResult(obj: {}): InvocationResult {
-  for (const [type, transferHandler] of transferHandlers) {
+  for (const [type, transferHandler] of Array.from(transferHandlers)) {
     if (transferHandler.canHandle(obj)) {
       const value = transferHandler.serialize(obj);
       return {
