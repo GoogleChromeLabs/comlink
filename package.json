@@ -6,7 +6,7 @@
   "module": "comlink.js",
   "types": "comlink.d.ts",
   "scripts": {
-    "test": "npm run linter && npm run unittest && npm run build",
+    "test": "npm run linter && npm run build && npm run unittest",
     "unittest": "karma start",
     "linter": "prettier --write ./*.js ./docs/**/*.js ./tests/**/*.js ./**/*.ts ./**/*.md ./**/*.json",
     "watchtest": "karma start --no-single-run --browsers ChromeHeadless",
@@ -14,7 +14,8 @@
     "version": "sed -i.bak -e 's!comlinkjs@[0-9.]*!comlinkjs@'${npm_package_version}'!' README.md && git add README.md",
     "mypublish": "npm run build && npm run test && cp README.md package.json dist && npm publish dist",
     "build": "rm -rf dist && mkdir dist && npm run compile",
-    "compile": "tsc --outDir dist && tsc -m umd --outDir dist/umd && node ./mangle_umd.js"
+    "watchcompile": "rollup -c -w",
+    "compile": "rollup -c"
   },
   "keywords": [],
   "author": {
@@ -37,6 +38,7 @@
   },
   "license": "Apache-2.0",
   "devDependencies": {
+    "@ampproject/rollup-plugin-closure-compiler": "^0.8.5",
     "chai": "4.2.0",
     "karma": "3.1.3",
     "karma-chai": "0.1.0",
@@ -47,6 +49,8 @@
     "karma-safaritechpreview-launcher": "1.0.0",
     "mocha": "5.2.0",
     "prettier": "1.15.3",
+    "rollup": "^0.67.4",
+    "rollup-plugin-typescript2": "^0.18.0",
     "typescript": "3.2.2"
   },
   "dependencies": {}

@@ -2,6 +2,7 @@
 *.swp
 node_modules
 .idea
+.rpt2_cache
 *.bak
 dist/comlink.ts
 dist/README.md

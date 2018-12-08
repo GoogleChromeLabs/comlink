@@ -14,6 +14,7 @@
     // "checkJs": true,                       /* Report errors in .js files. */
     // "jsx": "preserve",                     /* Specify JSX code generation: 'preserve', 'react-native', or 'react'. */
     "declaration": true /* Generates corresponding '.d.ts' file. */,
+    "declarationDir": "dist" /* Redirect output declarations to the directory. */,
     // "sourceMap": true,                     /* Generates corresponding '.map' file. */
     // "outFile": "./",                       /* Concatenate and emit output to single file. */
     // "outDir": "./",                        /* Redirect output structure to the directory. */
