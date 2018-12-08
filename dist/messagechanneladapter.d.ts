@@ -10,7 +10,5 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-export interface StringMessageChannel extends EventTarget {
-    send(data: string): void;
-}
+import { StringMessageChannel } from "./types";
 export declare function wrap(smc: StringMessageChannel, id?: string | null): MessagePort;

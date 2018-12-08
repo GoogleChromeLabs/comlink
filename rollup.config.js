@@ -8,6 +8,7 @@ const input = {
 const plugins = [
   typescript({
     useTsconfigDeclarationDir: true,
+    clean: true,
     objectHashIgnoreUnknownHack: true
   }),
   compiler()

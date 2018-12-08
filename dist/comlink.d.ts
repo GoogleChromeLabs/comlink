@@ -10,29 +10,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-export interface Endpoint {
-    postMessage(message: any, transfer?: any[]): void;
-    addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: {}): void;
-    removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: {}): void;
-}
-declare type Promisify<T> = T extends Promise<any> ? T : Promise<T>;
-declare type ProxiedObject<T> = {
-    [P in keyof T]: T[P] extends (...args: infer Arguments) => infer R ? (...args: Arguments) => Promisify<R> : Promisify<T[P]>;
-};
-export declare type ProxyResult<T> = ProxiedObject<T> & (T extends (...args: infer Arguments) => infer R ? (...args: Arguments) => Promisify<R> : unknown) & (T extends {
-    new (...args: infer ArgumentsType): infer InstanceType;
-} ? {
-    new (...args: ArgumentsType): Promisify<ProxiedObject<InstanceType>>;
-} : unknown);
-export declare type Proxy = Function;
-export declare type Exposable = Function | Object;
-export interface TransferHandler {
-    canHandle: (obj: {}) => Boolean;
-    serialize: (obj: {}) => {};
-    deserialize: (obj: {}) => {};
-}
+import { Endpoint, Exposable, ProxyResult, TransferHandler } from "./types";
 export declare const transferHandlers: Map<string, TransferHandler>;
 export declare function proxy<T = any>(endpoint: Endpoint | Window, target?: any): ProxyResult<T>;
 export declare function proxyValue<T>(obj: T): T;
 export declare function expose(rootObj: Exposable, endpoint: Endpoint | Window): void;
-export {};
