@@ -1,6 +1,7 @@
 *.pem
 *.swp
 node_modules
+.idea
 *.bak
 dist/comlink.ts
 dist/README.md
