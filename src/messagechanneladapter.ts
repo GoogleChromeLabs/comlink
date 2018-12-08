@@ -11,6 +11,7 @@
  * limitations under the License.
  */
 import {Message, StringMessageChannel} from "./types";
+import {findInstancePaths, generateUID, replaceProperty} from "./utils";
 
 export function wrap(
   smc: StringMessageChannel,
@@ -29,13 +30,13 @@ function hookup(
   internalPort.onmessage = (event: MessageEvent) => {
     if (!id) id = generateUID();
     const msg = event.data;
-    const messageChannels = Array.from(findMessageChannels(event.data));
-    for (const messageChannel of messageChannels) {
+    const messagePorts = findInstancePaths(event.data, MessagePort);
+    for (const messageChannel of messagePorts) {
       const id = generateUID();
       const channel = replaceProperty(msg, messageChannel, id);
       hookup(channel, smc, id);
     }
-    const payload = JSON.stringify({ id, msg, messageChannels });
+    const payload = JSON.stringify({ id, msg, messageChannels: messagePorts });
     smc.send(payload);
   };
 
@@ -58,45 +59,4 @@ function hookup(
       internalPort.postMessage(data.msg, mcs);
     }
   );
-}
-
-function replaceProperty(obj: any, path: string[], newVal: any): any {
-  for (const key of path.slice(0, -1)) obj = obj[key];
-  const key = path[path.length - 1];
-  const orig = obj[key];
-  obj[key] = newVal;
-  return orig;
-}
-
-function findMessageChannels(
-  obj: any,
-  path: string[] = [],
-  channels: string[][] = []
-): string[][] {
-  if (!obj) return [];
-  if (typeof obj === "string") return [];
-  if (obj instanceof MessagePort) {
-    channels.push(path.slice());
-  } else {
-    for (const key of Object.keys(obj)) {
-      path.push(key);
-      findMessageChannels(obj[key], path, channels);
-      path.pop();
-    }
-  }
-  return channels;
-}
-
-function hex4(): string {
-  return Math.floor((1 + Math.random()) * 0x10000)
-    .toString(16)
-    .substring(1);
-}
-
-const bits = 128;
-function generateUID(): string {
-  return new Array(bits / 16)
-    .fill(0)
-    .map(_ => hex4())
-    .join("");
 }
