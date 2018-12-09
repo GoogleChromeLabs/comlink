@@ -1,7 +1,7 @@
 import typescript from "rollup-plugin-typescript2";
 import compiler from "@ampproject/rollup-plugin-closure-compiler";
 
-const input = {
+const inputs = {
   comlink: "./src/comlink.ts",
   messagechanneladapter: "./src/messagechanneladapter.ts"
 };
@@ -14,35 +14,46 @@ const plugins = [
   compiler()
 ];
 const umdOutputOptions = {
-  name: "Comlink",
+  dir: "dist/umd",
   format: "umd"
+};
+const esmOutputOptions = {
+  dir: "dist",
+  format: "esm"
 };
 
 export default [
   {
-    input,
+    input: inputs.comlink,
     plugins,
-    experimentalCodeSplitting: true,
     output: {
-      dir: "dist",
-      format: "esm"
+      file: "comlink.js",
+      ...esmOutputOptions
     }
   },
   {
-    input: input.comlink,
+    input: inputs.messagechanneladapter,
     plugins,
     output: {
-      dir: "dist/umd",
+      file: "messagechanneladapter.js",
+      ...esmOutputOptions
+    }
+  },
+  {
+    input: inputs.comlink,
+    plugins,
+    output: {
       file: "comlink.js",
+      name: "Comlink",
       ...umdOutputOptions
     }
   },
   {
-    input: input.messagechanneladapter,
+    input: inputs.messagechanneladapter,
     plugins,
     output: {
-      dir: "dist/umd",
       file: "messagechanneladapter.js",
+      name: "messagechanneladapter",
       ...umdOutputOptions
     }
   }
