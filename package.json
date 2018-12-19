@@ -6,9 +6,10 @@
   "module": "comlink.js",
   "types": "comlink.d.ts",
   "scripts": {
-    "test": "npm run linter && npm run unittest && npm run build",
+    "test": "npm run linter && npm run dtslint && npm run unittest && npm run build",
     "unittest": "karma start",
     "linter": "prettier --write ./*.js ./docs/**/*.js ./tests/**/*.js ./**/*.ts ./**/*.md ./**/*.json",
+    "dtslint": "tslint --project tests/tsconfig.json --config tslint.json",
     "watchtest": "karma start --no-single-run --browsers ChromeHeadless",
     "watchtestharmony": "karma start --no-single-run --browsers ChromeCanaryHeadlessHarmony",
     "version": "sed -i.bak -e 's!comlinkjs@[0-9.]*!comlinkjs@'${npm_package_version}'!' README.md && git add README.md",
@@ -39,6 +40,7 @@
   "devDependencies": {
     "chai": "4.2.0",
     "karma": "4.0.0",
+    "dtslint": "^0.4.1",
     "karma-chai": "0.1.0",
     "karma-chrome-launcher": "2.2.0",
     "karma-firefox-launcher": "1.1.0",
@@ -47,6 +49,7 @@
     "karma-safaritechpreview-launcher": "2.0.2",
     "mocha": "5.2.0",
     "prettier": "1.16.1",
+    "tslint": "^5.12.1",
     "typescript": "3.2.4"
   },
   "dependencies": {}
