@@ -10,14 +10,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+/**
+ * Symbol that gets added to objects by `Comlink.proxy()`.
+ */
+export const proxyValueSymbol = Symbol("comlinkProxyValue");
+/**
+ * Returns true if the given value has the proxy value symbol added to it.
+ */
+const isProxyValue = (value) => !!value && value[proxyValueSymbol] === true;
 const TRANSFERABLE_TYPES = ["ArrayBuffer", "MessagePort", "OffscreenCanvas"]
     .filter(f => f in self)
     .map(f => self[f]);
 const uid = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
-const proxyValueSymbol = Symbol("proxyValue");
 const throwSymbol = Symbol("throw");
 const proxyTransferHandler = {
-    canHandle: (obj) => obj && obj[proxyValueSymbol],
+    canHandle: isProxyValue,
     serialize: (obj) => {
         const { port1, port2 } = new MessageChannel();
         expose(obj, port1);
@@ -59,8 +66,9 @@ export function proxy(endpoint, target) {
     }, [], target);
 }
 export function proxyValue(obj) {
-    obj[proxyValueSymbol] = true;
-    return obj;
+    const proxyVal = obj;
+    proxyVal[proxyValueSymbol] = true;
+    return proxyVal;
 }
 export function expose(rootObj, endpoint) {
     if (isWindow(endpoint))

@@ -22,14 +22,21 @@ else {factory([], self.Comlink={});}
 })(function (require, exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
+    /**
+     * Symbol that gets added to objects by `Comlink.proxy()`.
+     */
+    exports.proxyValueSymbol = Symbol("comlinkProxyValue");
+    /**
+     * Returns true if the given value has the proxy value symbol added to it.
+     */
+    const isProxyValue = (value) => !!value && value[exports.proxyValueSymbol] === true;
     const TRANSFERABLE_TYPES = ["ArrayBuffer", "MessagePort", "OffscreenCanvas"]
         .filter(f => f in self)
         .map(f => self[f]);
     const uid = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
-    const proxyValueSymbol = Symbol("proxyValue");
     const throwSymbol = Symbol("throw");
     const proxyTransferHandler = {
-        canHandle: (obj) => obj && obj[proxyValueSymbol],
+        canHandle: isProxyValue,
         serialize: (obj) => {
             const { port1, port2 } = new MessageChannel();
             expose(obj, port1);
@@ -72,8 +79,9 @@ else {factory([], self.Comlink={});}
     }
     exports.proxy = proxy;
     function proxyValue(obj) {
-        obj[proxyValueSymbol] = true;
-        return obj;
+        const proxyVal = obj;
+        proxyVal[exports.proxyValueSymbol] = true;
+        return proxyVal;
     }
     exports.proxyValue = proxyValue;
     function expose(rootObj, endpoint) {

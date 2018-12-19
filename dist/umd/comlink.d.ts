@@ -15,13 +15,37 @@ export interface Endpoint {
     addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: {}): void;
     removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: {}): void;
 }
+declare type Promisify<T> = T extends Promise<any> ? T : Promise<T>;
+/**
+ * Symbol that gets added to objects by `Comlink.proxy()`.
+ */
+export declare const proxyValueSymbol: unique symbol;
+/**
+ * Object that was wrapped with `Comlink.proxy()`.
+ */
+export interface ProxyValue {
+    [proxyValueSymbol]: true;
+}
+/** Helper that omits all keys K from object T */
+declare type Omit<T, K extends keyof T> = Pick<T, Exclude<keyof T, K>>;
+/**
+ * `ProxiedObject<T>` is equivalent to `T`, except that all properties are now promises and
+ * all functions now return promises, except if they were wrapped with `Comlink.proxyValue()`.
+ * It effectively async-ifies an object.
+ */
 declare type ProxiedObject<T> = {
-    [P in keyof T]: T[P] extends (...args: infer Arguments) => infer R ? (...args: Arguments) => Promise<R> : Promise<T[P]>;
+    [P in keyof T]: T[P] extends (...args: infer Arguments) => infer R ? (...args: Arguments) => Promisify<R> : (T[P] extends {
+        [proxyValueSymbol]: true;
+    } ? ProxiedObject<Omit<T[P], typeof proxyValueSymbol>> : Promisify<T[P]>);
 };
-export declare type ProxyResult<T> = ProxiedObject<T> & (T extends (...args: infer Arguments) => infer R ? (...args: Arguments) => Promise<R> : unknown) & (T extends {
+/**
+ * ProxyResult<T> is an augmentation of ProxyObject<T> that also handles raw functions
+ * and classes correctly.
+ */
+export declare type ProxyResult<T> = ProxiedObject<T> & (T extends (...args: infer Arguments) => infer R ? (...args: Arguments) => Promisify<R> : unknown) & (T extends {
     new (...args: infer ArgumentsType): infer InstanceType;
 } ? {
-    new (...args: ArgumentsType): Promise<ProxiedObject<InstanceType>>;
+    new (...args: ArgumentsType): Promisify<ProxiedObject<InstanceType>>;
 } : unknown);
 export declare type Proxy = Function;
 export declare type Exposable = Function | Object;
@@ -32,6 +56,6 @@ export interface TransferHandler {
 }
 export declare const transferHandlers: Map<string, TransferHandler>;
 export declare function proxy<T = any>(endpoint: Endpoint | Window, target?: any): ProxyResult<T>;
-export declare function proxyValue<T>(obj: T): T;
+export declare function proxyValue<T>(obj: T): T & ProxyValue;
 export declare function expose(rootObj: Exposable, endpoint: Endpoint | Window): void;
 export {};
