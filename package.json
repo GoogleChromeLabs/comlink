@@ -44,7 +44,7 @@
     "karma-firefox-launcher": "1.1.0",
     "karma-mocha": "1.3.0",
     "karma-safari-launcher": "1.0.0",
-    "karma-safaritechpreview-launcher": "1.0.0",
+    "karma-safaritechpreview-launcher": "2.0.2",
     "mocha": "5.2.0",
     "prettier": "1.15.3",
     "typescript": "3.2.2"
