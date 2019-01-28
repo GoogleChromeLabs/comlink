@@ -58,7 +58,7 @@ type ProxiedObject<T> = {
   [P in keyof T]: T[P] extends (...args: infer Arguments) => infer R
     ? (...args: Arguments) => Promisify<R>
     : (T[P] extends ProxyValue
-        ? ProxiedObject<Omit<T[P], typeof proxyValueSymbol>>
+        ? ProxiedObject<Omit<T[P], keyof ProxyValue>>
         : Promisify<T[P]>)
 };
 
