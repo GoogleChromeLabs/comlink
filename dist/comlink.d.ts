@@ -44,9 +44,7 @@ declare type Omit<T, K extends keyof T> = Pick<T, Exclude<keyof T, K>>;
 declare type ProxiedObject<T> = {
   [P in keyof T]: T[P] extends (...args: infer Arguments) => infer R
     ? (...args: Arguments) => Promisify<R>
-    : (T[P] extends {
-        [proxyValueSymbol]: true;
-      }
+    : (T[P] extends ProxyValue
         ? ProxiedObject<Omit<T[P], typeof proxyValueSymbol>>
         : Promisify<T[P]>)
 };
