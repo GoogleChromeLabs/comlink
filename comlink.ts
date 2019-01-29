@@ -28,16 +28,44 @@ export interface Endpoint {
 // To avoid Promise<Promise<T>>
 type Promisify<T> = T extends Promise<any> ? T : Promise<T>;
 
-// ProxiedObject<T> is equivalent to T, except that all properties are now promises and
-// all functions now return promises. It effectively async-ifies an object.
+/**
+ * Symbol that gets added to objects by `Comlink.proxy()`.
+ */
+export const proxyValueSymbol = Symbol("comlinkProxyValue");
+
+/**
+ * Object that was wrapped with `Comlink.proxy()`.
+ */
+export interface ProxyValue {
+  [proxyValueSymbol]: true;
+}
+
+/**
+ * Returns true if the given value has the proxy value symbol added to it.
+ */
+const isProxyValue = (value: any): value is ProxyValue =>
+  !!value && value[proxyValueSymbol] === true;
+
+/** Helper that omits all keys K from object T */
+type Omit<T, K extends keyof T> = Pick<T, Exclude<keyof T, K>>;
+
+/**
+ * `ProxiedObject<T>` is equivalent to `T`, except that all properties are now promises and
+ * all functions now return promises, except if they were wrapped with `Comlink.proxyValue()`.
+ * It effectively async-ifies an object.
+ */
 type ProxiedObject<T> = {
   [P in keyof T]: T[P] extends (...args: infer Arguments) => infer R
     ? (...args: Arguments) => Promisify<R>
-    : Promisify<T[P]>
+    : (T[P] extends ProxyValue
+        ? ProxiedObject<Omit<T[P], keyof ProxyValue>>
+        : Promisify<T[P]>)
 };
 
-// ProxyResult<T> is an augmentation of ProxyObject<T> that also handles raw functions
-// and classes correctly.
+/**
+ * ProxyResult<T> is an augmentation of ProxyObject<T> that also handles raw functions
+ * and classes correctly.
+ */
 export type ProxyResult<T> = ProxiedObject<T> &
   (T extends (...args: infer Arguments) => infer R
     ? (...args: Arguments) => Promisify<R>
@@ -154,10 +182,9 @@ const TRANSFERABLE_TYPES = ["ArrayBuffer", "MessagePort", "OffscreenCanvas"]
   .map(f => (self as any)[f]);
 const uid: number = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
 
-const proxyValueSymbol = Symbol("proxyValue");
 const throwSymbol = Symbol("throw");
 const proxyTransferHandler: TransferHandler = {
-  canHandle: (obj: {}): Boolean => obj && (obj as any)[proxyValueSymbol],
+  canHandle: isProxyValue,
   serialize: (obj: {}): {} => {
     const { port1, port2 } = new MessageChannel();
     expose(obj, port1);
@@ -216,9 +243,10 @@ export function proxy<T = any>(
   ) as ProxyResult<T>;
 }
 
-export function proxyValue<T>(obj: T): T {
-  (obj as any)[proxyValueSymbol] = true;
-  return obj;
+export function proxyValue<T>(obj: T): T & ProxyValue {
+  const proxyVal = obj as T & ProxyValue;
+  proxyVal[proxyValueSymbol] = true;
+  return proxyVal;
 }
 
 export function expose(rootObj: Exposable, endpoint: Endpoint | Window): void {
