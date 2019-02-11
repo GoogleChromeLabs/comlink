@@ -17,8 +17,6 @@ export function wrap(smc, id = null) {
 }
 function hookup(internalPort, smc, id = null) {
     internalPort.onmessage = (event) => {
-        if (!id)
-            id = generateUID();
         const msg = event.data;
         const messageChannels = Array.from(findMessageChannels(event.data));
         for (const messageChannel of messageChannels) {
@@ -38,6 +36,8 @@ function hookup(internalPort, smc, id = null) {
             return;
         }
         if (id && id !== data.id)
+            return;
+        if (!id && data.id)
             return;
         const mcs = data.messageChannels.map(messageChannel => {
             const id = messageChannel.reduce((obj, key) => obj[key], data.msg);
