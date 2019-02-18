@@ -193,7 +193,7 @@ function windowEndpoint(w) {
         postMessage: (msg, transfer) => w.postMessage(msg, "*", transfer)
     };
 }
-function isEndpoint(endpoint) {
+export function isEndpoint(endpoint) {
     return ("addEventListener" in endpoint &&
         "removeEventListener" in endpoint &&
         "postMessage" in endpoint);

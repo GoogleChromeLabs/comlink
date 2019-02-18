@@ -80,4 +80,5 @@ export declare function expose(
   rootObj: Exposable,
   endpoint: Endpoint | Window
 ): void;
+export declare function isEndpoint(endpoint: any): endpoint is Endpoint;
 export {};

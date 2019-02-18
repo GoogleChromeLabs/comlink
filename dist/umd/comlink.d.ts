@@ -56,4 +56,5 @@ export declare const transferHandlers: Map<string, TransferHandler>;
 export declare function proxy<T = any>(endpoint: Endpoint | Window, target?: any): ProxyResult<T>;
 export declare function proxyValue<T>(obj: T): T & ProxyValue;
 export declare function expose(rootObj: Exposable, endpoint: Endpoint | Window): void;
+export declare function isEndpoint(endpoint: any): endpoint is Endpoint;
 export {};

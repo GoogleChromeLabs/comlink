@@ -213,6 +213,7 @@ else {factory([], self.Comlink={});}
             "removeEventListener" in endpoint &&
             "postMessage" in endpoint);
     }
+    exports.isEndpoint = isEndpoint;
     function activateEndpoint(endpoint) {
         if (isMessagePort(endpoint))
             endpoint.start();

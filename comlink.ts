@@ -397,7 +397,7 @@ function windowEndpoint(w: Window): Endpoint {
   };
 }
 
-function isEndpoint(endpoint: any): endpoint is Endpoint {
+export function isEndpoint(endpoint: any): endpoint is Endpoint {
   return (
     "addEventListener" in endpoint &&
     "removeEventListener" in endpoint &&
