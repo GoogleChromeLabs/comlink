@@ -335,7 +335,9 @@ describe("Comlink in the same realm", function() {
     const proxy = Comlink.proxy(this.port1);
     Comlink.expose(SampleClass, this.port2);
     const instance = await new proxy();
-    const obj = await instance.proxyFunc();
+    const promise = instance.proxyFunc();
+    expect(promise).to.be.instanceOf(Promise);
+    const obj = await promise;
     expect(await obj.counter).to.equal(0);
     await obj.inc();
     expect(await obj.counter).to.equal(1);
@@ -366,6 +368,29 @@ describe("Comlink in the same realm", function() {
     await new Promise(async resolve => {
       proxy(Comlink.proxyValue(_ => resolve()));
     });
+  });
+
+  it("will proxy marked parameter that is a function with cloneable return value", async function() {
+    const proxy = Comlink.proxy(this.port1);
+    Comlink.expose(async function(f) {
+      const result = f();
+      expect(result instanceof Promise).to.be.true;
+      const obj = await result;
+      expect(obj).to.haveOwnProperty("foo");
+      expect(await obj.foo).to.equal(123);
+    }, this.port2);
+    await proxy(Comlink.proxyValue(() => ({ foo: 123 })));
+  });
+
+  it("will proxy marked parameter that is a function with proxied return value", async function() {
+    const proxy = Comlink.proxy(this.port1);
+    Comlink.expose(async function(f) {
+      const result = f();
+      expect(result instanceof Promise).to.be.true;
+      const obj = await result;
+      expect(await obj.foo).to.equal(123);
+    }, this.port2);
+    await proxy(Comlink.proxyValue(() => Comlink.proxyValue({ foo: 123 })));
   });
 
   it("will proxy deeply nester values", async function() {
