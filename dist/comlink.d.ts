@@ -23,7 +23,8 @@ export interface Endpoint {
     options?: boolean | AddEventListenerOptions
   ): void;
 }
-declare type Promisify<T> = T extends Promise<any> ? T : Promise<T>;
+declare type Promisify<T> = Promise<Unpromisify<T>>;
+declare type Unpromisify<P> = P extends Promise<infer T> ? T : P;
 /**
  * Symbol that gets added to objects by `Comlink.proxy()`.
  */
@@ -34,33 +35,62 @@ export declare const proxyValueSymbol: unique symbol;
 export interface ProxyValue {
   [proxyValueSymbol]: true;
 }
-/** Helper that omits all keys K from object T */
-declare type Omit<T, K extends keyof T> = Pick<T, Exclude<keyof T, K>>;
+declare type ProxyProperty<T> = T extends Function | ProxyValue
+  ? ProxyResult<T>
+  : Promisify<T>;
+declare type UnproxyProperty<T> = T extends Function | ProxyValue
+  ? ProxyInput<T>
+  : Unpromisify<T>;
 /**
  * `ProxiedObject<T>` is equivalent to `T`, except that all properties are now promises and
  * all functions now return promises, except if they were wrapped with `Comlink.proxyValue()`.
  * It effectively async-ifies an object.
  */
-declare type ProxiedObject<T> = {
-  [P in keyof T]: T[P] extends (...args: infer Arguments) => infer R
-    ? (...args: Arguments) => Promisify<R>
-    : (T[P] extends ProxyValue
-        ? ProxiedObject<Omit<T[P], keyof ProxyValue>>
-        : Promisify<T[P]>)
+export declare type ProxiedObject<T> = { [P in keyof T]: ProxyProperty<T[P]> };
+/**
+ * Inverse of `ProxiedObject<T>`
+ */
+export declare type UnwrapProxiedObject<T> = {
+  [P in keyof T]: UnproxyProperty<T[P]>
 };
 /**
- * ProxyResult<T> is an augmentation of ProxyObject<T> that also handles raw functions
+ * Proxies `T` if it is a ProxyValue, clones it otherwise.
+ */
+export declare type ProxyOrClone<T> = T extends ProxyValue ? ProxyResult<T> : T;
+export declare type UnproxyOrClone<T> = T extends ProxiedObject<ProxyValue>
+  ? ProxyInput<T>
+  : T;
+/**
+ * The inverse of `ProxyResult<T>`.
+ * Takes a `ProxyResult<T>` and returns its original input `T`.
+ */
+export declare type ProxyInput<R> = UnwrapProxiedObject<R> &
+  (R extends (...args: infer Arguments) => infer R
+    ? (
+        ...args: { [I in keyof Arguments]: ProxyOrClone<Arguments[I]> }
+      ) =>
+        | UnproxyOrClone<Unpromisify<R>>
+        | Promise<UnproxyOrClone<Unpromisify<R>>>
+    : unknown);
+/**
+ * `ProxyResult<T>` is an augmentation of `ProxyObject<T>` that also handles raw functions
  * and classes correctly.
  */
 export declare type ProxyResult<T> = ProxiedObject<T> &
   (T extends (...args: infer Arguments) => infer R
-    ? (...args: Arguments) => Promisify<R>
+    ? (
+        ...args: { [I in keyof Arguments]: UnproxyOrClone<Arguments[I]> }
+      ) => Promisify<ProxyOrClone<R>>
     : unknown) &
   (T extends {
     new (...args: infer ArgumentsType): infer InstanceType;
   }
     ? {
-        new (...args: ArgumentsType): Promisify<ProxiedObject<InstanceType>>;
+        new (
+          ...args: {
+            [I in keyof ArgumentsType]: UnproxyOrClone<ArgumentsType[I]>
+          }
+        ): Promisify<ProxiedObject<InstanceType>>;
       }
     : unknown);
 export declare type Proxy = Function;
