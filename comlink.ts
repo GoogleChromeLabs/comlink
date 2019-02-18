@@ -13,15 +13,16 @@
 
 export interface Endpoint {
   postMessage(message: any, transfer?: any[]): void;
+
   addEventListener(
-    type: string,
-    listener: EventListenerOrEventListenerObject,
-    options?: {}
+    type: "message",
+    listener: (this: MessagePort, ev: MessageEvent) => any,
+    options?: boolean | AddEventListenerOptions
   ): void;
   removeEventListener(
-    type: string,
-    listener: EventListenerOrEventListenerObject,
-    options?: {}
+    type: "message",
+    listener: (this: MessagePort, ev: MessageEvent) => any,
+    options?: boolean | AddEventListenerOptions
   ): void;
 }
 
@@ -386,8 +387,12 @@ function isRawWrappedValue(arg: WrappedValue): arg is RawWrappedValue {
 function windowEndpoint(w: Window): Endpoint {
   if (self.constructor.name !== "Window") throw Error("self is not a window");
   return {
-    addEventListener: self.addEventListener.bind(self),
-    removeEventListener: self.removeEventListener.bind(self),
+    addEventListener: self.addEventListener.bind(
+      self
+    ) as Endpoint["addEventListener"],
+    removeEventListener: self.removeEventListener.bind(
+      self
+    ) as Endpoint["removeEventListener"],
     postMessage: (msg, transfer) => w.postMessage(msg, "*", transfer)
   };
 }

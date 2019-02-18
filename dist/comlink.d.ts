@@ -13,14 +13,14 @@
 export interface Endpoint {
   postMessage(message: any, transfer?: any[]): void;
   addEventListener(
-    type: string,
-    listener: EventListenerOrEventListenerObject,
-    options?: {}
+    type: "message",
+    listener: (this: MessagePort, ev: MessageEvent) => any,
+    options?: boolean | AddEventListenerOptions
   ): void;
   removeEventListener(
-    type: string,
-    listener: EventListenerOrEventListenerObject,
-    options?: {}
+    type: "message",
+    listener: (this: MessagePort, ev: MessageEvent) => any,
+    options?: boolean | AddEventListenerOptions
   ): void;
 }
 declare type Promisify<T> = T extends Promise<any> ? T : Promise<T>;
