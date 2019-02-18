@@ -434,7 +434,10 @@ function detachMessageHandler(
 }
 
 function isMessagePort(endpoint: Endpoint): endpoint is MessagePort {
-  return endpoint.constructor.name === "MessagePort";
+  return (
+    typeof (endpoint as MessagePort).start === "function" &&
+    typeof (endpoint as MessagePort).close === "function"
+  );
 }
 
 function isWindow(endpoint: Endpoint | Window): endpoint is Window {
