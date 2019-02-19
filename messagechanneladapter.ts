@@ -11,7 +11,9 @@
  * limitations under the License.
  */
 
-export interface StringMessageChannel extends EventTarget {
+import { Endpoint } from './comlink'
+
+export interface StringMessageChannel extends Pick<Endpoint, 'addEventListener' | 'removeEventListener'> {
   send(data: string): void;
 }
 
