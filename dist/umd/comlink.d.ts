@@ -12,8 +12,8 @@
  */
 export interface Endpoint {
     postMessage(message: any, transfer?: any[]): void;
-    addEventListener(type: "message", listener: (this: MessagePort, ev: MessageEvent) => any, options?: boolean | AddEventListenerOptions): void;
-    removeEventListener(type: "message", listener: (this: MessagePort, ev: MessageEvent) => any, options?: boolean | AddEventListenerOptions): void;
+    addEventListener(type: "message", listener: (ev: MessageEvent) => any, options?: boolean | AddEventListenerOptions): void;
+    removeEventListener(type: "message", listener: (ev: MessageEvent) => any, options?: boolean | AddEventListenerOptions): void;
 }
 declare type Promisify<T> = Promise<Unpromisify<T>>;
 declare type Unpromisify<P> = P extends Promise<infer T> ? T : P;

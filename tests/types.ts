@@ -3,8 +3,16 @@
 // This code is only analyzed, not executed.
 
 import * as Comlink from "../comlink";
+import { wrap } from "../messagechanneladapter";
 
 async function main() {
+  Comlink.proxy(new MessageChannel().port1);
+  Comlink.expose({}, new MessageChannel().port2);
+  const connection = new RTCPeerConnection();
+  const channel = connection.createDataChannel("comlink");
+  Comlink.proxy(wrap(channel));
+  Comlink.expose({}, wrap(channel));
+
   interface Baz {
     baz: number;
     method(): number;

@@ -14,12 +14,12 @@ export interface Endpoint {
   postMessage(message: any, transfer?: any[]): void;
   addEventListener(
     type: "message",
-    listener: (this: MessagePort, ev: MessageEvent) => any,
+    listener: (ev: MessageEvent) => any,
     options?: boolean | AddEventListenerOptions
   ): void;
   removeEventListener(
     type: "message",
-    listener: (this: MessagePort, ev: MessageEvent) => any,
+    listener: (ev: MessageEvent) => any,
     options?: boolean | AddEventListenerOptions
   ): void;
 }

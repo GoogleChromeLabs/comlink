@@ -10,7 +10,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-export interface StringMessageChannel extends EventTarget {
+import { Endpoint } from './comlink';
+export interface StringMessageChannel extends Pick<Endpoint, 'addEventListener' | 'removeEventListener'> {
     send(data: string): void;
 }
 export declare function wrap(smc: StringMessageChannel, id?: string | null): MessagePort;
