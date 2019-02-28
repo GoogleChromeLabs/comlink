@@ -303,8 +303,10 @@ function* iterateAllProperties(value, path = [], visited = null) {
         return;
     if (typeof value === "object")
         visited.add(value);
-    if (ArrayBuffer.isView(value))
+    if (ArrayBuffer.isView(value)) {
+        yield { value: value.buffer, path: [...path, 'buffer'] };
         return;
+    }
     yield { value, path };
     const keys = Object.keys(value);
     for (const key of keys)

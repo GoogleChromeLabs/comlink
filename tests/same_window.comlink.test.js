@@ -300,6 +300,17 @@ describe("Comlink in the same realm", function() {
     }
   );
 
+  guardedIt(isNotSafari11_1)(
+    "will transfer buffers in typedarray",
+    async function() {
+      const proxy = Comlink.proxy(this.port1);
+      Comlink.expose(b => b.buffer.byteLength, this.port2);
+      const typedarray = new Uint8Array([1, 2, 3]);
+      expect(await proxy(typedarray)).to.equal(3);
+      expect(typedarray.buffer.byteLength).to.equal(0);
+    }
+  );
+
   it("will transfer a message port", async function() {
     const proxy = Comlink.proxy(this.port1);
     Comlink.expose(a => a.postMessage("ohai"), this.port2);
