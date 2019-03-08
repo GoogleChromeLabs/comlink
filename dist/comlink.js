@@ -303,7 +303,7 @@ function findTransferables(value, accumulator) {
             return;
         }
     }
-    for (let key in obj) {
+    for (let key in value) {
         findTransferables(obj[key], accumulator);
     }
 }
