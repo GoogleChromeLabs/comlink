@@ -1,36 +1,21 @@
 {
   "name": "comlinkjs",
   "version": "3.1.1",
-  "description": "",
+  "description": "Comlink makes WebWorkers enjoyable",
   "main": "comlink.js",
   "module": "comlink.js",
   "types": "comlink.d.ts",
   "scripts": {
     "test": "npm run linter && npm run unittest && npm run build",
     "unittest": "karma start",
-    "linter": "prettier --write ./*.js ./docs/**/*.js ./tests/**/*.js ./**/*.ts ./**/*.md ./**/*.json",
-    "watchtest": "karma start --no-single-run --browsers ChromeHeadless",
-    "watchtestharmony": "karma start --no-single-run --browsers ChromeCanaryHeadlessHarmony",
-    "version": "sed -i.bak -e 's!comlinkjs@[0-9.]*!comlinkjs@'${npm_package_version}'!' README.md && git add README.md",
-    "mypublish": "npm run build && npm run test && cp README.md package.json dist && npm publish dist",
-    "build": "rm -rf dist && mkdir dist && npm run compile",
-    "compile": "tsc --outDir dist && tsc -m umd --outDir dist/umd && node ./mangle_umd.js"
+    "linter": "prettier --write ./*.{js,ts,md,json} ./{docs,tests}/**/*.{js,ts,md,json}",
+    "watchtest": "karma start --no-single-run --browsers ChromeHeadless"
   },
   "keywords": [],
   "author": {
     "name": "Surma",
     "email": "surma@google.com"
   },
-  "contributors": [
-    {
-      "name": "Surma",
-      "email": "surma@google.com"
-    },
-    {
-      "name": "Ian Kilpatrick",
-      "email": "ikilpatrick@google.com"
-    }
-  ],
   "repository": {
     "type": "git",
     "url": "https://github.com/GoogleChromeLabs/comlink.git"
