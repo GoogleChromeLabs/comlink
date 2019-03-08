@@ -289,35 +289,27 @@ function cbProxy(cb, callPath = [], target = function () { }) {
         }
     });
 }
-function isTransferable(thing) {
-    return TRANSFERABLE_TYPES.some(type => thing instanceof type);
-}
-function* iterateAllProperties(value, path = [], visited = null) {
-    if (!value)
-        return;
-    if (!visited)
-        visited = new WeakSet();
-    if (visited.has(value))
-        return;
-    if (typeof value === "string")
-        return;
-    if (typeof value === "object")
-        visited.add(value);
-    if (ArrayBuffer.isView(value)) {
-        yield { value: value.buffer, path: [...path, 'buffer'] };
+function findTransferables(value, accumulator) {
+    if (typeof value !== "object" || value==null) {
         return;
     }
-    yield { value, path };
-    const keys = Object.keys(value);
-    for (const key of keys)
-        yield* iterateAllProperties(value[key], [...path, key], visited);
+    if (ArrayBuffer.isView(value)) {
+        accumulator.push(value.buffer);
+        return;
+    }
+    for (const type of TRANSFERABLE_TYPES) {
+        if (value instanceof type) {
+            accumulator.push(value);
+            return;
+        }
+    }
+    for (let key in obj) {
+        findTransferables(obj[key], accumulator);
+    }
 }
 function transferableProperties(obj) {
-    const r = [];
-    for (const prop of iterateAllProperties(obj)) {
-        if (isTransferable(prop.value))
-            r.push(prop.value);
-    }
+    const accumulator = [];
+    findTransferables(obj, accumulator);
     return r;
 }
 function makeInvocationResult(obj) {
