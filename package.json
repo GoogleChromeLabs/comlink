@@ -1,11 +1,12 @@
 {
-  "name": "comlinkjs",
+  "name": "comlink",
   "version": "3.1.1",
   "description": "Comlink makes WebWorkers enjoyable",
   "main": "comlink.js",
   "module": "comlink.js",
   "types": "comlink.d.ts",
   "scripts": {
+    "build": "microbundle build src/comlink.ts -o dist -f esm,umd",
     "test": "npm run linter && npm run unittest && npm run build",
     "unittest": "karma start",
     "linter": "prettier --write ./*.{js,ts,md,json} ./{docs,tests}/**/*.{js,ts,md,json}",
@@ -30,6 +31,7 @@
     "karma-mocha": "1.3.0",
     "karma-safari-launcher": "1.0.0",
     "karma-safaritechpreview-launcher": "2.0.2",
+    "microbundle": "^0.11.0",
     "mocha": "5.2.0",
     "prettier": "1.16.1",
     "typescript": "3.2.4"

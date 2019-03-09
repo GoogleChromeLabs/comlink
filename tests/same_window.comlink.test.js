@@ -68,42 +68,44 @@ class SampleClass {
 describe("Comlink in the same realm", function() {
   beforeEach(function() {
     const { port1, port2 } = new MessageChannel();
+    port1.start();
+    port2.start();
     this.port1 = port1;
     this.port2 = port2;
   });
 
   it("catched invalid endpoints", async function() {
-    expect(_ => Comlink.proxy({})).to.throw();
+    expect(_ => Comlink.wrap({})).to.throw();
     expect(_ => Comlink.expose({}, {})).to.throw();
   });
 
-  it("can work with objects", async function() {
-    const proxy = Comlink.proxy(this.port1);
+  it.only("can work with objects", async function() {
+    const proxy = Comlink.wrap(this.port1);
     Comlink.expose({ value: 4 }, this.port2);
     expect(await proxy.value).to.equal(4);
   });
 
   it("can work functions on an object", async function() {
-    const proxy = Comlink.proxy(this.port1);
+    const proxy = Comlink.wrap(this.port1);
     Comlink.expose({ f: _ => 4 }, this.port2);
     expect(await proxy.f()).to.equal(4);
   });
 
   it("can work with functions", async function() {
-    const proxy = Comlink.proxy(this.port1);
+    const proxy = Comlink.wrap(this.port1);
     Comlink.expose(_ => 4, this.port2);
     expect(await proxy()).to.equal(4);
   });
 
   it("can work with objects that have undefined properties", async function() {
-    const proxy = Comlink.proxy(this.port1);
+    const proxy = Comlink.wrap(this.port1);
     Comlink.expose({ x: undefined }, this.port2);
     expect(await proxy.x).to.be.undefined;
   });
 
   it("can keep the stack and message of thrown errors", async function() {
     let stack;
-    const proxy = Comlink.proxy(this.port1);
+    const proxy = Comlink.wrap(this.port1);
     Comlink.expose(_ => {
       const error = Error("OMG");
       stack = error.stack;
@@ -119,7 +121,7 @@ describe("Comlink in the same realm", function() {
   });
 
   it("can rethrow non-error objects", async function() {
-    const proxy = Comlink.proxy(this.port1);
+    const proxy = Comlink.wrap(this.port1);
     Comlink.expose(_ => {
       throw {test: true};
     }, this.port2);
@@ -132,13 +134,13 @@ describe("Comlink in the same realm", function() {
   });
 
   it("can work with parameterized functions", async function() {
-    const proxy = Comlink.proxy(this.port1);
+    const proxy = Comlink.wrap(this.port1);
     Comlink.expose((a, b) => a + b, this.port2);
     expect(await proxy(1, 3)).to.equal(4);
   });
 
   it("can work with functions that return promises", async function() {
-    const proxy = Comlink.proxy(this.port1);
+    const proxy = Comlink.wrap(this.port1);
     Comlink.expose(
       _ => new Promise(resolve => setTimeout(_ => resolve(4), 100)),
       this.port2
@@ -147,28 +149,28 @@ describe("Comlink in the same realm", function() {
   });
 
   it("can work with classes", async function() {
-    const proxy = Comlink.proxy(this.port1);
+    const proxy = Comlink.wrap(this.port1);
     Comlink.expose(SampleClass, this.port2);
     const instance = await new proxy();
     expect(await instance.method()).to.equal(4);
   });
 
   it("can access a class in an object", async function() {
-    const proxy = Comlink.proxy(this.port1);
+    const proxy = Comlink.wrap(this.port1);
     Comlink.expose({ SampleClass }, this.port2);
     const instance = await new proxy.SampleClass();
     expect(await instance.method()).to.equal(4);
   });
 
   it("can work with class instance properties", async function() {
-    const proxy = Comlink.proxy(this.port1);
+    const proxy = Comlink.wrap(this.port1);
     Comlink.expose(SampleClass, this.port2);
     const instance = await new proxy();
     expect(await instance._counter).to.equal(1);
   });
 
   it("can set class instance properties", async function() {
-    const proxy = Comlink.proxy(this.port1);
+    const proxy = Comlink.wrap(this.port1);
     Comlink.expose(SampleClass, this.port2);
     const instance = await new proxy();
     expect(await instance._counter).to.equal(1);
@@ -177,7 +179,7 @@ describe("Comlink in the same realm", function() {
   });
 
   it("can work with class instance methods", async function() {
-    const proxy = Comlink.proxy(this.port1);
+    const proxy = Comlink.wrap(this.port1);
     Comlink.expose(SampleClass, this.port2);
     const instance = await new proxy();
     expect(await instance.counter).to.equal(1);
@@ -186,7 +188,7 @@ describe("Comlink in the same realm", function() {
   });
 
   it("can handle throwing class instance methods", async function() {
-    const proxy = Comlink.proxy(this.port1);
+    const proxy = Comlink.wrap(this.port1);
     Comlink.expose(SampleClass, this.port2);
     const instance = await new proxy();
     return instance
@@ -196,7 +198,7 @@ describe("Comlink in the same realm", function() {
   });
 
   it("can work with class instance methods multiple times", async function() {
-    const proxy = Comlink.proxy(this.port1);
+    const proxy = Comlink.wrap(this.port1);
     Comlink.expose(SampleClass, this.port2);
     const instance = await new proxy();
     expect(await instance.counter).to.equal(1);
@@ -206,40 +208,40 @@ describe("Comlink in the same realm", function() {
   });
 
   it("can work with class instance methods that return promises", async function() {
-    const proxy = Comlink.proxy(this.port1);
+    const proxy = Comlink.wrap(this.port1);
     Comlink.expose(SampleClass, this.port2);
     const instance = await new proxy();
     expect(await instance.promiseFunc()).to.equal(4);
   });
 
   it("can work with class instance properties that are promises", async function() {
-    const proxy = Comlink.proxy(this.port1);
+    const proxy = Comlink.wrap(this.port1);
     Comlink.expose(SampleClass, this.port2);
     const instance = await new proxy();
     expect(await instance._promise).to.equal(4);
   });
 
   it("can work with class instance getters that are promises", async function() {
-    const proxy = Comlink.proxy(this.port1);
+    const proxy = Comlink.wrap(this.port1);
     Comlink.expose(SampleClass, this.port2);
     const instance = await new proxy();
     expect(await instance.promise).to.equal(4);
   });
 
   it("can work with static class properties", async function() {
-    const proxy = Comlink.proxy(this.port1);
+    const proxy = Comlink.wrap(this.port1);
     Comlink.expose(SampleClass, this.port2);
     expect(await proxy.SOME_NUMBER).to.equal(4);
   });
 
   it("can work with static class methods", async function() {
-    const proxy = Comlink.proxy(this.port1);
+    const proxy = Comlink.wrap(this.port1);
     Comlink.expose(SampleClass, this.port2);
     expect(await proxy.ADD(1, 3)).to.equal(4);
   });
 
   it("can work with bound class instance methods", async function() {
-    const proxy = Comlink.proxy(this.port1);
+    const proxy = Comlink.wrap(this.port1);
     Comlink.expose(SampleClass, this.port2);
     const instance = await new proxy();
     expect(await instance.counter).to.equal(1);
@@ -249,7 +251,7 @@ describe("Comlink in the same realm", function() {
   });
 
   it("can work with class instance getters", async function() {
-    const proxy = Comlink.proxy(this.port1);
+    const proxy = Comlink.wrap(this.port1);
     Comlink.expose(SampleClass, this.port2);
     const instance = await new proxy();
     expect(await instance.counter).to.equal(1);
@@ -258,7 +260,7 @@ describe("Comlink in the same realm", function() {
   });
 
   it("can work with class instance setters", async function() {
-    const proxy = Comlink.proxy(this.port1);
+    const proxy = Comlink.wrap(this.port1);
     Comlink.expose(SampleClass, this.port2);
     const instance = await new proxy();
     expect(await instance._counter).to.equal(1);
@@ -270,7 +272,7 @@ describe("Comlink in the same realm", function() {
   guardedIt(hasBroadcastChannel)("will work with BroadcastChannel", async function() {
     const b1 = new BroadcastChannel("comlink_bc_test");
     const b2 = new BroadcastChannel("comlink_bc_test");
-    const proxy = Comlink.proxy(b1);
+    const proxy = Comlink.wrap(b1);
     Comlink.expose(b => 40 + b, b2);
     expect(await proxy(2)).to.equal(42);
   });
@@ -278,7 +280,7 @@ describe("Comlink in the same realm", function() {
   // Buffer transfers seem to have regressed in Safari 11.1, it’s fixed in 11.2.
   const isNotSafari11_1 = _ => !/11\.1(\.[0-9]+)? Safari/.test(navigator.userAgent);
   guardedIt(isNotSafari11_1)("will transfer buffers", async function() {
-    const proxy = Comlink.proxy(this.port1);
+    const proxy = Comlink.wrap(this.port1);
     Comlink.expose(b => b.byteLength, this.port2);
     const buffer = new Uint8Array([1, 2, 3]).buffer;
     expect(await proxy(buffer)).to.equal(3);
@@ -286,7 +288,7 @@ describe("Comlink in the same realm", function() {
   });
 
   guardedIt(isNotSafari11_1)("will transfer deeply nested buffers", async function() {
-    const proxy = Comlink.proxy(this.port1);
+    const proxy = Comlink.wrap(this.port1);
     Comlink.expose(a => a.b.c.d.byteLength, this.port2);
     const buffer = new Uint8Array([1, 2, 3]).buffer;
     expect(await proxy({ b: { c: { d: buffer } } })).to.equal(3);
@@ -294,7 +296,7 @@ describe("Comlink in the same realm", function() {
   });
 
   it("will transfer a message port", async function() {
-    const proxy = Comlink.proxy(this.port1);
+    const proxy = Comlink.wrap(this.port1);
     Comlink.expose(a => a.postMessage("ohai"), this.port2);
     const { port1, port2 } = new MessageChannel();
     await proxy(port2);
@@ -307,7 +309,7 @@ describe("Comlink in the same realm", function() {
   });
 
   it("will proxy marked return values", async function() {
-    const proxy = Comlink.proxy(this.port1);
+    const proxy = Comlink.wrap(this.port1);
     Comlink.expose(
       _ =>
         Comlink.proxyValue({
@@ -325,7 +327,7 @@ describe("Comlink in the same realm", function() {
   });
 
   it("will proxy marked return values from class instance methods", async function() {
-    const proxy = Comlink.proxy(this.port1);
+    const proxy = Comlink.wrap(this.port1);
     Comlink.expose(SampleClass, this.port2);
     const instance = await new proxy();
     const obj = await instance.proxyFunc();
@@ -335,7 +337,7 @@ describe("Comlink in the same realm", function() {
   });
 
   it("will proxy marked parameter values", async function() {
-    const proxy = Comlink.proxy(this.port1);
+    const proxy = Comlink.wrap(this.port1);
     const local = {
       counter: 0,
       inc() {
@@ -351,7 +353,7 @@ describe("Comlink in the same realm", function() {
   });
 
   it("will proxy marked parameter values, simple function", async function() {
-    const proxy = Comlink.proxy(this.port1);
+    const proxy = Comlink.wrap(this.port1);
     Comlink.expose(async function(f) {
       await f();
     }, this.port2);
@@ -362,7 +364,7 @@ describe("Comlink in the same realm", function() {
   });
 
   it("will proxy deeply nester values", async function() {
-    const proxy = Comlink.proxy(this.port1);
+    const proxy = Comlink.wrap(this.port1);
     const obj = {
       a: {
         v: 4
@@ -384,7 +386,7 @@ describe("Comlink in the same realm", function() {
   });
 
   it("will proxy values in an array", function(done) {
-    const proxy = Comlink.proxy(this.port1);
+    const proxy = Comlink.wrap(this.port1);
     const obj = {
       async someFunc(v) {
         await v[0]();
@@ -396,7 +398,7 @@ describe("Comlink in the same realm", function() {
   });
 
   it("will handle undefined parameters", async function() {
-    const proxy = Comlink.proxy(this.port1);
+    const proxy = Comlink.wrap(this.port1);
     Comlink.expose({ f: _ => 4 }, this.port2);
     expect(await proxy.f(undefined)).to.equal(4);
   });
@@ -414,14 +416,14 @@ describe("Comlink in the same realm", function() {
       },
       this.port2
     );
-    const { a, b, c } = Comlink.proxy(this.port1);
+    const { a, b, c } = Comlink.wrap(this.port1);
     expect(await a).to.equal(4);
     expect(await b).to.equal(5);
     expect(await c()).to.equal(6);
   });
 
   it("can proxy with a given target", async function() {
-    const proxy = Comlink.proxy(this.port1, { value: {} });
+    const proxy = Comlink.wrap(this.port1, { value: {} });
     Comlink.expose({ value: 4 }, this.port2);
     expect(await proxy.value).to.equal(4);
   });

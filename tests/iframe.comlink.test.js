@@ -27,7 +27,7 @@ describe("Comlink across iframes", function() {
   });
 
   it("can communicate", async function() {
-    const proxy = Comlink.proxy(this.ifr.contentWindow);
+    const proxy = Comlink.wrap(this.ifr.contentWindow);
     expect(await proxy(1, 3)).to.equal(4);
   });
 });

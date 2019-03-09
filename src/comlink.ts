@@ -1,5 +1,5 @@
 /**
- * Copyright 2017 Google Inc. All Rights Reserved.
+ * Copyright 2019 Google Inc. All Rights Reserved.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -11,6 +11,173 @@
  * limitations under the License.
  */
 
+import * as Protocol from "./protocol.js";
+import { AnyPtrRecord } from "dns";
+export { Endpoint } from "./protocol.js";
+
+type Omit<T, K> = Pick<T, Exclude<keyof T, K>>;
+
+export type PromisifyValue<T> = T extends Promise<any> ? T : Promise<T>;
+
+export type PromisifyFunction<T> = T extends (...args: infer R1) => infer R2
+  ? (...args: R1) => Promise<R2>
+  : unknown;
+
+export type PromisifyConstructor<T> = T extends {
+  new (...args: infer R1): infer R2;
+}
+  ? { new (...args: R1): Promisify<R2> }
+  : unknown;
+
+export type PromisifyObject<T> = T extends {}
+  ? { [P in keyof T]: PromisifyValue<T[P]> }
+  : unknown;
+
+export type Remote<T> = PromisifyFunction<T> &
+  PromisifyObject<T> &
+  PromisifyConstructor<T>;
+export type Promisify<T> = Remote<T>;
+
+export function expose(obj: any, ep: Protocol.Endpoint = self as any) {
+  ep.addEventListener("message", function f(ev: MessageEvent) {
+    if (!ev || !ev.data) {
+      return;
+    }
+    const msg = ev.data as Protocol.Message;
+    const parent = msg.path.slice(0, -1).reduce((obj, prop) => obj[prop], obj);
+    const rawValue = parent[msg.path.slice(-1)[0]];
+    switch (msg.type) {
+      case Protocol.MessageType.GET:
+        {
+          const value = toWireValue(rawValue);
+          value.id = msg.id;
+          (ev.source! as Protocol.Endpoint).postMessage(value);
+        }
+        break;
+      case Protocol.MessageType.SET:
+        {
+          parent[msg.path.slice(-1)[0]] = fromWireValue(msg.value);
+        }
+        break;
+      case Protocol.MessageType.APPLY:
+        {
+          const value = toWireValue(
+            rawValue.apply(parent, msg.argumentList.map(fromWireValue))
+          );
+          (ev.source! as Protocol.Endpoint).postMessage(value);
+        }
+        break;
+      case Protocol.MessageType.CONSTRUCT:
+        {
+          const value = new rawValue(...msg.argumentList);
+          const { port1, port2 } = new MessageChannel();
+          port1.start();
+          port2.start();
+          expose(value, port2);
+          (ev.source! as Protocol.Endpoint).postMessage(
+            {
+              type: Protocol.WireValueType.PROXY,
+              ep: port1
+            },
+            [port1]
+          );
+        }
+        break;
+      default:
+        console.warn("Unrecognized message", msg);
+    }
+  } as any);
+}
+
+export function wrap<T>(ep: Protocol.Endpoint): Remote<T> {
+  return createProxy<T>(ep) as any;
+}
+
+function createProxy<T>(ep: Protocol.Endpoint, path: string[] = []): Remote<T> {
+  const proxy = new Proxy(new Function(), {
+    get(_target, prop) {
+      console.log('>>', prop);
+      if (typeof prop === "symbol") {
+        throw Error("Can’t access symbol properties with Comlink");
+      }
+      if (prop === "then") {
+        if (path.length === 0) {
+          return { then: () => proxy };
+        }
+        return requestResponseMessage(ep, {
+          type: Protocol.MessageType.GET,
+          path
+        }).then(fromWireValue);
+      }
+      return createProxy(ep, [...path, prop.toString()]);
+    },
+    set(_target, prop, value) {
+      ep.postMessage({
+        type: Protocol.MessageType.SET,
+        path: [...path, prop],
+        value
+      } as Protocol.SetMessage);
+      // TODO(surma@): We always succeed for now. Is that good?
+      return true;
+    },
+    apply(_target, _thisArg, argumentList) {
+      return requestResponseMessage(ep, {
+        type: Protocol.MessageType.APPLY,
+        path,
+        argumentList: argumentList.map(toWireValue)
+      }).then(fromWireValue);
+    },
+    construct(_target, argumentList) {
+      return requestResponseMessage(ep, {
+        type: Protocol.MessageType.CONSTRUCT,
+        path,
+        argumentList: argumentList.map(toWireValue)
+      }).then(fromWireValue);
+    }
+  });
+  return proxy as any;
+}
+
+function toWireValue(value: any): Protocol.WireValue {
+  return {
+    type: Protocol.WireValueType.RAW,
+    value
+  };
+}
+
+function fromWireValue(value: Protocol.WireValue): any {
+  switch (value.type) {
+    case Protocol.WireValueType.RAW:
+      return value.value;
+    case Protocol.WireValueType.PROXY:
+      return wrap(value.endpoint);
+  }
+}
+
+async function requestResponseMessage(
+  ep: Protocol.Endpoint,
+  msg: Protocol.Message
+): Promise<Protocol.WireValue> {
+  return new Promise(resolve => {
+    const id = generateUUID();
+    ep.postMessage({ id, ...msg });
+    ep.addEventListener("message", function l(ev: MessageEvent) {
+      if (!ev.data || !ev.data.uuid || ev.data.id !== id) {
+        return;
+      }
+      resolve(ev.data);
+    } as any);
+  });
+}
+
+function generateUUID(): string {
+  return new Array(4)
+    .fill(0)
+    .map(() => Math.floor(Math.random() * Number.MAX_SAFE_INTEGER).toString(16))
+    .join("-");
+}
+
+/*
 export interface Endpoint {
   postMessage(message: any, transfer?: any[]): void;
   addEventListener(
@@ -412,10 +579,8 @@ function isWindow(endpoint: Endpoint | Window): endpoint is Window {
   );
 }
 
-/**
- * `pingPongMessage` sends a `postMessage` and waits for a reply. Replies are
- * identified by a unique id that is attached to the payload.
- */
+// * `pingPongMessage` sends a `postMessage` and waits for a reply. Replies are
+// * identified by a unique id that is attached to the payload.
 function pingPongMessage(
   endpoint: Endpoint,
   msg: Object,
@@ -531,3 +696,4 @@ function makeInvocationResult(obj: {}): InvocationResult {
     }
   };
 }
+*/

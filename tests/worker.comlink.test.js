@@ -23,7 +23,7 @@ describe("Comlink across workers", function() {
   });
 
   it("can communicate", async function() {
-    const proxy = Comlink.proxy(this.worker);
+    const proxy = Comlink.wrap(this.worker);
     expect(await proxy(1, 3)).to.equal(4);
   });
 });

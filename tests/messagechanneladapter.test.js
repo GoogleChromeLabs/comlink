@@ -13,7 +13,7 @@
 
 import * as MessageChannelAdapter from "/base/dist/messagechanneladapter.js";
 
-describe("MessageChannelAdapter", function() {
+describe.skip("MessageChannelAdapter", function() {
   beforeEach(function() {
     let port1, port2;
     port1 = port2 = {
