@@ -12,10 +12,7 @@
  */
 
 import * as Protocol from "./protocol.js";
-import { AnyPtrRecord } from "dns";
 export { Endpoint } from "./protocol.js";
-
-type Omit<T, K> = Pick<T, Exclude<keyof T, K>>;
 
 export type PromisifyValue<T> = T extends Promise<any> ? T : Promise<T>;
 
@@ -39,54 +36,71 @@ export type Remote<T> = PromisifyFunction<T> &
 export type Promisify<T> = Remote<T>;
 
 export function expose(obj: any, ep: Protocol.Endpoint = self as any) {
-  ep.addEventListener("message", function f(ev: MessageEvent) {
+  ep.addEventListener("message", (async (ev: MessageEvent) => {
     if (!ev || !ev.data) {
       return;
     }
     const msg = ev.data as Protocol.Message;
-    const parent = msg.path.slice(0, -1).reduce((obj, prop) => obj[prop], obj);
-    const rawValue = parent[msg.path.slice(-1)[0]];
-    switch (msg.type) {
-      case Protocol.MessageType.GET:
-        {
-          const value = toWireValue(rawValue);
-          value.id = msg.id;
-          (ev.source! as Protocol.Endpoint).postMessage(value);
-        }
-        break;
-      case Protocol.MessageType.SET:
-        {
-          parent[msg.path.slice(-1)[0]] = fromWireValue(msg.value);
-        }
-        break;
-      case Protocol.MessageType.APPLY:
-        {
-          const value = toWireValue(
-            rawValue.apply(parent, msg.argumentList.map(fromWireValue))
-          );
-          (ev.source! as Protocol.Endpoint).postMessage(value);
-        }
-        break;
-      case Protocol.MessageType.CONSTRUCT:
-        {
-          const value = new rawValue(...msg.argumentList);
-          const { port1, port2 } = new MessageChannel();
-          port1.start();
-          port2.start();
-          expose(value, port2);
-          (ev.source! as Protocol.Endpoint).postMessage(
-            {
-              type: Protocol.WireValueType.PROXY,
-              ep: port1
-            },
-            [port1]
-          );
-        }
-        break;
-      default:
-        console.warn("Unrecognized message", msg);
+    try {
+      const parent = msg.path
+        .slice(0, -1)
+        .reduce((obj, prop) => obj[prop], obj);
+      const rawValue = msg.path.reduce((obj, prop) => obj[prop], obj);
+      switch (msg.type) {
+        case Protocol.MessageType.GET:
+          {
+            const value = toWireValue(await rawValue);
+            value.id = msg.id;
+            ep.postMessage(value);
+          }
+          break;
+        case Protocol.MessageType.SET:
+          {
+            parent[msg.path.slice(-1)[0]] = fromWireValue(msg.value);
+            const value = toWireValue(true);
+            value.id = msg.id;
+            ep.postMessage(value);
+          }
+          break;
+        case Protocol.MessageType.APPLY:
+          {
+            const value = toWireValue(
+              await rawValue.apply(parent, msg.argumentList.map(fromWireValue))
+            );
+            value.id = msg.id;
+            ep.postMessage(value);
+          }
+          break;
+        case Protocol.MessageType.CONSTRUCT:
+          {
+            const value = await new rawValue(...msg.argumentList);
+            const { port1, port2 } = new MessageChannel();
+            port1.start();
+            port2.start();
+            expose(value, port2);
+            ep.postMessage(
+              {
+                id: msg.id,
+                type: Protocol.WireValueType.PROXY,
+                endpoint: port1
+              },
+              [port1]
+            );
+          }
+          break;
+        default:
+          console.warn("Unrecognized message", msg);
+      }
+    } catch (e) {
+      const isError = e instanceof Error;
+      ep.postMessage({
+        id: msg.id,
+        type: Protocol.WireValueType.THROW,
+        isError,
+        value: isError ? { message: e.message, stack: e.stack } : e
+      });
     }
-  } as any);
+  }) as any);
 }
 
 export function wrap<T>(ep: Protocol.Endpoint): Remote<T> {
@@ -96,7 +110,6 @@ export function wrap<T>(ep: Protocol.Endpoint): Remote<T> {
 function createProxy<T>(ep: Protocol.Endpoint, path: string[] = []): Remote<T> {
   const proxy = new Proxy(new Function(), {
     get(_target, prop) {
-      console.log('>>', prop);
       if (typeof prop === "symbol") {
         throw Error("Can’t access symbol properties with Comlink");
       }
@@ -104,38 +117,64 @@ function createProxy<T>(ep: Protocol.Endpoint, path: string[] = []): Remote<T> {
         if (path.length === 0) {
           return { then: () => proxy };
         }
-        return requestResponseMessage(ep, {
+        const r = requestResponseMessage(ep, {
           type: Protocol.MessageType.GET,
           path
         }).then(fromWireValue);
+        return r.then.bind(r);
       }
       return createProxy(ep, [...path, prop.toString()]);
     },
     set(_target, prop, value) {
-      ep.postMessage({
+      // FIXME: ES6 Proxy Handler `set` methods are supposed to return a
+      // boolean. To show good will, we return true asynchronously ¯\_(ツ)_/¯
+      return requestResponseMessage(ep, {
         type: Protocol.MessageType.SET,
-        path: [...path, prop],
-        value
-      } as Protocol.SetMessage);
-      // TODO(surma@): We always succeed for now. Is that good?
-      return true;
+        path: [...path, prop.toString()],
+        value: toWireValue(value)
+      })
+        .then(fromWireValue)
+        .then(() => true) as any;
     },
     apply(_target, _thisArg, argumentList) {
-      return requestResponseMessage(ep, {
-        type: Protocol.MessageType.APPLY,
-        path,
-        argumentList: argumentList.map(toWireValue)
-      }).then(fromWireValue);
+      // We just pretend that `bind()` didn’t happen.
+      if (path[path.length - 1] === "bind") {
+        return createProxy(ep, path.slice(0, -1));
+      }
+      return requestResponseMessage(
+        ep,
+        {
+          type: Protocol.MessageType.APPLY,
+          path,
+          argumentList: argumentList.map(toWireValue)
+        },
+        getTransferables(argumentList)
+      ).then(fromWireValue);
     },
     construct(_target, argumentList) {
-      return requestResponseMessage(ep, {
-        type: Protocol.MessageType.CONSTRUCT,
-        path,
-        argumentList: argumentList.map(toWireValue)
-      }).then(fromWireValue);
+      return requestResponseMessage(
+        ep,
+        {
+          type: Protocol.MessageType.CONSTRUCT,
+          path,
+          argumentList: argumentList.map(toWireValue)
+        },
+        getTransferables(argumentList)
+      ).then(fromWireValue);
     }
   });
   return proxy as any;
+}
+
+function getTransferables(v: any[]): any[] {
+  // FIXME: Don’t use flatMap
+  return (v as any).flatMap((v: any) => transferCache.get(v) || []);
+}
+
+const transferCache = new WeakMap<any, any[]>();
+export function transfer(obj: any, transfers: any[]) {
+  transferCache.set(obj, transfers);
+  return obj;
 }
 
 function toWireValue(value: any): Protocol.WireValue {
@@ -150,21 +189,30 @@ function fromWireValue(value: Protocol.WireValue): any {
     case Protocol.WireValueType.RAW:
       return value.value;
     case Protocol.WireValueType.PROXY:
+      (value.endpoint as any).start();
       return wrap(value.endpoint);
+    case Protocol.WireValueType.THROW:
+      let base = {};
+      if (value.isError) {
+        base = new Error();
+      }
+      throw Object.assign(base, value.value);
   }
 }
 
-async function requestResponseMessage(
+function requestResponseMessage(
   ep: Protocol.Endpoint,
-  msg: Protocol.Message
+  msg: Protocol.Message,
+  transfers?: any[]
 ): Promise<Protocol.WireValue> {
   return new Promise(resolve => {
     const id = generateUUID();
-    ep.postMessage({ id, ...msg });
+    ep.postMessage({ id, ...msg }, transfers);
     ep.addEventListener("message", function l(ev: MessageEvent) {
-      if (!ev.data || !ev.data.uuid || ev.data.id !== id) {
+      if (!ev.data || !ev.data.id || ev.data.id !== id) {
         return;
       }
+      ep.removeEventListener("message", l as any);
       resolve(ev.data);
     } as any);
   });
@@ -176,524 +224,3 @@ function generateUUID(): string {
     .map(() => Math.floor(Math.random() * Number.MAX_SAFE_INTEGER).toString(16))
     .join("-");
 }
-
-/*
-export interface Endpoint {
-  postMessage(message: any, transfer?: any[]): void;
-  addEventListener(
-    type: string,
-    listener: EventListenerOrEventListenerObject,
-    options?: {}
-  ): void;
-  removeEventListener(
-    type: string,
-    listener: EventListenerOrEventListenerObject,
-    options?: {}
-  ): void;
-}
-
-// To avoid Promise<Promise<T>>
-type Promisify<T> = T extends Promise<any> ? T : Promise<T>;
-
-// ProxiedObject<T> is equivalent to T, except that all properties are now promises and
-// all functions now return promises. It effectively async-ifies an object.
-type ProxiedObject<T> = {
-  [P in keyof T]: T[P] extends (...args: infer Arguments) => infer R
-    ? (...args: Arguments) => Promisify<R>
-    : Promisify<T[P]>
-};
-
-// ProxyResult<T> is an augmentation of ProxyObject<T> that also handles raw functions
-// and classes correctly.
-export type ProxyResult<T> = ProxiedObject<T> &
-  (T extends (...args: infer Arguments) => infer R
-    ? (...args: Arguments) => Promisify<R>
-    : unknown) &
-  (T extends { new (...args: infer ArgumentsType): infer InstanceType }
-    ? { new (...args: ArgumentsType): Promisify<ProxiedObject<InstanceType>> }
-    : unknown);
-
-export type Proxy = Function;
-type CBProxyCallback = (bpcd: CBProxyCallbackDescriptor) => {}; // eslint-disable-line no-unused-vars
-type Transferable = MessagePort | ArrayBuffer; // eslint-disable-line no-unused-vars
-export type Exposable = Function | Object; // eslint-disable-line no-unused-vars
-
-interface InvocationResult {
-  id?: string;
-  value: WrappedValue;
-}
-
-type WrappedValue = RawWrappedValue | HandledWrappedValue;
-
-interface PropertyIteratorEntry {
-  value: {};
-  path: string[];
-}
-
-interface WrappedChildValue {
-  path: string[];
-  wrappedValue: HandledWrappedValue;
-}
-
-interface RawWrappedValue {
-  type: "RAW";
-  value: {};
-  wrappedChildren?: WrappedChildValue[];
-}
-
-interface HandledWrappedValue {
-  type: string;
-  value: {};
-}
-
-type CBProxyCallbackDescriptor =
-  | CBPCDGet
-  | CBPCDApply
-  | CBPCDConstruct
-  | CBPCDSet; // eslint-disable-line no-unused-vars
-
-interface CBPCDGet {
-  type: "GET";
-  callPath: PropertyKey[];
-}
-
-interface CBPCDApply {
-  type: "APPLY";
-  callPath: PropertyKey[];
-  argumentsList: {}[];
-}
-
-interface CBPCDConstruct {
-  type: "CONSTRUCT";
-  callPath: PropertyKey[];
-  argumentsList: {}[];
-}
-
-interface CBPCDSet {
-  type: "SET";
-  callPath: PropertyKey[];
-  property: PropertyKey;
-  value: {};
-}
-
-type InvocationRequest =
-  | GetInvocationRequest
-  | ApplyInvocationRequest
-  | ConstructInvocationRequest
-  | SetInvocationRequest;
-
-interface GetInvocationRequest {
-  id?: string;
-  type: "GET";
-  callPath: PropertyKey[];
-}
-
-interface ApplyInvocationRequest {
-  id?: string;
-  type: "APPLY";
-  callPath: PropertyKey[];
-  argumentsList: WrappedValue[];
-}
-
-interface ConstructInvocationRequest {
-  id?: string;
-  type: "CONSTRUCT";
-  callPath: PropertyKey[];
-  argumentsList: WrappedValue[];
-}
-
-interface SetInvocationRequest {
-  id?: string;
-  type: "SET";
-  callPath: PropertyKey[];
-  property: PropertyKey;
-  value: WrappedValue;
-}
-
-export interface TransferHandler {
-  canHandle: (obj: {}) => Boolean;
-  serialize: (obj: {}) => {};
-  deserialize: (obj: {}) => {};
-}
-
-const TRANSFERABLE_TYPES = ["ArrayBuffer", "MessagePort", "OffscreenCanvas"]
-  .filter(f => f in self)
-  .map(f => (self as any)[f]);
-const uid: number = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
-
-const proxyValueSymbol = Symbol("proxyValue");
-const throwSymbol = Symbol("throw");
-const proxyTransferHandler: TransferHandler = {
-  canHandle: (obj: {}): Boolean => obj && (obj as any)[proxyValueSymbol],
-  serialize: (obj: {}): {} => {
-    const { port1, port2 } = new MessageChannel();
-    expose(obj, port1);
-    return port2;
-  },
-  deserialize: (obj: {}): {} => {
-    return proxy(obj as MessagePort);
-  }
-};
-
-const throwTransferHandler = {
-  canHandle: (obj: {}): Boolean => obj && (obj as any)[throwSymbol],
-  serialize: (obj: any): {} => {
-    const message = obj && obj.message;
-    const stack = obj && obj.stack;
-    return Object.assign({}, obj, { message, stack });
-  },
-  deserialize: (obj: {}): {} => {
-    throw Object.assign(Error(), obj);
-  }
-};
-
-export const transferHandlers: Map<string, TransferHandler> = new Map([
-  ["PROXY", proxyTransferHandler],
-  ["THROW", throwTransferHandler]
-]);
-
-let pingPongMessageCounter: number = 0;
-
-export function proxy<T = any>(
-  endpoint: Endpoint | Window,
-  target?: any
-): ProxyResult<T> {
-  if (isWindow(endpoint)) endpoint = windowEndpoint(endpoint);
-  if (!isEndpoint(endpoint))
-    throw Error(
-      "endpoint does not have all of addEventListener, removeEventListener and postMessage defined"
-    );
-
-  activateEndpoint(endpoint);
-  return cbProxy(
-    async irequest => {
-      let args: WrappedValue[] = [];
-      if (irequest.type === "APPLY" || irequest.type === "CONSTRUCT")
-        args = irequest.argumentsList.map(wrapValue);
-      const response = await pingPongMessage(
-        endpoint as Endpoint,
-        Object.assign({}, irequest, { argumentsList: args }),
-        transferableProperties(args)
-      );
-      const result = response.data as InvocationResult;
-      return unwrapValue(result.value);
-    },
-    [],
-    target
-  ) as ProxyResult<T>;
-}
-
-export function proxyValue<T>(obj: T): T {
-  (obj as any)[proxyValueSymbol] = true;
-  return obj;
-}
-
-export function expose(rootObj: Exposable, endpoint: Endpoint | Window): void {
-  if (isWindow(endpoint)) endpoint = windowEndpoint(endpoint);
-  if (!isEndpoint(endpoint))
-    throw Error(
-      "endpoint does not have all of addEventListener, removeEventListener and postMessage defined"
-    );
-
-  activateEndpoint(endpoint);
-  attachMessageHandler(endpoint, async function(event: MessageEvent) {
-    if (!event.data.id || !event.data.callPath) return;
-    const irequest = event.data as InvocationRequest;
-    let that = await irequest.callPath
-      .slice(0, -1)
-      .reduce((obj, propName) => obj[propName], rootObj as any);
-    let obj = await irequest.callPath.reduce(
-      (obj, propName) => obj[propName],
-      rootObj as any
-    );
-    let iresult = obj;
-    let args: {}[] = [];
-
-    if (irequest.type === "APPLY" || irequest.type === "CONSTRUCT")
-      args = irequest.argumentsList.map(unwrapValue);
-    if (irequest.type === "APPLY") {
-      try {
-        iresult = await obj.apply(that, args);
-      } catch (e) {
-        iresult = e;
-        iresult[throwSymbol] = true;
-      }
-    }
-    if (irequest.type === "CONSTRUCT") {
-      try {
-        iresult = new obj(...args); // eslint-disable-line new-cap
-        iresult = proxyValue(iresult);
-      } catch (e) {
-        iresult = e;
-        iresult[throwSymbol] = true;
-      }
-    }
-    if (irequest.type === "SET") {
-      obj[irequest.property] = irequest.value;
-      // FIXME: ES6 Proxy Handler `set` methods are supposed to return a
-      // boolean. To show good will, we return true asynchronously ¯\_(ツ)_/¯
-      iresult = true;
-    }
-
-    iresult = makeInvocationResult(iresult);
-    iresult.id = irequest.id;
-    return (endpoint as Endpoint).postMessage(
-      iresult,
-      transferableProperties([iresult])
-    );
-  });
-}
-
-function wrapValue(arg: {}): WrappedValue {
-  // Is arg itself handled by a TransferHandler?
-  for (const [key, transferHandler] of transferHandlers) {
-    if (transferHandler.canHandle(arg)) {
-      return {
-        type: key,
-
-        value: transferHandler.serialize(arg)
-      };
-    }
-  }
-
-  // If not, traverse the entire object and find handled values.
-  let wrappedChildren: WrappedChildValue[] = [];
-  for (const item of iterateAllProperties(arg)) {
-    for (const [key, transferHandler] of transferHandlers) {
-      if (transferHandler.canHandle(item.value)) {
-        wrappedChildren.push({
-          path: item.path,
-          wrappedValue: {
-            type: key,
-            value: transferHandler.serialize(item.value)
-          }
-        });
-      }
-    }
-  }
-  for (const wrappedChild of wrappedChildren) {
-    const container = wrappedChild.path
-      .slice(0, -1)
-      .reduce((obj, key) => obj[key], arg as any);
-    container[wrappedChild.path[wrappedChild.path.length - 1]] = null;
-  }
-  return {
-    type: "RAW",
-    value: arg,
-    wrappedChildren
-  };
-}
-
-function unwrapValue(arg: WrappedValue): {} {
-  if (transferHandlers.has(arg.type)) {
-    const transferHandler = transferHandlers.get(arg.type)!;
-    return transferHandler.deserialize(arg.value);
-  } else if (isRawWrappedValue(arg)) {
-    for (const wrappedChildValue of arg.wrappedChildren || []) {
-      if (!transferHandlers.has(wrappedChildValue.wrappedValue.type))
-        throw Error(
-          `Unknown value type "${arg.type}" at ${wrappedChildValue.path.join(
-            "."
-          )}`
-        );
-      const transferHandler = transferHandlers.get(
-        wrappedChildValue.wrappedValue.type
-      )!;
-      const newValue = transferHandler.deserialize(
-        wrappedChildValue.wrappedValue.value
-      );
-      replaceValueInObjectAtPath(arg.value, wrappedChildValue.path, newValue);
-    }
-    return arg.value;
-  } else {
-    throw Error(`Unknown value type "${arg.type}"`);
-  }
-}
-
-function replaceValueInObjectAtPath(obj: {}, path: string[], newVal: {}) {
-  const lastKey = path.slice(-1)[0];
-  const lastObj = path
-    .slice(0, -1)
-    .reduce((obj: any, key: string) => obj[key], obj);
-  lastObj[lastKey] = newVal;
-}
-
-function isRawWrappedValue(arg: WrappedValue): arg is RawWrappedValue {
-  return arg.type === "RAW";
-}
-
-function windowEndpoint(w: Window): Endpoint {
-  if (self.constructor.name !== "Window") throw Error("self is not a window");
-  return {
-    addEventListener: self.addEventListener.bind(self),
-    removeEventListener: self.removeEventListener.bind(self),
-    postMessage: (msg, transfer) => w.postMessage(msg, "*", transfer)
-  };
-}
-
-function isEndpoint(endpoint: any): endpoint is Endpoint {
-  return (
-    "addEventListener" in endpoint &&
-    "removeEventListener" in endpoint &&
-    "postMessage" in endpoint
-  );
-}
-
-function activateEndpoint(endpoint: Endpoint): void {
-  if (isMessagePort(endpoint)) endpoint.start();
-}
-
-function attachMessageHandler(
-  endpoint: Endpoint,
-  f: (e: MessageEvent) => void
-): void {
-  // Checking all possible types of `endpoint` manually satisfies TypeScript’s
-  // type checker. Not sure why the inference is failing here. Since it’s
-  // unnecessary code I’m going to resort to `any` for now.
-  // if(isWorker(endpoint))
-  //   endpoint.addEventListener('message', f);
-  // if(isMessagePort(endpoint))
-  //   endpoint.addEventListener('message', f);
-  // if(isOtherWindow(endpoint))
-  //   endpoint.addEventListener('message', f);
-  (endpoint as any).addEventListener("message", f);
-}
-
-function detachMessageHandler(
-  endpoint: Endpoint,
-  f: (e: MessageEvent) => void
-): void {
-  // Same as above.
-  (<any>endpoint).removeEventListener("message", f);
-}
-
-function isMessagePort(endpoint: Endpoint): endpoint is MessagePort {
-  return endpoint.constructor.name === "MessagePort";
-}
-
-function isWindow(endpoint: Endpoint | Window): endpoint is Window {
-  // TODO: This doesn’t work on cross-origin iframes.
-  // return endpoint.constructor.name === 'Window';
-  return ["window", "length", "location", "parent", "opener"].every(
-    prop => prop in endpoint
-  );
-}
-
-// * `pingPongMessage` sends a `postMessage` and waits for a reply. Replies are
-// * identified by a unique id that is attached to the payload.
-function pingPongMessage(
-  endpoint: Endpoint,
-  msg: Object,
-  transferables: Transferable[]
-): Promise<MessageEvent> {
-  const id = `${uid}-${pingPongMessageCounter++}`;
-
-  return new Promise(resolve => {
-    attachMessageHandler(endpoint, function handler(event: MessageEvent) {
-      if (event.data.id !== id) return;
-      detachMessageHandler(endpoint, handler);
-      resolve(event);
-    });
-
-    // Copy msg and add `id` property
-    msg = Object.assign({}, msg, { id });
-    endpoint.postMessage(msg, transferables);
-  });
-}
-
-function cbProxy(
-  cb: CBProxyCallback,
-  callPath: PropertyKey[] = [],
-  target = function() {}
-): Proxy {
-  return new Proxy(target, {
-    construct(_target, argumentsList, proxy) {
-      return cb({
-        type: "CONSTRUCT",
-        callPath,
-        argumentsList
-      });
-    },
-    apply(_target, _thisArg, argumentsList) {
-      // We use `bind` as an indicator to have a remote function bound locally.
-      // The actual target for `bind()` is currently ignored.
-      if (callPath[callPath.length - 1] === "bind")
-        return cbProxy(cb, callPath.slice(0, -1));
-      return cb({
-        type: "APPLY",
-        callPath,
-        argumentsList
-      });
-    },
-    get(_target, property, proxy) {
-      if (property === "then" && callPath.length === 0) {
-        return { then: () => proxy };
-      } else if (property === "then") {
-        const r = cb({
-          type: "GET",
-          callPath
-        });
-        return Promise.resolve(r).then.bind(r);
-      } else {
-        return cbProxy(cb, callPath.concat(property), (<any>_target)[property]);
-      }
-    },
-    set(_target, property, value, _proxy): boolean {
-      return cb({
-        type: "SET",
-        callPath,
-        property,
-        value
-      }) as boolean;
-    }
-  });
-}
-
-function isTransferable(thing: {}): thing is Transferable {
-  return TRANSFERABLE_TYPES.some(type => thing instanceof type);
-}
-
-function* iterateAllProperties(
-  value: {} | undefined,
-  path: string[] = [],
-  visited: WeakSet<{}> | null = null
-): Iterable<PropertyIteratorEntry> {
-  if (!value) return;
-  if (!visited) visited = new WeakSet<{}>();
-  if (visited.has(value)) return;
-  if (typeof value === "string") return;
-  if (typeof value === "object") visited.add(value);
-  if (ArrayBuffer.isView(value)) return;
-  yield { value, path };
-
-  const keys = Object.keys(value);
-  for (const key of keys)
-    yield* iterateAllProperties((value as any)[key], [...path, key], visited);
-}
-
-function transferableProperties(obj: {}[] | undefined): Transferable[] {
-  const r: Transferable[] = [];
-  for (const prop of iterateAllProperties(obj)) {
-    if (isTransferable(prop.value)) r.push(prop.value);
-  }
-  return r;
-}
-
-function makeInvocationResult(obj: {}): InvocationResult {
-  for (const [type, transferHandler] of transferHandlers) {
-    if (transferHandler.canHandle(obj)) {
-      const value = transferHandler.serialize(obj);
-      return {
-        value: { type, value }
-      };
-    }
-  }
-
-  return {
-    value: {
-      type: "RAW",
-      value: obj
-    }
-  };
-}
-*/

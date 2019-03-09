@@ -27,7 +27,8 @@ export interface Endpoint {
 
 export const enum WireValueType {
   RAW,
-  PROXY
+  PROXY,
+  THROW
 }
 
 export interface RawWireValue {
@@ -42,7 +43,14 @@ export interface ProxyWireValue {
   endpoint: Endpoint;
 }
 
-export type WireValue = RawWireValue | ProxyWireValue;
+export interface ThrowWireValue {
+  id?: string;
+  type: WireValueType.THROW;
+  isError: boolean;
+  value: {};
+}
+
+export type WireValue = RawWireValue | ProxyWireValue | ThrowWireValue;
 
 export type MessageID = string;
 
@@ -60,6 +68,7 @@ export interface GetMessage {
 }
 
 export interface SetMessage {
+  id?: MessageID;
   type: MessageType.SET;
   path: string[];
   value: WireValue;
