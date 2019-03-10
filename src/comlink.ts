@@ -14,26 +14,28 @@
 import * as Protocol from "./protocol.js";
 export { Endpoint } from "./protocol.js";
 
-export type PromisifyValue<T> = T extends Promise<any> ? T : Promise<T>;
+export const proxyMarker = Symbol("Comlink.proxy");
 
-export type PromisifyFunction<T> = T extends (...args: infer R1) => infer R2
-  ? (...args: R1) => Promise<R2>
-  : unknown;
+// prettier-ignore
+type Promisify<T> = T extends { [proxyMarker]: boolean }
+  ? Promise<Remote<T>>
+  : T extends Promise<any>
+    ? T
+    : T extends (...args: infer R1) => infer R2
+      ? (...args: R1) => Promisify<R2>
+      : Promise<T>;
 
-export type PromisifyConstructor<T> = T extends {
-  new (...args: infer R1): infer R2;
-}
-  ? { new (...args: R1): Promisify<R2> }
-  : unknown;
-
-export type PromisifyObject<T> = T extends {}
-  ? { [P in keyof T]: PromisifyValue<T[P]> }
-  : unknown;
-
-export type Remote<T> = PromisifyFunction<T> &
-  PromisifyObject<T> &
-  PromisifyConstructor<T>;
-export type Promisify<T> = Remote<T>;
+// prettier-ignore
+export type Remote<T> =
+  (
+    T extends (...args: infer R1) => infer R2
+      ? (...args: R1) => Promisify<R2>
+      : { [K in keyof T]: Promisify<T[K]> }
+  ) & (
+    T extends { new (...args: infer R1): infer R2 }
+      ? { new (...args: R1): Promise<Remote<R2>> }
+      : unknown
+  );
 
 export function expose(obj: any, ep: Protocol.Endpoint = self as any) {
   ep.addEventListener("message", (async (ev: MessageEvent) => {
@@ -166,7 +168,6 @@ export function transfer(obj: any, transfers: any[]) {
   return obj;
 }
 
-export const proxyMarker = Symbol("Comlink.proxy");
 export function proxy<T>(obj: T): T & { [proxyMarker]: true } {
   return Object.assign(obj, { [proxyMarker]: true }) as any;
 }
