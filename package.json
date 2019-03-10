@@ -6,10 +6,12 @@
   "module": "comlink.js",
   "types": "comlink.d.ts",
   "scripts": {
-    "bundle": "microbundle build src/comlink.ts -o dist -f esm,umd",
+    "minify:esm": "terser --compress --mangle -o dist/esm/comlink.min.js --source-map -- dist/esm/comlink.js",
+    "minify:umd": "terser --compress --mangle -o dist/umd/comlink.min.js --source-map -- dist/umd/comlink.js",
+    "minify": "npm run minify:esm && npm run minify:umd",
     "build:esm": "tsc -t esnext -m esnext --lib esnext,dom src/comlink.ts --outDir dist/esm/",
     "build:umd": "rollup --format=umd --file=dist/umd/comlink.js --name Comlink dist/esm/comlink.js",
-    "build": "npm run build:esm && npm run build:umd",
+    "build": "npm run build:esm && npm run build:umd && npm run minify",
     "test": "npm run unittest && npm run build",
     "unittest": "karma start",
     "fmt": "prettier --write ./*.{js,ts,md,json} ./{docs,tests}/**/*.{js,ts,md,json}",
@@ -39,5 +41,7 @@
     "rollup": "^1.6.0",
     "typescript": "3.2.4"
   },
-  "dependencies": {}
+  "dependencies": {
+    "terser": "^3.16.1"
+  }
 }
