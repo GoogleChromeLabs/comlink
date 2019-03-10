@@ -185,6 +185,15 @@ export function proxy<T>(obj: T): T & { [proxyMarker]: true } {
   return Object.assign(obj, { [proxyMarker]: true }) as any;
 }
 
+export function windowEndpoint(w: Window, context = self): Protocol.Endpoint {
+  return {
+    postMessage: (msg: any, transferables: any[]) =>
+      w.postMessage(msg, "*", transferables),
+    addEventListener: context.addEventListener.bind(context),
+    removeEventListener: context.removeEventListener.bind(context)
+  };
+}
+
 function toWireValue(value: any): Protocol.WireValue {
   if (value && value[proxyMarker]) {
     // TODO: Create `startedMessageChannel()`.
