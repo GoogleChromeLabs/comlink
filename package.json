@@ -7,7 +7,7 @@
   "types": "comlink.d.ts",
   "scripts": {
     "build": "rollup -c",
-    "test": "npm run fmt_test && npm run unittest && npm run build",
+    "test": "npm run fmt_test && npm run build && npm run unittest",
     "unittest": "karma start",
     "fmt": "prettier --write ./*.{js,ts,md,json} ./{docs,tests}/**/*.{js,ts,md,json}",
     "fmt_test": "test $(prettier -l ./*.{js,ts,md,json} ./{docs,tests}/**/*.{js,ts,md,json} | wc -l) -eq 0",
