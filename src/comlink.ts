@@ -40,12 +40,10 @@ export function expose(obj: any, ep: Protocol.Endpoint = self as any) {
     if (!ev || !ev.data) {
       return;
     }
-    const {path,id,type} = ev.data as Protocol.Message;
+    const { path, id, type } = ev.data as Protocol.Message;
     let returnValue, returnWireValue;
     try {
-      const parent = path
-        .slice(0, -1)
-        .reduce((obj, prop) => obj[prop], obj);
+      const parent = path.slice(0, -1).reduce((obj, prop) => obj[prop], obj);
       const rawValue = path.reduce((obj, prop) => obj[prop], obj);
       switch (type) {
         case Protocol.MessageType.GET:
@@ -70,9 +68,7 @@ export function expose(obj: any, ep: Protocol.Endpoint = self as any) {
         case Protocol.MessageType.CONSTRUCT:
           {
             const value = await new rawValue(...ev.data.argumentList);
-            const { port1, port2 } = new MessageChannel();
-            port1.start();
-            port2.start();
+            const { port1, port2 } = startedMessageChannel();
             expose(value, port2);
             returnValue = port1;
             transfer(port1, [port1]);
@@ -94,7 +90,7 @@ export function expose(obj: any, ep: Protocol.Endpoint = self as any) {
       };
     }
     returnWireValue = returnWireValue || toWireValue(returnValue);
-    ep.postMessage({...returnWireValue, id}, getTransferables([returnValue]));
+    ep.postMessage({ ...returnWireValue, id }, getTransferables([returnValue]));
   }) as any);
 }
 
@@ -103,11 +99,8 @@ export function wrap<T>(ep: Protocol.Endpoint): Remote<T> {
 }
 
 function createProxy<T>(ep: Protocol.Endpoint, path: string[] = []): Remote<T> {
-  const proxy = new Proxy(new Function(), {
+  const proxy: Function = new Proxy(new Function(), {
     get(_target, prop) {
-      if (typeof prop === "symbol") {
-        throw Error("Can’t access symbol properties with Comlink");
-      }
       if (prop === "then") {
         if (path.length === 0) {
           return { then: () => proxy };
@@ -127,9 +120,7 @@ function createProxy<T>(ep: Protocol.Endpoint, path: string[] = []): Remote<T> {
         type: Protocol.MessageType.SET,
         path: [...path, prop.toString()],
         value: toWireValue(value)
-      })
-        .then(fromWireValue)
-        .then(() => true) as any;
+      }).then(fromWireValue) as any;
     },
     apply(_target, _thisArg, argumentList) {
       // We just pretend that `bind()` didn’t happen.
@@ -189,9 +180,7 @@ export function windowEndpoint(w: Window, context = self): Protocol.Endpoint {
 function toWireValue(value: any): Protocol.WireValue {
   if (value && value[proxyMarker]) {
     // TODO: Create `startedMessageChannel()`.
-    const { port1, port2 } = new MessageChannel();
-    port1.start();
-    port2.start();
+    const { port1, port2 } = startedMessageChannel();
     expose(value, port1);
     if (!transferCache.has(value)) {
       transferCache.set(value, []);
@@ -240,6 +229,13 @@ function requestResponseMessage(
       resolve(ev.data);
     } as any);
   });
+}
+
+function startedMessageChannel(): MessageChannel {
+  const mc = new MessageChannel();
+  mc.port1.start();
+  mc.port2.start();
+  return mc;
 }
 
 function generateUUID(): string {
