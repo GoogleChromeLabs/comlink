@@ -2,9 +2,9 @@
   "name": "comlink",
   "version": "4.0.0-alpha.1",
   "description": "Comlink makes WebWorkers enjoyable",
-  "main": "comlink.js",
-  "module": "comlink.js",
-  "types": "comlink.d.ts",
+  "main": "dist/umd/comlink.js",
+  "module": "dist/esm/comlink.js",
+  "types": "dist/umd/comlink.d.ts",
   "scripts": {
     "build": "rollup -c",
     "test:unit": "karma start",
