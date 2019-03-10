@@ -1,6 +1,6 @@
 {
   "name": "comlink",
-  "version": "4.0.0-alpha.0",
+  "version": "4.0.0-alpha.1",
   "description": "Comlink makes WebWorkers enjoyable",
   "main": "comlink.js",
   "module": "comlink.js",
