@@ -41,8 +41,8 @@ module.exports = function(config) {
       "ChromeCanaryHarmony",
       "Firefox",
       "FirefoxNightly",
-      "Safari"
-      // "SafariTechPreview"
+      "Safari",
+      "SafariTechPreview"
     ],
     customLaunchers: {
       ChromeCanaryHarmony: {
