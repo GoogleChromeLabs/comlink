@@ -40,69 +40,61 @@ export function expose(obj: any, ep: Protocol.Endpoint = self as any) {
     if (!ev || !ev.data) {
       return;
     }
-    const msg = ev.data as Protocol.Message;
+    const {path,id,type} = ev.data as Protocol.Message;
+    let returnValue, returnWireValue;
     try {
-      const parent = msg.path
+      const parent = path
         .slice(0, -1)
         .reduce((obj, prop) => obj[prop], obj);
-      const rawValue = msg.path.reduce((obj, prop) => obj[prop], obj);
-      switch (msg.type) {
+      const rawValue = path.reduce((obj, prop) => obj[prop], obj);
+      switch (type) {
         case Protocol.MessageType.GET:
           {
-            const value = await rawValue;
-            const wireValue = toWireValue(value);
-            wireValue.id = msg.id;
-            ep.postMessage(wireValue, getTransferables([value]));
+            returnValue = await rawValue;
           }
           break;
         case Protocol.MessageType.SET:
           {
-            parent[msg.path.slice(-1)[0]] = fromWireValue(msg.value);
-            const value = toWireValue(true);
-            value.id = msg.id;
-            ep.postMessage(value);
+            parent[path.slice(-1)[0]] = fromWireValue(ev.data.value);
+            returnValue = true;
           }
           break;
         case Protocol.MessageType.APPLY:
           {
-            const returnValue = await rawValue.apply(
+            returnValue = await rawValue.apply(
               parent,
-              msg.argumentList.map(fromWireValue)
+              ev.data.argumentList.map(fromWireValue)
             );
-            const wireValue = toWireValue(returnValue);
-            wireValue.id = msg.id;
-            ep.postMessage(wireValue, getTransferables([returnValue]));
           }
           break;
         case Protocol.MessageType.CONSTRUCT:
           {
-            const value = await new rawValue(...msg.argumentList);
+            const value = await new rawValue(...ev.data.argumentList);
             const { port1, port2 } = new MessageChannel();
             port1.start();
             port2.start();
             expose(value, port2);
-            ep.postMessage(
-              {
-                id: msg.id,
-                type: Protocol.WireValueType.PROXY,
-                endpoint: port1
-              },
-              [port1]
-            );
+            returnValue = port1;
+            transfer(port1, [port1]);
+            returnWireValue = {
+              type: Protocol.WireValueType.PROXY,
+              endpoint: port1
+            };
           }
           break;
         default:
-          console.warn("Unrecognized message", msg);
+          console.warn("Unrecognized message", ev.data);
       }
     } catch (e) {
       const isError = e instanceof Error;
-      ep.postMessage({
-        id: msg.id,
+      returnWireValue = {
         type: Protocol.WireValueType.THROW,
         isError,
         value: isError ? { message: e.message, stack: e.stack } : e
-      });
+      };
     }
+    returnWireValue = returnWireValue || toWireValue(returnValue);
+    ep.postMessage({...returnWireValue, id}, getTransferables([returnValue]));
   }) as any);
 }
 
