@@ -11,7 +11,7 @@
  * limitations under the License.
  */
 
-import * as Comlink from "/base/dist/comlink.js";
+import * as Comlink from "/base/dist/esm/comlink.js";
 
 class SampleClass {
   constructor() {
