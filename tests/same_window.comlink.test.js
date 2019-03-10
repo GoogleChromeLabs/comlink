@@ -367,14 +367,14 @@ describe("Comlink in the same realm", function() {
     });
   });
 
-  it("will thing deeply nester values", async function() {
+  it("will proxy deeply nester values", async function() {
     const thing = Comlink.wrap(this.port1);
     const obj = {
       a: {
         v: 4
       },
       b: Comlink.proxy({
-        v: 4
+        v: 5
       })
     };
     Comlink.expose(obj, this.port2);
@@ -382,23 +382,11 @@ describe("Comlink in the same realm", function() {
     const a = await thing.a;
     const b = await thing.b;
     expect(await a.v).to.equal(4);
-    expect(await b.v).to.equal(4);
-    obj.a.v = 9;
-    obj.b.v = 9;
-    expect(await a.v).to.equal(4);
-    expect(await b.v).to.equal(9);
-  });
-
-  it("will proxy values in an array", function(done) {
-    const thing = Comlink.wrap(this.port1);
-    const obj = {
-      async someFunc(v) {
-        await v[0]();
-      }
-    };
-    Comlink.expose(obj, this.port2);
-
-    thing.someFunc([Comlink.proxy(_ => done())]);
+    expect(await b.v).to.equal(5);
+    await (a.v = 8);
+    await (b.v = 9);
+    expect(await thing.a.v).to.equal(4);
+    expect(await thing.b.v).to.equal(9);
   });
 
   it("will handle undefined parameters", async function() {

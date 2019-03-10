@@ -49,9 +49,10 @@ export function expose(obj: any, ep: Protocol.Endpoint = self as any) {
       switch (msg.type) {
         case Protocol.MessageType.GET:
           {
-            const value = toWireValue(await rawValue);
-            value.id = msg.id;
-            ep.postMessage(value);
+            const value = await rawValue;
+            const wireValue = toWireValue(value);
+            wireValue.id = msg.id;
+            ep.postMessage(wireValue, getTransferables([value]));
           }
           break;
         case Protocol.MessageType.SET:
