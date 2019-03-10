@@ -152,12 +152,15 @@ function createProxy<T>(ep: Protocol.Endpoint, path: string[] = []): Remote<T> {
   return proxy as any;
 }
 
-function getTransferables(v: any[]): any[] {
-  // FIXME: Don’t use flatMap
-  return (v as any).flatMap((v: any) => transferCache.get(v) || []);
+function myFlat<T>(arr: (T | T[])[]): T[] {
+  return Array.prototype.concat.apply([], arr);
 }
 
 const transferCache = new WeakMap<any, any[]>();
+function getTransferables(v: any[]): any[] {
+  return myFlat(v.map(v => transferCache.get(v) || []));
+}
+
 export function transfer(obj: any, transfers: any[]) {
   transferCache.set(obj, transfers);
   return obj;

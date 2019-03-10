@@ -367,6 +367,21 @@ describe("Comlink in the same realm", function() {
     });
   });
 
+  it("will wrap multiple marked parameter values, simple function", async function() {
+    const thing = Comlink.wrap(this.port1);
+    Comlink.expose(async function(f1, f2, f3) {
+      return await f1() + await f2() + await f3();
+    }, this.port2);
+    // Weird code because Mocha
+    expect(
+      await thing(
+        Comlink.proxy(_ => 1),
+        Comlink.proxy(_ => 2),
+        Comlink.proxy(_ => 3)
+      )
+    ).to.equal(6);
+  });
+
   it("will proxy deeply nester values", async function() {
     const thing = Comlink.wrap(this.port1);
     const obj = {
