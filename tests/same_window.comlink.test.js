@@ -51,8 +51,8 @@ class SampleClass {
     return new Promise(resolve => setTimeout(_ => resolve(4), 100));
   }
 
-  thingFunc() {
-    return Comlink.thingValue({
+  proxyFunc() {
+    return Comlink.proxy({
       counter: 0,
       inc() {
         this.counter++;
@@ -118,7 +118,7 @@ describe("Comlink in the same realm", function() {
   it("can rethrow non-error objects", async function() {
     const thing = Comlink.wrap(this.port1);
     Comlink.expose(_ => {
-      throw {test: true};
+      throw { test: true };
     }, this.port2);
     try {
       await thing();
@@ -263,17 +263,21 @@ describe("Comlink in the same realm", function() {
     expect(await instance._counter).to.equal(4);
   });
 
-  const hasBroadcastChannel = _ => ('BroadcastChannel' in self);
-  guardedIt(hasBroadcastChannel)("will work with BroadcastChannel", async function() {
-    const b1 = new BroadcastChannel("comlink_bc_test");
-    const b2 = new BroadcastChannel("comlink_bc_test");
-    const thing = Comlink.wrap(b1);
-    Comlink.expose(b => 40 + b, b2);
-    expect(await thing(2)).to.equal(42);
-  });
+  const hasBroadcastChannel = _ => "BroadcastChannel" in self;
+  guardedIt(hasBroadcastChannel)(
+    "will work with BroadcastChannel",
+    async function() {
+      const b1 = new BroadcastChannel("comlink_bc_test");
+      const b2 = new BroadcastChannel("comlink_bc_test");
+      const thing = Comlink.wrap(b1);
+      Comlink.expose(b => 40 + b, b2);
+      expect(await thing(2)).to.equal(42);
+    }
+  );
 
   // Buffer transfers seem to have regressed in Safari 11.1, it’s fixed in 11.2.
-  const isNotSafari11_1 = _ => !/11\.1(\.[0-9]+)? Safari/.test(navigator.userAgent);
+  const isNotSafari11_1 = _ =>
+    !/11\.1(\.[0-9]+)? Safari/.test(navigator.userAgent);
   guardedIt(isNotSafari11_1)("will transfer buffers", async function() {
     const thing = Comlink.wrap(this.port1);
     Comlink.expose(b => b.byteLength, this.port2);
@@ -282,13 +286,18 @@ describe("Comlink in the same realm", function() {
     expect(buffer.byteLength).to.equal(0);
   });
 
-  guardedIt(isNotSafari11_1)("will transfer deeply nested buffers", async function() {
-    const thing = Comlink.wrap(this.port1);
-    Comlink.expose(a => a.b.c.d.byteLength, this.port2);
-    const buffer = new Uint8Array([1, 2, 3]).buffer;
-    expect(await thing(Comlink.transfer({ b: { c: { d: buffer } } }, [buffer]))).to.equal(3);
-    expect(buffer.byteLength).to.equal(0);
-  });
+  guardedIt(isNotSafari11_1)(
+    "will transfer deeply nested buffers",
+    async function() {
+      const thing = Comlink.wrap(this.port1);
+      Comlink.expose(a => a.b.c.d.byteLength, this.port2);
+      const buffer = new Uint8Array([1, 2, 3]).buffer;
+      expect(
+        await thing(Comlink.transfer({ b: { c: { d: buffer } } }, [buffer]))
+      ).to.equal(3);
+      expect(buffer.byteLength).to.equal(0);
+    }
+  );
 
   it("will transfer a message port", async function() {
     const thing = Comlink.wrap(this.port1);
@@ -321,17 +330,17 @@ describe("Comlink in the same realm", function() {
     expect(await obj.counter).to.equal(1);
   });
 
-  it("will thing marked return values from class instance methods", async function() {
+  it("will wrap marked return values from class instance methods", async function() {
     const thing = Comlink.wrap(this.port1);
     Comlink.expose(SampleClass, this.port2);
     const instance = await new thing();
-    const obj = await instance.thingFunc();
+    const obj = await instance.proxyFunc();
     expect(await obj.counter).to.equal(0);
     await obj.inc();
     expect(await obj.counter).to.equal(1);
   });
 
-  it("will thing marked parameter values", async function() {
+  it("will wrap marked parameter values", async function() {
     const thing = Comlink.wrap(this.port1);
     const local = {
       counter: 0,
@@ -343,18 +352,18 @@ describe("Comlink in the same realm", function() {
       await f.inc();
     }, this.port2);
     expect(local.counter).to.equal(0);
-    await thing(Comlink.thingValue(local));
+    await thing(Comlink.proxy(local));
     expect(await local.counter).to.equal(1);
   });
 
-  it("will thing marked parameter values, simple function", async function() {
+  it("will wrap marked parameter values, simple function", async function() {
     const thing = Comlink.wrap(this.port1);
     Comlink.expose(async function(f) {
       await f();
     }, this.port2);
     // Weird code because Mocha
     await new Promise(async resolve => {
-      thing(Comlink.thingValue(_ => resolve()));
+      thing(Comlink.proxy(_ => resolve()));
     });
   });
 
@@ -364,7 +373,7 @@ describe("Comlink in the same realm", function() {
       a: {
         v: 4
       },
-      b: Comlink.thingValue({
+      b: Comlink.proxy({
         v: 4
       })
     };
@@ -380,7 +389,7 @@ describe("Comlink in the same realm", function() {
     expect(await b.v).to.equal(9);
   });
 
-  it("will thing values in an array", function(done) {
+  it("will proxy values in an array", function(done) {
     const thing = Comlink.wrap(this.port1);
     const obj = {
       async someFunc(v) {
@@ -389,7 +398,7 @@ describe("Comlink in the same realm", function() {
     };
     Comlink.expose(obj, this.port2);
 
-    thing.someFunc([Comlink.thingValue(_ => done())]);
+    thing.someFunc([Comlink.proxy(_ => done())]);
   });
 
   it("will handle undefined parameters", async function() {

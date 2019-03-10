@@ -64,11 +64,13 @@ export function expose(obj: any, ep: Protocol.Endpoint = self as any) {
           break;
         case Protocol.MessageType.APPLY:
           {
-            const value = toWireValue(
-              await rawValue.apply(parent, msg.argumentList.map(fromWireValue))
+            const returnValue = await rawValue.apply(
+              parent,
+              msg.argumentList.map(fromWireValue)
             );
-            value.id = msg.id;
-            ep.postMessage(value);
+            const wireValue = toWireValue(returnValue);
+            wireValue.id = msg.id;
+            ep.postMessage(wireValue, getTransferables([returnValue]));
           }
           break;
         case Protocol.MessageType.CONSTRUCT:
@@ -177,7 +179,27 @@ export function transfer(obj: any, transfers: any[]) {
   return obj;
 }
 
+export const proxyMarker = Symbol("Comlink.proxy");
+export function proxy<T>(obj: T): T & { [proxyMarker]: true } {
+  return Object.assign(obj, { [proxyMarker]: true }) as any;
+}
+
 function toWireValue(value: any): Protocol.WireValue {
+  if (value && value[proxyMarker]) {
+    // TODO: Create `startedMessageChannel()`.
+    const { port1, port2 } = new MessageChannel();
+    port1.start();
+    port2.start();
+    expose(value, port1);
+    if (!transferCache.has(value)) {
+      transferCache.set(value, []);
+    }
+    transferCache.get(value)!.push(port2);
+    return {
+      type: Protocol.WireValueType.PROXY,
+      endpoint: port2
+    };
+  }
   return {
     type: Protocol.WireValueType.RAW,
     value
