@@ -154,14 +154,19 @@ function createProxy<T>(ep: Protocol.Endpoint, path: string[] = []): Remote<T> {
       }
       return createProxy(ep, [...path, prop.toString()]);
     },
-    set(_target, prop, value) {
+    set(_target, prop, rawValue) {
       // FIXME: ES6 Proxy Handler `set` methods are supposed to return a
       // boolean. To show good will, we return true asynchronously ¯\_(ツ)_/¯
-      return requestResponseMessage(ep, {
-        type: Protocol.MessageType.SET,
-        path: [...path, prop.toString()],
-        value: toWireValue(value)[0]
-      }).then(fromWireValue) as any;
+      const [value, transferables] = toWireValue(rawValue);
+      return requestResponseMessage(
+        ep,
+        {
+          type: Protocol.MessageType.SET,
+          path: [...path, prop.toString()],
+          value
+        },
+        transferables
+      ).then(fromWireValue) as any;
     },
     apply(_target, _thisArg, rawArgumentList) {
       // We just pretend that `bind()` didn’t happen.

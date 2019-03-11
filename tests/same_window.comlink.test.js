@@ -365,6 +365,20 @@ describe("Comlink in the same realm", function() {
     expect(await local.counter).to.equal(1);
   });
 
+  it("will wrap marked assignments", function(done) {
+    const thing = Comlink.wrap(this.port1);
+    const obj = {
+      onready: null,
+      call() {
+        this.onready();
+      }
+    };
+    Comlink.expose(obj, this.port2);
+
+    thing.onready = Comlink.proxy(() => done());
+    thing.call();
+  });
+
   it("will wrap marked parameter values, simple function", async function() {
     const thing = Comlink.wrap(this.port1);
     Comlink.expose(async function(f) {
@@ -391,7 +405,7 @@ describe("Comlink in the same realm", function() {
     ).to.equal(6);
   });
 
-  it("will proxy deeply nester values", async function() {
+  it("will proxy deeply nested values", async function() {
     const thing = Comlink.wrap(this.port1);
     const obj = {
       a: {
