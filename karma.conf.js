@@ -43,6 +43,8 @@ module.exports = function(config) {
       postDetection: availableBrowsers => {
         if (process.env.INSIDE_DOCKER) {
           return ["DockerChrome"];
+        } else if (process.env.CHROME_ONLY) {
+          return ["ChromeHeadless"];
         } else {
           return availableBrowsers;
         }
