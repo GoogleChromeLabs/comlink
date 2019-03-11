@@ -13,14 +13,15 @@ function config({ format, minify }) {
     },
     plugins: [
       typescript({
-        useTsconfigDeclarationDir: true,
         clean: true,
         typescript: require("typescript"),
         tsconfigOverride: {
           compilerOptions: {
-            sourceMap: true,
-            declarationDir: dir
-          }
+            sourceMap: true
+          },
+          // Don’t ask. Without this, the typescript plugin is convinced
+          // to create subfolders and misplace the .d.ts files.
+          files: ["./src/comlink.ts"]
         }
       }),
       minify
