@@ -37,6 +37,14 @@ export type Remote<T> =
       : unknown
   );
 
+export interface TransferHandler {
+  canHandle(obj: {}): boolean;
+  serialize(obj: {}): {};
+  deserialize(obj: {}): {};
+}
+
+export const transferHandlers = new Map<string, TransferHandler>();
+
 export function expose(obj: any, ep: Protocol.Endpoint = self as any) {
   ep.addEventListener("message", (async (ev: MessageEvent) => {
     if (!ev || !ev.data) {
@@ -180,6 +188,15 @@ export function windowEndpoint(w: Window, context = self): Protocol.Endpoint {
 }
 
 function toWireValue(value: any): Protocol.WireValue {
+  for (const [name, handler] of transferHandlers) {
+    if (handler.canHandle(value)) {
+      return {
+        type: Protocol.WireValueType.HANDLER,
+        name,
+        value: handler.serialize(value)
+      };
+    }
+  }
   if (value && value[proxyMarker]) {
     // TODO: Create `startedMessageChannel()`.
     const { port1, port2 } = startedMessageChannel();
@@ -201,6 +218,8 @@ function toWireValue(value: any): Protocol.WireValue {
 
 function fromWireValue(value: Protocol.WireValue): any {
   switch (value.type) {
+    case Protocol.WireValueType.HANDLER:
+      return transferHandlers.get(value.name)!.deserialize(value.value);
     case Protocol.WireValueType.RAW:
       return value.value;
     case Protocol.WireValueType.PROXY:

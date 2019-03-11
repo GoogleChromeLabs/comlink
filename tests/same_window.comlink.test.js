@@ -417,7 +417,7 @@ describe("Comlink in the same realm", function() {
     expect(await thing.f(undefined)).to.equal(4);
   });
 
-  it("can handle destructuring on the thing side", async function() {
+  it("can handle destructuring", async function() {
     Comlink.expose(
       {
         a: 4,
@@ -436,10 +436,30 @@ describe("Comlink in the same realm", function() {
     expect(await c()).to.equal(6);
   });
 
-  it("can thing with a given target", async function() {
-    const thing = Comlink.wrap(this.port1, { value: {} });
-    Comlink.expose({ value: 4 }, this.port2);
-    expect(await thing.value).to.equal(4);
+  it("lets users define transfer handlers", function(done) {
+    Comlink.transferHandlers.set("event", {
+      canHandle(obj) {
+        return obj instanceof Event
+      },
+      serialize(obj) {
+        return obj.data;
+      },
+      deserialize(data) {
+        return new MessageEvent("message", {data});
+      }
+    });
+
+    Comlink.expose((ev) => {
+      expect(ev).to.be.an.instanceOf(Event);
+      expect(ev.data).to.deep.equal({a: 1});
+      done();
+    }, this.port1);
+    const thing = Comlink.wrap(this.port2);
+
+    const {port1, port2} = new MessageChannel();
+    port1.addEventListener("message", thing.bind(this));
+    port1.start();
+    port2.postMessage({a: 1});
   });
 });
 
