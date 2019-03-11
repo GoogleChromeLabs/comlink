@@ -54,7 +54,10 @@ export const transferHandlers = new Map<string, TransferHandler>([
         expose(obj, port1);
         return [port2, [port2]];
       },
-      deserialize: port => wrap(port as any)
+      deserialize: (port: MessagePort) => {
+        port.start();
+        return wrap(port);
+      }
     }
   ],
   [
@@ -77,7 +80,7 @@ export const transferHandlers = new Map<string, TransferHandler>([
         if ((obj as any).isError) {
           throw Object.assign(new Error(), obj);
         }
-        return obj;
+        throw obj;
       }
     }
   ]
@@ -157,30 +160,32 @@ function createProxy<T>(ep: Protocol.Endpoint, path: string[] = []): Remote<T> {
         value: toWireValue(value)[0]
       }).then(fromWireValue) as any;
     },
-    apply(_target, _thisArg, argumentList) {
+    apply(_target, _thisArg, rawArgumentList) {
       // We just pretend that `bind()` didn’t happen.
       if (path[path.length - 1] === "bind") {
         return createProxy(ep, path.slice(0, -1));
       }
+      const [argumentList, transferables] = processArguments(rawArgumentList);
       return requestResponseMessage(
         ep,
         {
           type: Protocol.MessageType.APPLY,
           path,
-          argumentList: argumentList.map(toWireValue)
+          argumentList
         },
-        getTransferables(argumentList)
+        transferables
       ).then(fromWireValue);
     },
-    construct(_target, argumentList) {
+    construct(_target, rawArgumentList) {
+      const [argumentList, transferables] = processArguments(rawArgumentList);
       return requestResponseMessage(
         ep,
         {
           type: Protocol.MessageType.CONSTRUCT,
           path,
-          argumentList: argumentList.map(toWireValue)
+          argumentList
         },
-        getTransferables(argumentList)
+        transferables
       ).then(fromWireValue);
     }
   });
@@ -191,11 +196,12 @@ function myFlat<T>(arr: (T | T[])[]): T[] {
   return Array.prototype.concat.apply([], arr);
 }
 
-const transferCache = new WeakMap<any, any[]>();
-function getTransferables(v: any[]): any[] {
-  return myFlat(v.map(v => transferCache.get(v) || []));
+function processArguments(argumentList: any[]): [Protocol.WireValue[], any[]] {
+  const processed = argumentList.map(toWireValue);
+  return [processed.map(v => v[0]), myFlat(processed.map(v => v[1]))];
 }
 
+const transferCache = new WeakMap<any, any[]>();
 export function transfer(obj: any, transfers: any[]) {
   transferCache.set(obj, transfers);
   return obj;
@@ -233,7 +239,7 @@ function toWireValue(value: any): [Protocol.WireValue, any[]] {
       type: Protocol.WireValueType.RAW,
       value
     },
-    getTransferables([value])
+    transferCache.get(value) || []
   ];
 }
 
