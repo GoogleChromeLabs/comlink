@@ -14,8 +14,8 @@
 import * as Comlink from "/base/dist/esm/comlink.js";
 
 class SampleClass {
-  constructor() {
-    this._counter = 1;
+  constructor(counterInit = 1) {
+    this._counter = counterInit;
     this._promise = Promise.resolve(4);
   }
 
@@ -148,6 +148,13 @@ describe("Comlink in the same realm", function() {
     Comlink.expose(SampleClass, this.port2);
     const instance = await new thing();
     expect(await instance.method()).to.equal(4);
+  });
+
+  it("can pass parameters to class constructor", async function() {
+    const thing = Comlink.wrap(this.port1);
+    Comlink.expose(SampleClass, this.port2);
+    const instance = await new thing(23);
+    expect(await instance.counter).to.equal(23);
   });
 
   it("can access a class in an object", async function() {

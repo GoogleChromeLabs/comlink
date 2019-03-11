@@ -43,6 +43,7 @@ export function expose(obj: any, ep: Protocol.Endpoint = self as any) {
       return;
     }
     const { path, id, type } = ev.data as Protocol.Message;
+    const argumentList = (ev.data.argumentList || []).map(fromWireValue);
     let returnValue, returnWireValue;
     try {
       const parent = path.slice(0, -1).reduce((obj, prop) => obj[prop], obj);
@@ -61,15 +62,12 @@ export function expose(obj: any, ep: Protocol.Endpoint = self as any) {
           break;
         case Protocol.MessageType.APPLY:
           {
-            returnValue = await rawValue.apply(
-              parent,
-              ev.data.argumentList.map(fromWireValue)
-            );
+            returnValue = await rawValue.apply(parent, argumentList);
           }
           break;
         case Protocol.MessageType.CONSTRUCT:
           {
-            const value = await new rawValue(...ev.data.argumentList);
+            const value = await new rawValue(...argumentList);
             const { port1, port2 } = startedMessageChannel();
             expose(value, port2);
             returnValue = port1;
