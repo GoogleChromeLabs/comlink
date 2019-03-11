@@ -11,10 +11,11 @@
  * limitations under the License.
  */
 
-importScripts("https://cdn.jsdelivr.net/npm/comlinkjs@3/umd/comlink.js");
+// importScripts("https://unpkg.com/comlink@alpha/dist/umd/comlink.js");
+importScripts("../../../dist/umd/comlink.js");
 
 async function remoteFunction(cb) {
   await cb("A string from a worker");
 }
 
-Comlink.expose(remoteFunction, self);
+Comlink.expose(remoteFunction);

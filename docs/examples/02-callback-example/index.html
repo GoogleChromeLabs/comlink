@@ -1,15 +1,17 @@
-<!doctype html>
+<!DOCTYPE html>
 
 <script type="module">
-  import * as Comlink from "https://cdn.jsdelivr.net/npm/comlinkjs@3/comlink.js";
+  // import * as Comlink from "https://unpkg.com/comlink@alpha/dist/esm/comlink.js";
+  import * as Comlink from "../../../dist/esm/comlink.js";
+
   function callback(value) {
     alert(`Result: ${value}`);
   }
 
   async function init() {
-    const remoteFunction = Comlink.proxy(new Worker('worker.js'));
-    await remoteFunction(Comlink.proxyValue(callback))
-  };
+    const remoteFunction = Comlink.wrap(new Worker("worker.js"));
+    await remoteFunction(Comlink.proxy(callback));
+  }
 
   init();
 </script>

@@ -1,4 +1,4 @@
-Comlink.transferHandlers.set("EVENT", {
+self.__eventTransferHandler = {
   canHandle(obj) {
     return obj instanceof Event;
   },
@@ -14,4 +14,4 @@ Comlink.transferHandlers.set("EVENT", {
   deserialize(obj) {
     return obj;
   }
-});
+};
