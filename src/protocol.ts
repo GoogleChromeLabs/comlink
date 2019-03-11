@@ -38,19 +38,6 @@ export interface RawWireValue {
   value: {};
 }
 
-export interface ProxyWireValue {
-  id?: string;
-  type: WireValueType.PROXY;
-  endpoint: Endpoint;
-}
-
-export interface ThrowWireValue {
-  id?: string;
-  type: WireValueType.THROW;
-  isError: boolean;
-  value: {};
-}
-
 export interface HandlerWireValue {
   id?: string;
   type: WireValueType.HANDLER;
@@ -58,11 +45,7 @@ export interface HandlerWireValue {
   value: {};
 }
 
-export type WireValue =
-  | RawWireValue
-  | ProxyWireValue
-  | ThrowWireValue
-  | HandlerWireValue;
+export type WireValue = RawWireValue | HandlerWireValue;
 
 export type MessageID = string;
 

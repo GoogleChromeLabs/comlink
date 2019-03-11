@@ -15,6 +15,7 @@ import * as Protocol from "./protocol.js";
 export { Endpoint } from "./protocol.js";
 
 export const proxyMarker = Symbol("Comlink.proxy");
+const throwSet = new WeakSet();
 
 // prettier-ignore
 type Promisify<T> = T extends { [proxyMarker]: boolean }
@@ -38,12 +39,52 @@ export type Remote<T> =
   );
 
 export interface TransferHandler {
-  canHandle(obj: {}): boolean;
-  serialize(obj: {}): {};
-  deserialize(obj: {}): {};
+  canHandle(obj: any): boolean;
+  serialize(obj: any): [any, any[]];
+  deserialize(obj: any): any;
 }
 
-export const transferHandlers = new Map<string, TransferHandler>();
+export const transferHandlers = new Map<string, TransferHandler>([
+  [
+    "proxy",
+    {
+      canHandle: obj => obj && obj[proxyMarker],
+      serialize(obj) {
+        const { port1, port2 } = startedMessageChannel();
+        expose(obj, port1);
+        return [port2, [port2]];
+      },
+      deserialize: (port: MessagePort) => {
+        port.start();
+        return wrap(port);
+      }
+    }
+  ],
+  [
+    "throw",
+    {
+      canHandle: obj => throwSet.has(obj),
+      serialize(obj) {
+        const isError = obj instanceof Error;
+        let serialized = obj;
+        if (isError) {
+          serialized = {
+            isError,
+            message: obj.message,
+            stack: obj.stack
+          };
+        }
+        return [serialized, []];
+      },
+      deserialize(obj) {
+        if ((obj as any).isError) {
+          throw Object.assign(new Error(), obj);
+        }
+        throw obj;
+      }
+    }
+  ]
+]);
 
 export function expose(obj: any, ep: Protocol.Endpoint = self as any) {
   ep.addEventListener("message", (async (ev: MessageEvent) => {
@@ -52,7 +93,7 @@ export function expose(obj: any, ep: Protocol.Endpoint = self as any) {
     }
     const { path, id, type } = ev.data as Protocol.Message;
     const argumentList = (ev.data.argumentList || []).map(fromWireValue);
-    let returnValue, returnWireValue;
+    let returnValue;
     try {
       const parent = path.slice(0, -1).reduce((obj, prop) => obj[prop], obj);
       const rawValue = path.reduce((obj, prop) => obj[prop], obj);
@@ -76,29 +117,18 @@ export function expose(obj: any, ep: Protocol.Endpoint = self as any) {
         case Protocol.MessageType.CONSTRUCT:
           {
             const value = await new rawValue(...argumentList);
-            const { port1, port2 } = startedMessageChannel();
-            expose(value, port2);
-            returnValue = port1;
-            transfer(port1, [port1]);
-            returnWireValue = {
-              type: Protocol.WireValueType.PROXY,
-              endpoint: port1
-            };
+            returnValue = proxy(value);
           }
           break;
         default:
           console.warn("Unrecognized message", ev.data);
       }
     } catch (e) {
-      const isError = e instanceof Error;
-      returnWireValue = {
-        type: Protocol.WireValueType.THROW,
-        isError,
-        value: isError ? { message: e.message, stack: e.stack } : e
-      };
+      returnValue = e;
+      throwSet.add(e);
     }
-    returnWireValue = returnWireValue || toWireValue(returnValue);
-    ep.postMessage({ ...returnWireValue, id }, getTransferables([returnValue]));
+    const [wireValue, transferables] = toWireValue(returnValue);
+    ep.postMessage({ ...wireValue, id }, transferables);
   }) as any);
 }
 
@@ -127,33 +157,35 @@ function createProxy<T>(ep: Protocol.Endpoint, path: string[] = []): Remote<T> {
       return requestResponseMessage(ep, {
         type: Protocol.MessageType.SET,
         path: [...path, prop.toString()],
-        value: toWireValue(value)
+        value: toWireValue(value)[0]
       }).then(fromWireValue) as any;
     },
-    apply(_target, _thisArg, argumentList) {
+    apply(_target, _thisArg, rawArgumentList) {
       // We just pretend that `bind()` didn’t happen.
       if (path[path.length - 1] === "bind") {
         return createProxy(ep, path.slice(0, -1));
       }
+      const [argumentList, transferables] = processArguments(rawArgumentList);
       return requestResponseMessage(
         ep,
         {
           type: Protocol.MessageType.APPLY,
           path,
-          argumentList: argumentList.map(toWireValue)
+          argumentList
         },
-        getTransferables(argumentList)
+        transferables
       ).then(fromWireValue);
     },
-    construct(_target, argumentList) {
+    construct(_target, rawArgumentList) {
+      const [argumentList, transferables] = processArguments(rawArgumentList);
       return requestResponseMessage(
         ep,
         {
           type: Protocol.MessageType.CONSTRUCT,
           path,
-          argumentList: argumentList.map(toWireValue)
+          argumentList
         },
-        getTransferables(argumentList)
+        transferables
       ).then(fromWireValue);
     }
   });
@@ -164,11 +196,12 @@ function myFlat<T>(arr: (T | T[])[]): T[] {
   return Array.prototype.concat.apply([], arr);
 }
 
-const transferCache = new WeakMap<any, any[]>();
-function getTransferables(v: any[]): any[] {
-  return myFlat(v.map(v => transferCache.get(v) || []));
+function processArguments(argumentList: any[]): [Protocol.WireValue[], any[]] {
+  const processed = argumentList.map(toWireValue);
+  return [processed.map(v => v[0]), myFlat(processed.map(v => v[1]))];
 }
 
+const transferCache = new WeakMap<any, any[]>();
 export function transfer(obj: any, transfers: any[]) {
   transferCache.set(obj, transfers);
   return obj;
@@ -187,33 +220,27 @@ export function windowEndpoint(w: Window, context = self): Protocol.Endpoint {
   };
 }
 
-function toWireValue(value: any): Protocol.WireValue {
+function toWireValue(value: any): [Protocol.WireValue, any[]] {
   for (const [name, handler] of transferHandlers) {
     if (handler.canHandle(value)) {
-      return {
-        type: Protocol.WireValueType.HANDLER,
-        name,
-        value: handler.serialize(value)
-      };
+      const [serializedValue, transferables] = handler.serialize(value);
+      return [
+        {
+          type: Protocol.WireValueType.HANDLER,
+          name,
+          value: serializedValue
+        },
+        transferables
+      ];
     }
   }
-  if (value && value[proxyMarker]) {
-    // TODO: Create `startedMessageChannel()`.
-    const { port1, port2 } = startedMessageChannel();
-    expose(value, port1);
-    if (!transferCache.has(value)) {
-      transferCache.set(value, []);
-    }
-    transferCache.get(value)!.push(port2);
-    return {
-      type: Protocol.WireValueType.PROXY,
-      endpoint: port2
-    };
-  }
-  return {
-    type: Protocol.WireValueType.RAW,
-    value
-  };
+  return [
+    {
+      type: Protocol.WireValueType.RAW,
+      value
+    },
+    transferCache.get(value) || []
+  ];
 }
 
 function fromWireValue(value: Protocol.WireValue): any {
@@ -222,15 +249,6 @@ function fromWireValue(value: Protocol.WireValue): any {
       return transferHandlers.get(value.name)!.deserialize(value.value);
     case Protocol.WireValueType.RAW:
       return value.value;
-    case Protocol.WireValueType.PROXY:
-      (value.endpoint as any).start();
-      return wrap(value.endpoint);
-    case Protocol.WireValueType.THROW:
-      let base = {};
-      if (value.isError) {
-        base = new Error();
-      }
-      throw Object.assign(base, value.value);
   }
 }
 

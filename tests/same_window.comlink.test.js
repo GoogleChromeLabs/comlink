@@ -108,8 +108,9 @@ describe("Comlink in the same realm", function() {
     }, this.port2);
     try {
       await thing();
-      fail("Should have thrown");
+      throw "Should have thrown";;
     } catch (err) {
+      expect(err).to.not.eq("Should have thrown");
       expect(err.message).to.equal("OMG");
       expect(err.stack).to.equal(stack);
     }
@@ -122,8 +123,9 @@ describe("Comlink in the same realm", function() {
     }, this.port2);
     try {
       await thing();
-      fail("Should have thrown");
+      throw "Should have thrown";
     } catch (err) {
+      expect(err).to.not.eq("Should have thrown");
       expect(err.test).to.equal(true);
     }
   });
@@ -442,7 +444,7 @@ describe("Comlink in the same realm", function() {
         return obj instanceof Event
       },
       serialize(obj) {
-        return obj.data;
+        return [obj.data, []];
       },
       deserialize(data) {
         return new MessageEvent("message", {data});
