@@ -1,13 +1,14 @@
-<!doctype html>
+<!DOCTYPE html>
 Open DevTools and click the button.
 <button id="mainbtn" class="btn btn--big">Click me</button>
-<script type="module">
-  // import * as Comlink from "https://unpkg.com/comlink@alpha/dist/esm/comlink.js";
-  import * as Comlink from "../../../dist/esm/comlink.js";
-  import EventTransferHandler from "./event.transferhandler.js";
+<!-- <script src="https://unpkg.com/comlink@alpha/dist/umd/comlink.js"></script> -->
+<script src="../../../dist/umd/comlink.js"></script>
+<script src="./event.transferhandler.js"></script>
+<script>
+  const worker = new Worker("worker.js");
+  const api = Comlink.wrap(worker);
 
-  const worker = new Worker('worker.js');
-  const api = Comlink.proxy(worker);
-
-  document.querySelector('#mainbtn').addEventListener('click', async ev => await api.onclick(ev));
+  document
+    .querySelector("#mainbtn")
+    .addEventListener("click", api.onclick.bind(api));
 </script>

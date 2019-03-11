@@ -1,9 +1,10 @@
-<!doctype html>
+<!DOCTYPE html>
 
 <script type="module">
-  import * as Comlink from "https://cdn.jsdelivr.net/npm/comlinkjs@3/comlink.js";
+  // import * as Comlink from "https://unpkg.com/comlink@alpha/dist/esm/comlink.js";
+  import * as Comlink from "../../../../dist/esm/comlink.js";
   function add(a, b) {
     return a + b;
   }
-  Comlink.expose(add, self.parent);
+  Comlink.expose(add, Comlink.windowEndpoint(self.parent));
 </script>

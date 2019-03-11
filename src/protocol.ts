@@ -23,6 +23,7 @@ export interface Endpoint {
     listener: EventListenerOrEventListenerObject,
     options?: {}
   ): void;
+  start?: () => void;
 }
 
 export const enum WireValueType {

@@ -50,7 +50,7 @@ export const transferHandlers = new Map<string, TransferHandler>([
     {
       canHandle: obj => obj && obj[proxyMarker],
       serialize(obj) {
-        const { port1, port2 } = startedMessageChannel();
+        const { port1, port2 } = new MessageChannel();
         expose(obj, port1);
         return [port2, [port2]];
       },
@@ -130,6 +130,9 @@ export function expose(obj: any, ep: Protocol.Endpoint = self as any) {
     const [wireValue, transferables] = toWireValue(returnValue);
     ep.postMessage({ ...wireValue, id }, transferables);
   }) as any);
+  if (ep.start) {
+    ep.start();
+  }
 }
 
 export function wrap<T>(ep: Protocol.Endpoint): Remote<T> {
@@ -259,7 +262,6 @@ function requestResponseMessage(
 ): Promise<Protocol.WireValue> {
   return new Promise(resolve => {
     const id = generateUUID();
-    ep.postMessage({ id, ...msg }, transfers);
     ep.addEventListener("message", function l(ev: MessageEvent) {
       if (!ev.data || !ev.data.id || ev.data.id !== id) {
         return;
@@ -267,14 +269,11 @@ function requestResponseMessage(
       ep.removeEventListener("message", l as any);
       resolve(ev.data);
     } as any);
+    if (ep.start) {
+      ep.start();
+    }
+    ep.postMessage({ id, ...msg }, transfers);
   });
-}
-
-function startedMessageChannel(): MessageChannel {
-  const mc = new MessageChannel();
-  mc.port1.start();
-  mc.port2.start();
-  return mc;
 }
 
 function generateUUID(): string {

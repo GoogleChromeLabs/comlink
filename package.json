@@ -10,8 +10,8 @@
     "test:unit": "karma start",
     "test:types": "tsc -t esnext -m esnext --lib esnext,dom --moduleResolution node --noEmit tests/type-checks.ts",
     "test": "npm run fmt_test && npm run build && npm run test:types && npm run test:unit",
-    "fmt": "prettier --write ./*.{js,ts,md,json} ./{src,docs,tests}/**/*.{js,ts,md,json}",
-    "fmt_test": "test $(prettier -l ./*.{js,ts,md,json} ./{src,docs,tests}/**/*.{js,ts,md,json} | wc -l) -eq 0",
+    "fmt": "prettier --write ./*.{js,ts,md,json,html} ./{src,docs,tests}/**/*.{js,ts,md,json,html}",
+    "fmt_test": "test $(prettier -l ./*.{js,ts,md,json,html} ./{src,docs,tests}/**/*.{js,ts,md,json,html} | wc -l) -eq 0",
     "watchtest": "CHROME_ONLY=1 karma start --no-single-run"
   },
   "husky": {
