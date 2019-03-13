@@ -11,8 +11,8 @@
  * limitations under the License.
  */
 
-// importScripts("https://unpkg.com/comlink@alpha/dist/umd/comlink.js");
-importScripts("../../../dist/umd/comlink.js");
+importScripts("https://unpkg.com/comlink@alpha/dist/umd/comlink.js");
+// importScripts("../../../dist/umd/comlink.js");
 
 const obj = {
   counter: 0,

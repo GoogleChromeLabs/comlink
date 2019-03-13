@@ -11,8 +11,8 @@
  * limitations under the License.
  */
 
-// importScripts("https://unpkg.com/comlink@alpha/dist/umd/comlink.js");
-importScripts("../../../dist/umd/comlink.js");
+importScripts("https://unpkg.com/comlink@alpha/dist/umd/comlink.js");
+// importScripts("../../../dist/umd/comlink.js");
 
 addEventListener("install", () => skipWaiting());
 addEventListener("activate", () => clients.claim());

@@ -5,7 +5,7 @@ Comlink makes [WebWorkers][webworker] enjoyable. Comlink is a **tiny library (1.
 At a more abstract level it is an RPC implementation for `postMessage` and [ES6 Proxies][es6 proxy].
 
 ```
-$ npm install --save comlink
+$ npm install --save comlink@alpha
 ```
 
 ![Comlink in action](https://user-images.githubusercontent.com/234957/54164510-cdab2d80-4454-11e9-92d0-7356aa6c5746.png)
