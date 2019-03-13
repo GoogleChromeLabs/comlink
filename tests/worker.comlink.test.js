@@ -11,7 +11,7 @@
  * limitations under the License.
  */
 
-import * as Comlink from "/base/dist/esm/comlink.js";
+import * as Comlink from "/base/dist/esm/comlink.mjs";
 
 describe("Comlink across workers", function() {
   beforeEach(function() {

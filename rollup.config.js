@@ -3,11 +3,13 @@ import { terser } from "rollup-plugin-terser";
 
 function config({ format, minify }) {
   const dir = `dist/${format}/`;
+  const minifierSuffix = minify ? ".min" : "";
+  const ext = format === "esm" ? "mjs" : "js";
   return {
     input: "./src/comlink.ts",
     output: {
       name: "Comlink",
-      file: `${dir}/comlink${minify ? ".min" : ""}.js`,
+      file: `${dir}/comlink${minifierSuffix}.${ext}`,
       format,
       sourcemap: true
     },
@@ -34,6 +36,8 @@ function config({ format, minify }) {
     ].flat()
   };
 }
+
+require("rimraf").sync("dist");
 
 export default [
   { format: "esm", minify: false },
