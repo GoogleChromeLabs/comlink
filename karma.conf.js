@@ -55,11 +55,7 @@ module.exports = function(config) {
         base: "ChromeHeadless",
         flags: ["--no-sandbox"]
       }
-    },
-    // Remove these 2 lines once this PR lands
-    // https://github.com/karma-runner/karma/pull/2834
-    customContextFile: "tests/context.html",
-    customDebugFile: "tests/debug.html"
+    }
   };
 
   config.set(configuration);
