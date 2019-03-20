@@ -23,7 +23,7 @@ function config({ format, minify }) {
           },
           // Don’t ask. Without this, the typescript plugin is convinced
           // to create subfolders and misplace the .d.ts files.
-          files: ["./src/comlink.ts"]
+          files: ["./src/comlink.ts", "./src/protocol.ts"]
         }
       }),
       minify

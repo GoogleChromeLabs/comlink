@@ -11,8 +11,14 @@
  * limitations under the License.
  */
 
-import * as Protocol from "./protocol.js";
-export { Endpoint } from "./protocol.js";
+import {
+  Endpoint,
+  Message,
+  MessageType,
+  WireValue,
+  WireValueType
+} from "./protocol.js";
+export { Endpoint };
 
 export const proxyMarker = Symbol("Comlink.proxy");
 const throwSet = new WeakSet();
@@ -86,35 +92,35 @@ export const transferHandlers = new Map<string, TransferHandler>([
   ]
 ]);
 
-export function expose(obj: any, ep: Protocol.Endpoint = self as any) {
+export function expose(obj: any, ep: Endpoint = self as any) {
   ep.addEventListener("message", (async (ev: MessageEvent) => {
     if (!ev || !ev.data) {
       return;
     }
-    const { path, id, type } = ev.data as Protocol.Message;
+    const { path, id, type } = ev.data as Message;
     const argumentList = (ev.data.argumentList || []).map(fromWireValue);
     let returnValue;
     try {
       const parent = path.slice(0, -1).reduce((obj, prop) => obj[prop], obj);
       const rawValue = path.reduce((obj, prop) => obj[prop], obj);
       switch (type) {
-        case Protocol.MessageType.GET:
+        case MessageType.GET:
           {
             returnValue = await rawValue;
           }
           break;
-        case Protocol.MessageType.SET:
+        case MessageType.SET:
           {
             parent[path.slice(-1)[0]] = fromWireValue(ev.data.value);
             returnValue = true;
           }
           break;
-        case Protocol.MessageType.APPLY:
+        case MessageType.APPLY:
           {
             returnValue = await rawValue.apply(parent, argumentList);
           }
           break;
-        case Protocol.MessageType.CONSTRUCT:
+        case MessageType.CONSTRUCT:
           {
             const value = await new rawValue(...argumentList);
             returnValue = proxy(value);
@@ -135,11 +141,11 @@ export function expose(obj: any, ep: Protocol.Endpoint = self as any) {
   }
 }
 
-export function wrap<T>(ep: Protocol.Endpoint): Remote<T> {
+export function wrap<T>(ep: Endpoint): Remote<T> {
   return createProxy<T>(ep) as any;
 }
 
-function createProxy<T>(ep: Protocol.Endpoint, path: string[] = []): Remote<T> {
+function createProxy<T>(ep: Endpoint, path: string[] = []): Remote<T> {
   const proxy: Function = new Proxy(new Function(), {
     get(_target, prop) {
       if (prop === "then") {
@@ -147,7 +153,7 @@ function createProxy<T>(ep: Protocol.Endpoint, path: string[] = []): Remote<T> {
           return { then: () => proxy };
         }
         const r = requestResponseMessage(ep, {
-          type: Protocol.MessageType.GET,
+          type: MessageType.GET,
           path
         }).then(fromWireValue);
         return r.then.bind(r);
@@ -161,7 +167,7 @@ function createProxy<T>(ep: Protocol.Endpoint, path: string[] = []): Remote<T> {
       return requestResponseMessage(
         ep,
         {
-          type: Protocol.MessageType.SET,
+          type: MessageType.SET,
           path: [...path, prop.toString()],
           value
         },
@@ -177,7 +183,7 @@ function createProxy<T>(ep: Protocol.Endpoint, path: string[] = []): Remote<T> {
       return requestResponseMessage(
         ep,
         {
-          type: Protocol.MessageType.APPLY,
+          type: MessageType.APPLY,
           path,
           argumentList
         },
@@ -189,7 +195,7 @@ function createProxy<T>(ep: Protocol.Endpoint, path: string[] = []): Remote<T> {
       return requestResponseMessage(
         ep,
         {
-          type: Protocol.MessageType.CONSTRUCT,
+          type: MessageType.CONSTRUCT,
           path,
           argumentList
         },
@@ -204,7 +210,7 @@ function myFlat<T>(arr: (T | T[])[]): T[] {
   return Array.prototype.concat.apply([], arr);
 }
 
-function processArguments(argumentList: any[]): [Protocol.WireValue[], any[]] {
+function processArguments(argumentList: any[]): [WireValue[], any[]] {
   const processed = argumentList.map(toWireValue);
   return [processed.map(v => v[0]), myFlat(processed.map(v => v[1]))];
 }
@@ -219,7 +225,7 @@ export function proxy<T>(obj: T): T & { [proxyMarker]: true } {
   return Object.assign(obj, { [proxyMarker]: true }) as any;
 }
 
-export function windowEndpoint(w: Window, context = self): Protocol.Endpoint {
+export function windowEndpoint(w: Window, context = self): Endpoint {
   return {
     postMessage: (msg: any, transferables: any[]) =>
       w.postMessage(msg, "*", transferables),
@@ -228,13 +234,13 @@ export function windowEndpoint(w: Window, context = self): Protocol.Endpoint {
   };
 }
 
-function toWireValue(value: any): [Protocol.WireValue, any[]] {
+function toWireValue(value: any): [WireValue, any[]] {
   for (const [name, handler] of transferHandlers) {
     if (handler.canHandle(value)) {
       const [serializedValue, transferables] = handler.serialize(value);
       return [
         {
-          type: Protocol.WireValueType.HANDLER,
+          type: WireValueType.HANDLER,
           name,
           value: serializedValue
         },
@@ -244,27 +250,27 @@ function toWireValue(value: any): [Protocol.WireValue, any[]] {
   }
   return [
     {
-      type: Protocol.WireValueType.RAW,
+      type: WireValueType.RAW,
       value
     },
     transferCache.get(value) || []
   ];
 }
 
-function fromWireValue(value: Protocol.WireValue): any {
+function fromWireValue(value: WireValue): any {
   switch (value.type) {
-    case Protocol.WireValueType.HANDLER:
+    case WireValueType.HANDLER:
       return transferHandlers.get(value.name)!.deserialize(value.value);
-    case Protocol.WireValueType.RAW:
+    case WireValueType.RAW:
       return value.value;
   }
 }
 
 function requestResponseMessage(
-  ep: Protocol.Endpoint,
-  msg: Protocol.Message,
+  ep: Endpoint,
+  msg: Message,
   transfers?: any[]
-): Promise<Protocol.WireValue> {
+): Promise<WireValue> {
   return new Promise(resolve => {
     const id = generateUUID();
     ep.addEventListener("message", function l(ev: MessageEvent) {
