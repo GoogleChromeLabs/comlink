@@ -477,6 +477,24 @@ describe("Comlink in the same realm", function() {
     port1.start();
     port2.postMessage({a: 1});
   });
+
+  it("can tunnels a new endpoint with createEndpoint", async function() {
+    Comlink.expose({
+        a: 4,
+        c() {
+          return 5;
+        }
+      },
+      this.port2
+    );
+    const proxy = Comlink.wrap(this.port1);
+    const otherEp = await proxy[Comlink.createEndpoint]();
+    const otherProxy = Comlink.wrap(otherEp);
+    expect(await otherProxy.a).to.equal(4);
+    expect(await proxy.a).to.equal(4);
+    expect(await otherProxy.c()).to.equal(5);
+    expect(await proxy.c()).to.equal(5);
+  });
 });
 
 function guardedIt(f) {

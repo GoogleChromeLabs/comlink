@@ -26,4 +26,11 @@ describe("Comlink across workers", function() {
     const proxy = Comlink.wrap(this.worker);
     expect(await proxy(1, 3)).to.equal(4);
   });
+
+  it("can tunnels a new endpoint with createEndpoint", async function() {
+    const proxy = Comlink.wrap(this.worker);
+    const otherEp = await proxy[Comlink.createEndpoint]();
+    const otherProxy = Comlink.wrap(otherEp);
+    expect(await otherProxy(20, 1)).to.equal(21);
+  });
 });

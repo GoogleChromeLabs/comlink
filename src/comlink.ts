@@ -21,6 +21,7 @@ import {
 export { Endpoint };
 
 export const proxyMarker = Symbol("Comlink.proxy");
+export const createEndpoint = Symbol("Comlink.endpoint");
 const throwSet = new WeakSet();
 
 // prettier-ignore
@@ -97,7 +98,10 @@ export function expose(obj: any, ep: Endpoint = self as any) {
     if (!ev || !ev.data) {
       return;
     }
-    const { path, id, type } = ev.data as Message;
+    const { id, type, path } = {
+      path: [] as string[],
+      ...(ev.data as Message)
+    };
     const argumentList = (ev.data.argumentList || []).map(fromWireValue);
     let returnValue;
     try {
@@ -126,6 +130,13 @@ export function expose(obj: any, ep: Endpoint = self as any) {
             returnValue = proxy(value);
           }
           break;
+        case MessageType.ENDPOINT:
+          {
+            const { port1, port2 } = new MessageChannel();
+            expose(obj, port2);
+            returnValue = transfer(port1, [port1]);
+          }
+          break;
         default:
           console.warn("Unrecognized message", ev.data);
       }
@@ -145,7 +156,10 @@ export function wrap<T>(ep: Endpoint): Remote<T> {
   return createProxy<T>(ep) as any;
 }
 
-function createProxy<T>(ep: Endpoint, path: string[] = []): Remote<T> {
+function createProxy<T>(
+  ep: Endpoint,
+  path: (string | number | symbol)[] = []
+): Remote<T> {
   const proxy: Function = new Proxy(new Function(), {
     get(_target, prop) {
       if (prop === "then") {
@@ -154,11 +168,11 @@ function createProxy<T>(ep: Endpoint, path: string[] = []): Remote<T> {
         }
         const r = requestResponseMessage(ep, {
           type: MessageType.GET,
-          path
+          path: path.map(p => p.toString())
         }).then(fromWireValue);
         return r.then.bind(r);
       }
-      return createProxy(ep, [...path, prop.toString()]);
+      return createProxy(ep, [...path, prop]);
     },
     set(_target, prop, rawValue) {
       // FIXME: ES6 Proxy Handler `set` methods are supposed to return a
@@ -168,15 +182,21 @@ function createProxy<T>(ep: Endpoint, path: string[] = []): Remote<T> {
         ep,
         {
           type: MessageType.SET,
-          path: [...path, prop.toString()],
+          path: [...path, prop].map(p => p.toString()),
           value
         },
         transferables
       ).then(fromWireValue) as any;
     },
     apply(_target, _thisArg, rawArgumentList) {
+      const last = path[path.length - 1];
+      if ((last as any) === createEndpoint) {
+        return requestResponseMessage(ep, {
+          type: MessageType.ENDPOINT
+        }).then(fromWireValue);
+      }
       // We just pretend that `bind()` didn’t happen.
-      if (path[path.length - 1] === "bind") {
+      if (last === "bind") {
         return createProxy(ep, path.slice(0, -1));
       }
       const [argumentList, transferables] = processArguments(rawArgumentList);
@@ -184,7 +204,7 @@ function createProxy<T>(ep: Endpoint, path: string[] = []): Remote<T> {
         ep,
         {
           type: MessageType.APPLY,
-          path,
+          path: path.map(p => p.toString()),
           argumentList
         },
         transferables
@@ -196,7 +216,7 @@ function createProxy<T>(ep: Endpoint, path: string[] = []): Remote<T> {
         ep,
         {
           type: MessageType.CONSTRUCT,
-          path,
+          path: path.map(p => p.toString()),
           argumentList
         },
         transferables

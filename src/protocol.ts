@@ -54,7 +54,8 @@ export const enum MessageType {
   GET,
   SET,
   APPLY,
-  CONSTRUCT
+  CONSTRUCT,
+  ENDPOINT
 }
 
 export interface GetMessage {
@@ -84,4 +85,14 @@ export interface ConstructMessage {
   argumentList: WireValue[];
 }
 
-export type Message = GetMessage | SetMessage | ApplyMessage | ConstructMessage;
+export interface EndpointMessage {
+  id?: MessageID;
+  type: MessageType.ENDPOINT;
+}
+
+export type Message =
+  | GetMessage
+  | SetMessage
+  | ApplyMessage
+  | ConstructMessage
+  | EndpointMessage;

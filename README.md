@@ -85,6 +85,16 @@ Comlink.transferHandlers.set("EVENT", {
 
 Note that this particular transfer handler won’t create an actual `Event`, but just an object that has the `event.target.id` and `event.target.classList` property. Often, this enough. If not, the transfer handler can be easily augmented to provide all necessary data.
 
+### `Comlink.createEndpoint`
+
+Every proxy created by Comlink has the `[createEndpoint]` method.
+Calling it will return a new `MessagePort`, that has been hooked up to the same object as the proxy that `[createEndpoint]` has been called on.
+
+```js
+const port = myProxy[Comlink.createEndpoint]();
+const newProxy = Comlink.wrap(port);
+```
+
 [webworker]: https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API
 [umd]: https://github.com/umdjs/umd
 [transferable]: https://developer.mozilla.org/en-US/docs/Web/API/Transferable
