@@ -95,6 +95,10 @@ const port = myProxy[Comlink.createEndpoint]();
 const newProxy = Comlink.wrap(port);
 ```
 
+## Node
+
+Comlink works with Node’s [`worker_threads`][worker_threads] module. Take a look at the example in the `docs` folder.
+
 [webworker]: https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API
 [umd]: https://github.com/umdjs/umd
 [transferable]: https://developer.mozilla.org/en-US/docs/Web/API/Transferable
@@ -108,6 +112,7 @@ const newProxy = Comlink.wrap(port);
 [structured cloning]: https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Structured_clone_algorithm
 [structured clone table]: structured-clone-table.md
 [event]: https://developer.mozilla.org/en-US/docs/Web/API/Event
+[worker_threads]: https://nodejs.org/api/worker_threads.html
 
 ---
 
