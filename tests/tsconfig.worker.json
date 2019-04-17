@@ -1,0 +1,14 @@
+{
+  "extends": "../tsconfig.json",
+  "include": ["types.ts"],
+  "exclude": [],
+  "compilerOptions": {
+    "lib": [
+      "es2015",
+      "es2017",
+      "es2015.proxy",
+      "esnext.asynciterable",
+      "webworker"
+    ]
+  }
+}

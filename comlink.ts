@@ -11,6 +11,9 @@
  * limitations under the License.
  */
 
+// TypeScript reference for `Window` type
+/// <reference lib="dom" />
+
 export interface Endpoint {
   postMessage(message: any, transfer?: any[]): void;
   addEventListener(
