@@ -70,7 +70,7 @@ Each function parameter and return value is given to _all_ registered transfer h
 
 ```js
 Comlink.transferHandlers.set("EVENT", {
-  canHandle: obj => obj instanceOf Event,
+  canHandle: obj => obj instanceof Event,
   serialize: ev => {
     return {
       target: {
