@@ -78,8 +78,8 @@ Comlink.transferHandlers.set("EVENT", {
         classList: [...ev.target.classList]
       }
     };
-  }
-  deserialize: obj => obj
+  },
+  deserialize: obj => obj,
 });
 ```
 
