@@ -40,7 +40,7 @@
   "devDependencies": {
     "chai": "4.2.0",
     "karma": "4.1.0",
-    "dtslint": "0.5.3",
+    "dtslint": "0.7.1",
     "karma-chai": "0.1.0",
     "karma-chrome-launcher": "2.2.0",
     "karma-firefox-launcher": "1.1.0",
