@@ -44,7 +44,7 @@
     "mocha": "5.2.0",
     "prettier": "1.16.1",
     "rimraf": "2.6.3",
-    "rollup": "1.6.0",
+    "rollup": "1.11.3",
     "rollup-plugin-terser": "4.0.4",
     "rollup-plugin-typescript2": "0.21.0",
     "typescript": "3.3.3333"
