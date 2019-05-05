@@ -1,12 +1,13 @@
-<!doctype html>
+<!DOCTYPE html>
 
 <iframe src="iframe.html"></iframe>
 <script type="module">
-  import * as Comlink from "https://cdn.jsdelivr.net/npm/comlinkjs@3/comlink.js";
+  import * as Comlink from "https://unpkg.com/comlink@alpha/dist/esm/comlink.mjs";
+  // import * as Comlink from "../../../../dist/esm/comlink.mjs";
   async function main() {
-    const ifr = document.querySelector('iframe');
-    await new Promise(resolve => ifr.onload = resolve);
-    const f = Comlink.proxy(ifr.contentWindow);
+    const ifr = document.querySelector("iframe");
+    await new Promise(resolve => (ifr.onload = resolve));
+    const f = Comlink.wrap(Comlink.windowEndpoint(ifr.contentWindow));
     alert(`1 + 3 = ${await f(1, 3)}`);
   }
   main();

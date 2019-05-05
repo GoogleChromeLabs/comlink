@@ -10,10 +10,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-export interface StringMessageChannel extends EventTarget {
-  send(data: string): void;
-}
-export declare function wrap(
-  smc: StringMessageChannel,
-  id?: string | null
-): MessagePort;
+
+importScripts("https://unpkg.com/comlink@alpha/dist/umd/comlink.js");
+// importScripts("../../../dist/umd/comlink.js");
+
+addEventListener("install", () => skipWaiting());
+addEventListener("activate", () => clients.claim());
+
+const obj = {
+  counter: 0,
+  inc() {
+    this.counter++;
+  }
+};
+
+self.addEventListener("message", event => {
+  if (event.data.comlinkInit) {
+    Comlink.expose(obj, event.data.port);
+    return;
+  }
+});
