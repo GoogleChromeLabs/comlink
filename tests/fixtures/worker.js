@@ -13,4 +13,4 @@
 
 importScripts("/base/dist/umd/comlink.js");
 
-Comlink.expose((a, b) => a + b, self);
+Comlink.expose((a, b) => a + b);
