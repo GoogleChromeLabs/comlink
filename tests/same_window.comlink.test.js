@@ -121,7 +121,7 @@ describe("Comlink in the same realm", function() {
   it("can rethrow non-error objects", async function() {
     const proxy = Comlink.proxy(this.port1);
     Comlink.expose(_ => {
-      throw {test: true};
+      throw { test: true };
     }, this.port2);
     try {
       await proxy();
@@ -266,17 +266,21 @@ describe("Comlink in the same realm", function() {
     expect(await instance._counter).to.equal(4);
   });
 
-  const hasBroadcastChannel = _ => ('BroadcastChannel' in self);
-  guardedIt(hasBroadcastChannel)("will work with BroadcastChannel", async function() {
-    const b1 = new BroadcastChannel("comlink_bc_test");
-    const b2 = new BroadcastChannel("comlink_bc_test");
-    const proxy = Comlink.proxy(b1);
-    Comlink.expose(b => 40 + b, b2);
-    expect(await proxy(2)).to.equal(42);
-  });
+  const hasBroadcastChannel = _ => "BroadcastChannel" in self;
+  guardedIt(hasBroadcastChannel)(
+    "will work with BroadcastChannel",
+    async function() {
+      const b1 = new BroadcastChannel("comlink_bc_test");
+      const b2 = new BroadcastChannel("comlink_bc_test");
+      const proxy = Comlink.proxy(b1);
+      Comlink.expose(b => 40 + b, b2);
+      expect(await proxy(2)).to.equal(42);
+    }
+  );
 
   // Buffer transfers seem to have regressed in Safari 11.1, it’s fixed in 11.2.
-  const isNotSafari11_1 = _ => !/11\.1(\.[0-9]+)? Safari/.test(navigator.userAgent);
+  const isNotSafari11_1 = _ =>
+    !/11\.1(\.[0-9]+)? Safari/.test(navigator.userAgent);
   guardedIt(isNotSafari11_1)("will transfer buffers", async function() {
     const proxy = Comlink.proxy(this.port1);
     Comlink.expose(b => b.byteLength, this.port2);
@@ -285,13 +289,27 @@ describe("Comlink in the same realm", function() {
     expect(buffer.byteLength).to.equal(0);
   });
 
-  guardedIt(isNotSafari11_1)("will transfer deeply nested buffers", async function() {
-    const proxy = Comlink.proxy(this.port1);
-    Comlink.expose(a => a.b.c.d.byteLength, this.port2);
-    const buffer = new Uint8Array([1, 2, 3]).buffer;
-    expect(await proxy({ b: { c: { d: buffer } } })).to.equal(3);
-    expect(buffer.byteLength).to.equal(0);
-  });
+  guardedIt(isNotSafari11_1)(
+    "will transfer deeply nested buffers",
+    async function() {
+      const proxy = Comlink.proxy(this.port1);
+      Comlink.expose(a => a.b.c.d.byteLength, this.port2);
+      const buffer = new Uint8Array([1, 2, 3]).buffer;
+      expect(await proxy({ b: { c: { d: buffer } } })).to.equal(3);
+      expect(buffer.byteLength).to.equal(0);
+    }
+  );
+
+  guardedIt(isNotSafari11_1)(
+    "will transfer buffers in typedarray",
+    async function() {
+      const proxy = Comlink.proxy(this.port1);
+      Comlink.expose(b => b.buffer.byteLength, this.port2);
+      const typedarray = new Uint8Array([1, 2, 3]);
+      expect(await proxy(typedarray)).to.equal(3);
+      expect(typedarray.buffer.byteLength).to.equal(0);
+    }
+  );
 
   it("will transfer a message port", async function() {
     const proxy = Comlink.proxy(this.port1);
@@ -424,6 +442,34 @@ describe("Comlink in the same realm", function() {
     const proxy = Comlink.proxy(this.port1, { value: {} });
     Comlink.expose({ value: 4 }, this.port2);
     expect(await proxy.value).to.equal(4);
+  });
+
+  it("can call a method on a nested object when wrapped with proxyValue()", async function() {
+    Comlink.expose(
+      {
+        prop: Comlink.proxyValue({
+          method(p) {
+            return p;
+          }
+        })
+      },
+      this.port2
+    );
+    const proxy = Comlink.proxy(this.port1);
+    expect(await proxy.prop.method(123)).to.equal(123);
+  });
+
+  it("can retrieve a property on a nested object when wrapped with proxyValue()", async function() {
+    Comlink.expose(
+      {
+        prop1: Comlink.proxyValue({
+          prop2: 123
+        })
+      },
+      this.port2
+    );
+    const proxy = Comlink.proxy(this.port1);
+    expect(await proxy.prop1.prop2).to.equal(123);
   });
 });
 

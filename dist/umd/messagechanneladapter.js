@@ -18,7 +18,7 @@
     else if (typeof define === "function" && define.amd) {
         define(["require", "exports"], factory);
     }
-else {factory([], self.Comlink={});}
+else {factory([], self.MessageChannelAdapter={});}
 })(function (require, exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
@@ -30,8 +30,6 @@ else {factory([], self.Comlink={});}
     exports.wrap = wrap;
     function hookup(internalPort, smc, id = null) {
         internalPort.onmessage = (event) => {
-            if (!id)
-                id = generateUID();
             const msg = event.data;
             const messageChannels = Array.from(findMessageChannels(event.data));
             for (const messageChannel of messageChannels) {
@@ -51,6 +49,8 @@ else {factory([], self.Comlink={});}
                 return;
             }
             if (id && id !== data.id)
+                return;
+            if (!id && data.id)
                 return;
             const mcs = data.messageChannels.map(messageChannel => {
                 const id = messageChannel.reduce((obj, key) => obj[key], data.msg);

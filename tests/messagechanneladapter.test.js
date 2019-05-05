@@ -15,12 +15,7 @@ import * as MessageChannelAdapter from "/base/dist/messagechanneladapter.js";
 
 describe("MessageChannelAdapter", function() {
   beforeEach(function() {
-    let port1, port2;
-    port1 = port2 = {
-      get other() {
-        if (this === port1) return port2;
-        else return port1;
-      },
+    const portMethods = {
       send(msg) {
         for (const callback of this.other.callbacks) callback({ data: msg });
       },
@@ -29,6 +24,10 @@ describe("MessageChannelAdapter", function() {
         this.callbacks.push(callback);
       }
     };
+    const port1 = Object.assign({}, portMethods);
+    const port2 = Object.assign({}, portMethods);
+    port1.other = port2;
+    port2.other = port1;
     port1.callbacks = [];
     port2.callbacks = [];
     this.port1 = port1;
@@ -107,6 +106,22 @@ describe("MessageChannelAdapter", function() {
     });
     b1.postMessage('hai1');
     b2.postMessage('hai2');
+  });
+
+  it("can receive echoed messages", function(done) {
+    this.wrappedPort2.addEventListener("message", event => {
+      expect(event.data).to.equal(`ohai`);
+      this.wrappedPort2.postMessage(event.data);
+    });
+    this.wrappedPort2.start();
+
+    this.wrappedPort1.addEventListener("message", event => {
+      expect(event.data).to.equal(`ohai`);
+      done();
+    });
+    this.wrappedPort1.start();
+
+    this.wrappedPort1.postMessage("ohai");
   });
 });
 
