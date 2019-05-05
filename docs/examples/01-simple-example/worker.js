@@ -11,8 +11,7 @@
  * limitations under the License.
  */
 
-importScripts("https://unpkg.com/comlink@alpha/dist/umd/comlink.js");
-// importScripts("../../../dist/umd/comlink.js");
+importScripts("https://cdn.jsdelivr.net/npm/comlinkjs@3/umd/comlink.js");
 
 const obj = {
   counter: 0,
@@ -21,4 +20,4 @@ const obj = {
   }
 };
 
-Comlink.expose(obj);
+Comlink.expose(obj, self);

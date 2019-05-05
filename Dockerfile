@@ -10,7 +10,7 @@ RUN apt-get update -qqy \
 ENV NVM_DIR /usr/local/nvm
 RUN wget -qO- https://raw.githubusercontent.com/creationix/nvm/v0.33.2/install.sh | bash \
   && source $NVM_DIR/nvm.sh \
-  && nvm install v11
+  && nvm install v8
 
 ENV CHROME_BIN /opt/google/chrome/chrome
 ENV INSIDE_DOCKER=1

@@ -11,12 +11,10 @@
  * limitations under the License.
  */
 
-importScripts("https://unpkg.com/comlink@alpha/dist/umd/comlink.js");
-// importScripts("../../../dist/umd/comlink.js");
+importScripts("https://cdn.jsdelivr.net/npm/comlinkjs@3/umd/comlink.js");
 
 class MyClass {
   constructor(init = 0) {
-    console.log(init);
     this._counter = init;
   }
 
@@ -29,4 +27,4 @@ class MyClass {
   }
 }
 
-Comlink.expose(MyClass);
+Comlink.expose(MyClass, self);

@@ -10,7 +10,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-importScripts("/base/dist/umd/comlink.js");
-
-Comlink.expose((a, b) => a + b, self);
+export interface StringMessageChannel extends EventTarget {
+    send(data: string): void;
+}
+export declare function wrap(smc: StringMessageChannel, id?: string | null): MessagePort;

@@ -11,7 +11,7 @@
  * limitations under the License.
  */
 
-import * as Comlink from "/base/dist/esm/comlink.mjs";
+import * as Comlink from "/base/dist/comlink.js";
 
 describe("Comlink across workers", function() {
   beforeEach(function() {
@@ -23,14 +23,7 @@ describe("Comlink across workers", function() {
   });
 
   it("can communicate", async function() {
-    const proxy = Comlink.wrap(this.worker);
+    const proxy = Comlink.proxy(this.worker);
     expect(await proxy(1, 3)).to.equal(4);
-  });
-
-  it("can tunnels a new endpoint with createEndpoint", async function() {
-    const proxy = Comlink.wrap(this.worker);
-    const otherEp = await proxy[Comlink.createEndpoint]();
-    const otherProxy = Comlink.wrap(otherEp);
-    expect(await otherProxy(20, 1)).to.equal(21);
   });
 });

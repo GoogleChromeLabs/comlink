@@ -11,6 +11,21 @@
  * limitations under the License.
  */
 
-importScripts("/base/dist/umd/comlink.js");
+importScripts("https://cdn.jsdelivr.net/npm/comlinkjs@3/umd/comlink.js");
 
-Comlink.expose((a, b) => a + b, self);
+addEventListener("install", () => skipWaiting());
+addEventListener("activate", () => clients.claim());
+
+const obj = {
+  counter: 0,
+  inc() {
+    this.counter++;
+  }
+};
+
+self.addEventListener("message", event => {
+  if (event.data.comlinkInit) {
+    Comlink.expose(obj, event.data.port);
+    return;
+  }
+});

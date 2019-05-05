@@ -11,7 +11,7 @@
  * limitations under the License.
  */
 
-import * as Comlink from "/base/dist/esm/comlink.mjs";
+import * as Comlink from "/base/dist/comlink.js";
 
 describe("Comlink across iframes", function() {
   beforeEach(function() {
@@ -27,7 +27,7 @@ describe("Comlink across iframes", function() {
   });
 
   it("can communicate", async function() {
-    const proxy = Comlink.wrap(Comlink.windowEndpoint(this.ifr.contentWindow));
+    const proxy = Comlink.proxy(this.ifr.contentWindow);
     expect(await proxy(1, 3)).to.equal(4);
   });
 });

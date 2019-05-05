@@ -2,5 +2,6 @@
 *.swp
 node_modules
 *.bak
-dist
-.*_cache*
+dist/comlink.ts
+dist/README.md
+dist/package.json

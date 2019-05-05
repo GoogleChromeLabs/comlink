@@ -14,14 +14,14 @@
 module.exports = function(config) {
   const configuration = {
     basePath: "",
-    frameworks: ["mocha", "chai", "detectBrowsers"],
+    frameworks: ["mocha", "chai"],
     files: [
       {
         pattern: "tests/fixtures/*",
         included: false
       },
       {
-        pattern: "dist/**/*.@(mjs|js)",
+        pattern: "dist/**/*.js",
         included: false
       },
       {
@@ -36,27 +36,35 @@ module.exports = function(config) {
     autoWatch: true,
     singleRun: true,
     concurrency: Infinity,
-    detectBrowsers: {
-      enabled: true,
-      usePhantomJS: false,
-      preferHeadless: true,
-      postDetection: availableBrowsers => {
-        if (process.env.INSIDE_DOCKER) {
-          return ["DockerChrome"];
-        } else if (process.env.CHROME_ONLY) {
-          return ["ChromeHeadless"];
-        } else {
-          return availableBrowsers;
-        }
-      }
-    },
+    browsers: [
+      "Chrome",
+      "ChromeCanaryHarmony",
+      "Firefox",
+      "FirefoxNightly",
+      "Safari"
+      // "SafariTechPreview"
+    ],
     customLaunchers: {
+      ChromeCanaryHarmony: {
+        base: "ChromeCanary",
+        flags: ["--js-flags=--harmony"]
+      },
+      ChromeCanaryHeadlessHarmony: {
+        base: "ChromeCanary",
+        flags: ["--js-flags=--harmony", /* '--headless', */ "--disable-gpu"]
+      },
       DockerChrome: {
         base: "ChromeHeadless",
         flags: ["--no-sandbox"]
       }
-    }
+    },
+    // Remove these 2 lines once this PR lands
+    // https://github.com/karma-runner/karma/pull/2834
+    customContextFile: "tests/context.html",
+    customDebugFile: "tests/debug.html"
   };
+
+  if (process.env.INSIDE_DOCKER) configuration.browsers = ["DockerChrome"];
 
   config.set(configuration);
 };

@@ -1,18 +1,17 @@
-<!DOCTYPE html>
+<!doctype html>
+
 
 <script type="module">
-  import * as Comlink from "https://unpkg.com/comlink@alpha/dist/esm/comlink.mjs";
-  // import * as Comlink from "../../../dist/esm/comlink.mjs";
-
+  import * as Comlink from "https://cdn.jsdelivr.net/npm/comlinkjs@3/comlink.js";
   async function init() {
-    const worker = new Worker("worker.js");
+    const worker = new Worker('worker.js');
     // WebWorkers use `postMessage` and therefore work with Comlink.
-    const obj = Comlink.wrap(worker);
+    const obj = Comlink.proxy(worker);
 
     alert(`Counter: ${await obj.counter}`);
     await obj.inc();
     alert(`Counter: ${await obj.counter}`);
-  }
+  };
 
   init();
 </script>
