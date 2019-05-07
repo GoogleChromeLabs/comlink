@@ -160,7 +160,7 @@ function createProxy<T>(
   ep: Endpoint,
   path: (string | number | symbol)[] = []
 ): Remote<T> {
-  const proxy: Function = new Proxy(new Function(), {
+  const proxy: Function = new Proxy(function() {}, {
     get(_target, prop) {
       if (prop === "then") {
         if (path.length === 0) {
