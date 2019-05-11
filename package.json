@@ -19,7 +19,6 @@
       "pre-commit": "npm test"
     }
   },
-  "keywords": [],
   "author": {
     "name": "Surma",
     "email": "surma@google.com"
