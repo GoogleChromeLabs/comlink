@@ -47,7 +47,7 @@ export type Remote<T> =
 
 export interface TransferHandler {
   canHandle(obj: any): boolean;
-  serialize(obj: any): [any, any[]];
+  serialize(obj: any): [any, Transferable[]];
   deserialize(obj: any): any;
 }
 
@@ -230,13 +230,13 @@ function myFlat<T>(arr: (T | T[])[]): T[] {
   return Array.prototype.concat.apply([], arr);
 }
 
-function processArguments(argumentList: any[]): [WireValue[], any[]] {
+function processArguments(argumentList: any[]): [WireValue[], Transferable[]] {
   const processed = argumentList.map(toWireValue);
   return [processed.map(v => v[0]), myFlat(processed.map(v => v[1]))];
 }
 
-const transferCache = new WeakMap<any, any[]>();
-export function transfer(obj: any, transfers: any[]) {
+const transferCache = new WeakMap<any, Transferable[]>();
+export function transfer(obj: any, transfers: Transferable[]) {
   transferCache.set(obj, transfers);
   return obj;
 }
@@ -247,14 +247,14 @@ export function proxy<T>(obj: T): T & { [proxyMarker]: true } {
 
 export function windowEndpoint(w: Window, context = self): Endpoint {
   return {
-    postMessage: (msg: any, transferables: any[]) =>
+    postMessage: (msg: any, transferables: Transferable[]) =>
       w.postMessage(msg, "*", transferables),
     addEventListener: context.addEventListener.bind(context),
     removeEventListener: context.removeEventListener.bind(context)
   };
 }
 
-function toWireValue(value: any): [WireValue, any[]] {
+function toWireValue(value: any): [WireValue, Transferable[]] {
   for (const [name, handler] of transferHandlers) {
     if (handler.canHandle(value)) {
       const [serializedValue, transferables] = handler.serialize(value);
@@ -289,7 +289,7 @@ function fromWireValue(value: WireValue): any {
 function requestResponseMessage(
   ep: Endpoint,
   msg: Message,
-  transfers?: any[]
+  transfers?: Transferable[]
 ): Promise<WireValue> {
   return new Promise(resolve => {
     const id = generateUUID();
