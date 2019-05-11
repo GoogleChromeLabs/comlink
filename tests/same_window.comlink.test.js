@@ -108,7 +108,7 @@ describe("Comlink in the same realm", function() {
     }, this.port2);
     try {
       await thing();
-      throw "Should have thrown";;
+      throw "Should have thrown";
     } catch (err) {
       expect(err).to.not.eq("Should have thrown");
       expect(err.message).to.equal("OMG");
@@ -393,7 +393,7 @@ describe("Comlink in the same realm", function() {
   it("will wrap multiple marked parameter values, simple function", async function() {
     const thing = Comlink.wrap(this.port1);
     Comlink.expose(async function(f1, f2, f3) {
-      return await f1() + await f2() + await f3();
+      return (await f1()) + (await f2()) + (await f3());
     }, this.port2);
     // Weird code because Mocha
     expect(
@@ -455,31 +455,32 @@ describe("Comlink in the same realm", function() {
   it("lets users define transfer handlers", function(done) {
     Comlink.transferHandlers.set("event", {
       canHandle(obj) {
-        return obj instanceof Event
+        return obj instanceof Event;
       },
       serialize(obj) {
         return [obj.data, []];
       },
       deserialize(data) {
-        return new MessageEvent("message", {data});
+        return new MessageEvent("message", { data });
       }
     });
 
-    Comlink.expose((ev) => {
+    Comlink.expose(ev => {
       expect(ev).to.be.an.instanceOf(Event);
-      expect(ev.data).to.deep.equal({a: 1});
+      expect(ev.data).to.deep.equal({ a: 1 });
       done();
     }, this.port1);
     const thing = Comlink.wrap(this.port2);
 
-    const {port1, port2} = new MessageChannel();
+    const { port1, port2 } = new MessageChannel();
     port1.addEventListener("message", thing.bind(this));
     port1.start();
-    port2.postMessage({a: 1});
+    port2.postMessage({ a: 1 });
   });
 
   it("can tunnels a new endpoint with createEndpoint", async function() {
-    Comlink.expose({
+    Comlink.expose(
+      {
         a: 4,
         c() {
           return 5;

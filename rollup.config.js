@@ -32,8 +32,8 @@ function config({ format, minify, input }) {
             compress: true,
             mangle: true
           })
-        : []
-    ].flat()
+        : undefined
+    ].filter(Boolean)
   };
 }
 
