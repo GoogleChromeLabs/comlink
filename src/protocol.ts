@@ -12,7 +12,7 @@
  */
 
 export interface Endpoint {
-  postMessage(message: any, transfer?: any[]): void;
+  postMessage(message: any, transfer?: Transferable[]): void;
   addEventListener(
     type: string,
     listener: EventListenerOrEventListenerObject,
