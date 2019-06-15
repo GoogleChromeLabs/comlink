@@ -16,7 +16,8 @@ import {
   Message,
   MessageType,
   WireValue,
-  WireValueType
+  WireValueType,
+  WindowLike
 } from "./protocol.js";
 export { Endpoint };
 
@@ -245,7 +246,10 @@ export function proxy<T>(obj: T): T & { [proxyMarker]: true } {
   return Object.assign(obj, { [proxyMarker]: true }) as any;
 }
 
-export function windowEndpoint(w: Window, context = self): Endpoint {
+export function windowEndpoint(
+  w: WindowLike,
+  context: WindowLike = self
+): Endpoint {
   return {
     postMessage: (msg: any, transferables: Transferable[]) =>
       w.postMessage(msg, "*", transferables),
