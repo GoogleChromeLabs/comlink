@@ -11,8 +11,7 @@
  * limitations under the License.
  */
 
-export interface Endpoint {
-  postMessage(message: any, transfer?: Transferable[]): void;
+export interface EventSource {
   addEventListener(
     type: string,
     listener: EventListenerOrEventListenerObject,
@@ -23,6 +22,18 @@ export interface Endpoint {
     listener: EventListenerOrEventListenerObject,
     options?: {}
   ): void;
+}
+
+export interface PostMessageWithOrigin {
+  postMessage(
+    message: any,
+    targetOrigin: string,
+    transfer?: Transferable[]
+  ): void;
+}
+
+export interface Endpoint extends EventSource {
+  postMessage(message: any, transfer?: Transferable[]): void;
   start?: () => void;
 }
 
