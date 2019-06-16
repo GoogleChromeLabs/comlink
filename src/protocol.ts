@@ -24,7 +24,7 @@ export interface EventSource {
   ): void;
 }
 
-export interface WindowLike extends EventSource {
+export interface PostMessageWithOrigin {
   postMessage(
     message: any,
     targetOrigin: string,
