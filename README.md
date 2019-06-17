@@ -108,7 +108,7 @@ Comlink works with Node’s [`worker_threads`][worker_threads] module. Take a lo
 [delivrjs]: https://cdn.jsdelivr.net/
 [es6 proxy]: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Proxy
 [proxy-polyfill]: https://github.com/GoogleChrome/proxy-polyfill
-[endpoint]: src/protocol.js
+[endpoint]: src/protocol.ts
 [structured cloning]: https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Structured_clone_algorithm
 [structured clone table]: structured-clone-table.md
 [event]: https://developer.mozilla.org/en-US/docs/Web/API/Event
