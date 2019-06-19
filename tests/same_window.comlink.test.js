@@ -382,12 +382,9 @@ describe("Comlink in the same realm", function() {
   it("will wrap marked parameter values, simple function", async function() {
     const thing = Comlink.wrap(this.port1);
     Comlink.expose(async function(f) {
-      await f();
+      return await f();
     }, this.port2);
-    // Weird code because Mocha
-    await new Promise(async resolve => {
-      thing(Comlink.proxy(_ => resolve()));
-    });
+    expect(await thing(Comlink.proxy(_ => 1))).to.equal(1);
   });
 
   it("will wrap multiple marked parameter values, simple function", async function() {
@@ -395,7 +392,6 @@ describe("Comlink in the same realm", function() {
     Comlink.expose(async function(f1, f2, f3) {
       return (await f1()) + (await f2()) + (await f3());
     }, this.port2);
-    // Weird code because Mocha
     expect(
       await thing(
         Comlink.proxy(_ => 1),
@@ -478,7 +474,7 @@ describe("Comlink in the same realm", function() {
     port2.postMessage({ a: 1 });
   });
 
-  it("can tunnels a new endpoint with createEndpoint", async function() {
+  it("can tunnel a new endpoint with createEndpoint", async function() {
     Comlink.expose(
       {
         a: 4,

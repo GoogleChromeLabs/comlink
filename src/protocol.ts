@@ -59,6 +59,8 @@ export interface HandlerWireValue {
 
 export type WireValue = RawWireValue | HandlerWireValue;
 
+export type Prop = string | number | symbol;
+
 export type MessageID = string;
 
 export const enum MessageType {
@@ -70,34 +72,27 @@ export const enum MessageType {
 }
 
 export interface GetMessage {
-  id?: MessageID;
   type: MessageType.GET;
-  path: string[];
+  prop: Prop;
 }
 
 export interface SetMessage {
-  id?: MessageID;
   type: MessageType.SET;
-  path: string[];
+  prop: Prop;
   value: WireValue;
 }
 
 export interface ApplyMessage {
-  id?: MessageID;
   type: MessageType.APPLY;
-  path: string[];
   argumentList: WireValue[];
 }
 
 export interface ConstructMessage {
-  id?: MessageID;
   type: MessageType.CONSTRUCT;
-  path: string[];
   argumentList: WireValue[];
 }
 
 export interface EndpointMessage {
-  id?: MessageID;
   type: MessageType.ENDPOINT;
 }
 
@@ -107,3 +102,8 @@ export type Message =
   | ApplyMessage
   | ConstructMessage
   | EndpointMessage;
+
+export interface Command {
+  id: MessageID;
+  messages: Message[];
+}
