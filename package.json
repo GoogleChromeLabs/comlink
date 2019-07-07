@@ -44,7 +44,7 @@
     "prettier": "1.18.2",
     "rimraf": "2.6.3",
     "rollup": "1.16.4",
-    "rollup-plugin-terser": "5.1.0",
+    "rollup-plugin-terser": "5.1.1",
     "rollup-plugin-typescript2": "0.21.2",
     "typescript": "3.5.2"
   },
