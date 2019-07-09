@@ -46,7 +46,7 @@
     "rollup": "1.16.7",
     "rollup-plugin-terser": "5.1.1",
     "rollup-plugin-typescript2": "0.21.2",
-    "typescript": "3.5.2"
+    "typescript": "3.5.3"
   },
   "dependencies": {}
 }
