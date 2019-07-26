@@ -45,7 +45,7 @@
     "rimraf": "2.6.3",
     "rollup": "1.17.0",
     "rollup-plugin-terser": "5.1.1",
-    "rollup-plugin-typescript2": "0.22.0",
+    "rollup-plugin-typescript2": "0.22.1",
     "typescript": "3.5.3"
   },
   "dependencies": {}
