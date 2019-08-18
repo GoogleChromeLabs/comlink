@@ -45,7 +45,9 @@ export type Remote<T> =
     T extends { new (...args: infer R1): infer R2 }
       ? { new (...args: R1): Promise<Remote<R2>> }
       : unknown
-  );
+  ) & {
+    releaseProxy: () => Promise<void>;
+  }
 
 export interface TransferHandler {
   canHandle(obj: any): boolean;
@@ -96,7 +98,7 @@ export const transferHandlers = new Map<string, TransferHandler>([
 ]);
 
 export function expose(obj: any, ep: Endpoint = self as any) {
-  ep.addEventListener("message", (async (ev: MessageEvent) => {
+  ep.addEventListener("message", async function callback(ev: MessageEvent) {
     if (!ev || !ev.data) {
       return;
     }
@@ -139,6 +141,11 @@ export function expose(obj: any, ep: Endpoint = self as any) {
             returnValue = transfer(port1, [port1]);
           }
           break;
+        case MessageType.RELEASE:
+          {
+            returnValue = undefined;
+          }
+          break;
         default:
           console.warn("Unrecognized message", ev.data);
       }
@@ -148,10 +155,23 @@ export function expose(obj: any, ep: Endpoint = self as any) {
     }
     const [wireValue, transferables] = toWireValue(returnValue);
     ep.postMessage({ ...wireValue, id }, transferables);
-  }) as any);
+    if (type === MessageType.RELEASE) {
+      // detach and deactive after sending release response above.
+      ep.removeEventListener("message", callback as any);
+      deactiveEndPoint(ep);
+    }
+  } as any);
   if (ep.start) {
     ep.start();
   }
+}
+
+function isMessagePort(endpoint: Endpoint): endpoint is MessagePort {
+  return endpoint.constructor.name === "MessagePort";
+}
+
+function deactiveEndPoint(endpoint: Endpoint) {
+  if (isMessagePort(endpoint)) endpoint.close();
 }
 
 export function wrap<T>(ep: Endpoint): Remote<T> {
@@ -164,6 +184,16 @@ function createProxy<T>(
 ): Remote<T> {
   const proxy: Function = new Proxy(function() {}, {
     get(_target, prop) {
+      if (prop === "releaseProxy") {
+        return () => {
+          return requestResponseMessage(ep, {
+            type: MessageType.RELEASE,
+            path: path.map(p => p.toString())
+          }).then(() => {
+            deactiveEndPoint(ep);
+          });
+        };
+      }
       if (prop === "then") {
         if (path.length === 0) {
           return { then: () => proxy };
