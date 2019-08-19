@@ -496,6 +496,14 @@ describe("Comlink in the same realm", function() {
     expect(await otherProxy.c()).to.equal(5);
     expect(await proxy.c()).to.equal(5);
   });
+
+  it("released proxy should no longer be useable and throw an exception", async function() {
+    const thing = Comlink.wrap(this.port1);
+    Comlink.expose(SampleClass, this.port2);
+    const instance = await new thing();
+    await instance.releaseProxy();
+    expect(() => instance.method()).to.throw();
+  });
 });
 
 function guardedIt(f) {

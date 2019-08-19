@@ -178,12 +178,20 @@ export function wrap<T>(ep: Endpoint): Remote<T> {
   return createProxy<T>(ep) as any;
 }
 
+function throwIfProxyReleased(isReleased: boolean) {
+  if (isReleased) {
+    throw new Error("Proxy has been released and is not useable");
+  }
+}
+
 function createProxy<T>(
   ep: Endpoint,
   path: (string | number | symbol)[] = []
 ): Remote<T> {
-  const proxy: Function = new Proxy(function() {}, {
+  let isProxyReleased = false;
+  const proxy = new Proxy(function() {}, {
     get(_target, prop) {
+      throwIfProxyReleased(isProxyReleased);
       if (prop === "releaseProxy") {
         return () => {
           return requestResponseMessage(ep, {
@@ -191,6 +199,7 @@ function createProxy<T>(
             path: path.map(p => p.toString())
           }).then(() => {
             deactiveEndPoint(ep);
+            isProxyReleased = true;
           });
         };
       }
@@ -207,6 +216,7 @@ function createProxy<T>(
       return createProxy(ep, [...path, prop]);
     },
     set(_target, prop, rawValue) {
+      throwIfProxyReleased(isProxyReleased);
       // FIXME: ES6 Proxy Handler `set` methods are supposed to return a
       // boolean. To show good will, we return true asynchronously ¯\_(ツ)_/¯
       const [value, transferables] = toWireValue(rawValue);
@@ -221,6 +231,7 @@ function createProxy<T>(
       ).then(fromWireValue) as any;
     },
     apply(_target, _thisArg, rawArgumentList) {
+      throwIfProxyReleased(isProxyReleased);
       const last = path[path.length - 1];
       if ((last as any) === createEndpoint) {
         return requestResponseMessage(ep, {
@@ -243,6 +254,7 @@ function createProxy<T>(
       ).then(fromWireValue);
     },
     construct(_target, rawArgumentList) {
+      throwIfProxyReleased(isProxyReleased);
       const [argumentList, transferables] = processArguments(rawArgumentList);
       return requestResponseMessage(
         ep,
