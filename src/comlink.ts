@@ -12,11 +12,18 @@
  */
 
 import {
+  ApplyMessage,
+  Command,
+  ConstructMessage,
   Endpoint,
+  EndpointMessage,
   EventSource,
+  GetMessage,
   Message,
   MessageType,
+  Prop,
   PostMessageWithOrigin,
+  SetMessage,
   WireValue,
   WireValueType
 } from "./protocol.js";
@@ -95,60 +102,77 @@ export const transferHandlers = new Map<string, TransferHandler>([
   ]
 ]);
 
-export function expose(obj: any, ep: Endpoint = self as any) {
+export function expose(object: any, ep: Endpoint = self as any) {
   ep.addEventListener("message", (async (ev: MessageEvent) => {
     if (!ev || !ev.data) {
       return;
     }
-    const { id, type, path } = {
-      path: [] as string[],
-      ...(ev.data as Message)
-    };
-    const argumentList = (ev.data.argumentList || []).map(fromWireValue);
-    let returnValue;
+
+    const { id, messages } = ev.data as Command;
+    let currentObject = object;
+    let previousObject = object;
+    let returnValue = object;
+
     try {
-      const parent = path.slice(0, -1).reduce((obj, prop) => obj[prop], obj);
-      const rawValue = path.reduce((obj, prop) => obj[prop], obj);
-      switch (type) {
-        case MessageType.GET:
-          {
-            returnValue = await rawValue;
-          }
-          break;
-        case MessageType.SET:
-          {
-            parent[path.slice(-1)[0]] = fromWireValue(ev.data.value);
-            returnValue = true;
-          }
-          break;
-        case MessageType.APPLY:
-          {
-            returnValue = await rawValue.apply(parent, argumentList);
-          }
-          break;
-        case MessageType.CONSTRUCT:
-          {
-            const value = await new rawValue(...argumentList);
-            returnValue = proxy(value);
-          }
-          break;
-        case MessageType.ENDPOINT:
-          {
-            const { port1, port2 } = new MessageChannel();
-            expose(obj, port2);
-            returnValue = transfer(port1, [port1]);
-          }
-          break;
-        default:
-          console.warn("Unrecognized message", ev.data);
+      for (const message of messages) {
+        const argumentList = ((message as any).argumentList || []).map(
+          fromWireValue
+        );
+        const { type } = message;
+
+        switch (type) {
+          case MessageType.GET:
+            {
+              previousObject = currentObject;
+              returnValue = currentObject = await currentObject[
+                (message as GetMessage).prop
+              ];
+            }
+            break;
+          case MessageType.SET:
+            {
+              currentObject[(message as SetMessage).prop] = fromWireValue(
+                (message as SetMessage).value
+              );
+              returnValue = true;
+            }
+            break;
+          case MessageType.APPLY:
+            {
+              returnValue = currentObject = await currentObject.apply(
+                previousObject,
+                argumentList
+              );
+              previousObject = currentObject;
+            }
+            break;
+          case MessageType.CONSTRUCT:
+            {
+              currentObject = await new currentObject(...argumentList);
+              previousObject = currentObject;
+              returnValue = proxy(currentObject);
+            }
+            break;
+          case MessageType.ENDPOINT:
+            {
+              const { port1, port2 } = new MessageChannel();
+              expose(currentObject, port2);
+              returnValue = transfer(port1, [port1]);
+            }
+            break;
+          default:
+            console.warn("Unrecognized message", ev.data);
+        }
       }
     } catch (e) {
       returnValue = e;
       throwSet.add(e);
     }
+
     const [wireValue, transferables] = toWireValue(returnValue);
     ep.postMessage({ ...wireValue, id }, transferables);
   }) as any);
+
   if (ep.start) {
     ep.start();
   }
@@ -158,20 +182,20 @@ export function wrap<T>(ep: Endpoint): Remote<T> {
   return createProxy<T>(ep) as any;
 }
 
-function createProxy<T>(
-  ep: Endpoint,
-  path: (string | number | symbol)[] = []
-): Remote<T> {
+function createProxy<T>(ep: Endpoint, path: Prop[] = []): Remote<T> {
   const proxy: Function = new Proxy(function() {}, {
     get(_target, prop) {
       if (prop === "then") {
         if (path.length === 0) {
           return { then: () => proxy };
         }
-        const r = requestResponseMessage(ep, {
-          type: MessageType.GET,
-          path: path.map(p => p.toString())
-        }).then(fromWireValue);
+        const r = requestResponseMessage(
+          ep,
+          path.map(prop => ({
+            type: MessageType.GET,
+            prop
+          }))
+        ).then(fromWireValue);
         return r.then.bind(r);
       }
       return createProxy(ep, [...path, prop]);
@@ -180,49 +204,215 @@ function createProxy<T>(
       // FIXME: ES6 Proxy Handler `set` methods are supposed to return a
       // boolean. To show good will, we return true asynchronously ¯\_(ツ)_/¯
       const [value, transferables] = toWireValue(rawValue);
-      return requestResponseMessage(
-        ep,
+      const messages = [
+        ...path.map(
+          prop =>
+            ({
+              type: MessageType.GET,
+              prop
+            } as Message)
+        ),
         {
           type: MessageType.SET,
-          path: [...path, prop].map(p => p.toString()),
+          prop,
           value
-        },
-        transferables
-      ).then(fromWireValue) as any;
+        } as SetMessage
+      ];
+      return requestResponseMessage(ep, messages, transferables).then(
+        fromWireValue
+      ) as any;
     },
     apply(_target, _thisArg, rawArgumentList) {
       const last = path[path.length - 1];
       if ((last as any) === createEndpoint) {
-        return requestResponseMessage(ep, {
-          type: MessageType.ENDPOINT
-        }).then(fromWireValue);
+        const messages = [
+          {
+            type: MessageType.ENDPOINT
+          } as EndpointMessage
+        ];
+        return requestResponseMessage(ep, messages).then(fromWireValue);
       }
       // We just pretend that `bind()` didn’t happen.
       if (last === "bind") {
         return createProxy(ep, path.slice(0, -1));
       }
       const [argumentList, transferables] = processArguments(rawArgumentList);
-      return requestResponseMessage(
-        ep,
+      const messages = [
+        ...path.map(
+          prop =>
+            ({
+              type: MessageType.GET,
+              prop
+            } as Message)
+        ),
         {
           type: MessageType.APPLY,
-          path: path.map(p => p.toString()),
           argumentList
-        },
-        transferables
-      ).then(fromWireValue);
+        } as ApplyMessage
+      ];
+      return requestResponseMessage(ep, messages, transferables).then(
+        fromWireValue
+      );
     },
     construct(_target, rawArgumentList) {
       const [argumentList, transferables] = processArguments(rawArgumentList);
-      return requestResponseMessage(
-        ep,
+      const messages = [
+        ...path.map(
+          prop =>
+            ({
+              type: MessageType.GET,
+              prop
+            } as Message)
+        ),
         {
           type: MessageType.CONSTRUCT,
-          path: path.map(p => p.toString()),
           argumentList
-        },
+        } as ConstructMessage
+      ];
+      return requestResponseMessage(ep, messages, transferables).then(
+        fromWireValue
+      );
+    }
+  });
+  return proxy as any;
+}
+
+export function wrapChain<T>(ep: Endpoint): Remote<T> {
+  return createChainProxy<T>(ep) as any;
+}
+
+function createChainProxy<T>(
+  ep: Endpoint,
+  messages: (Message)[] = [],
+  previousTransferables: Transferable[] = []
+): Remote<T> {
+  const proxy: Function = new Proxy(function() {}, {
+    get(_target, prop) {
+      if (prop === "then") {
+        if (messages.length === 0) {
+          return { then: () => proxy };
+        }
+
+        const r = requestResponseMessage(
+          ep,
+          messages,
+          previousTransferables
+        ).then(fromWireValue);
+        return r.then.bind(r);
+      }
+
+      return createChainProxy(
+        ep,
+        [
+          ...messages,
+          {
+            type: MessageType.GET,
+            prop
+          }
+        ],
+        previousTransferables
+      );
+    },
+    set(_target, prop, rawValue) {
+      // FIXME: ES6 Proxy Handler `set` methods are supposed to return a
+      // boolean. To show good will, we return true asynchronously ¯\_(ツ)_/¯
+      const [value, newTransferables] = toWireValue(rawValue);
+      const transferables = [...previousTransferables, ...newTransferables];
+
+      return requestResponseMessage(
+        ep,
+        [
+          ...messages,
+          {
+            type: MessageType.SET,
+            prop,
+            value
+          }
+        ],
         transferables
-      ).then(fromWireValue);
+      ).then(fromWireValue) as any;
+    },
+    apply(_target, _thisArg, rawArgumentList) {
+      const last: Message | undefined = messages[messages.length - 1];
+
+      if (
+        last &&
+        last.type === MessageType.GET &&
+        last.prop === createEndpoint
+      ) {
+        return requestResponseMessage(
+          ep,
+          [
+            ...messages.slice(0, -1),
+            {
+              type: MessageType.ENDPOINT
+            }
+          ],
+          previousTransferables
+        ).then(fromWireValue);
+      }
+
+      // We just pretend that `bind()` didn’t happen.
+      if (last && last.type === MessageType.GET && last.prop === "bind") {
+        return createChainProxy(
+          ep,
+          messages.slice(0, -1),
+          previousTransferables
+        );
+      }
+
+      if (last && last.type === MessageType.GET && last.prop === "then") {
+        const [argumentList, newTransferables] = processArguments(
+          rawArgumentList
+        );
+        const transferables = [...previousTransferables, ...newTransferables];
+        return requestResponseMessage(
+          ep,
+          [
+            ...messages,
+            {
+              type: MessageType.APPLY,
+              argumentList
+            }
+          ],
+          transferables
+        ).then(fromWireValue);
+      }
+
+      const [argumentList, newTransferables] = processArguments(
+        rawArgumentList
+      );
+      const transferables = [...previousTransferables, ...newTransferables];
+
+      return createChainProxy(
+        ep,
+        [
+          ...messages,
+          {
+            type: MessageType.APPLY,
+            argumentList
+          }
+        ],
+        transferables
+      );
+    },
+    construct(_target, rawArgumentList) {
+      const [argumentList, newTransferables] = processArguments(
+        rawArgumentList
+      );
+      const transferables = [...previousTransferables, ...newTransferables];
+
+      return createChainProxy(
+        ep,
+        [
+          ...messages,
+          {
+            type: MessageType.CONSTRUCT,
+            argumentList
+          }
+        ],
+        transferables
+      );
     }
   });
   return proxy as any;
@@ -293,22 +483,40 @@ function fromWireValue(value: WireValue): any {
 
 function requestResponseMessage(
   ep: Endpoint,
-  msg: Message,
+  messages: Message[],
   transfers?: Transferable[]
 ): Promise<WireValue> {
   return new Promise(resolve => {
     const id = generateUUID();
+
     ep.addEventListener("message", function l(ev: MessageEvent) {
       if (!ev.data || !ev.data.id || ev.data.id !== id) {
         return;
       }
+
       ep.removeEventListener("message", l as any);
       resolve(ev.data);
     } as any);
+
     if (ep.start) {
       ep.start();
     }
-    ep.postMessage({ id, ...msg }, transfers);
+
+    ep.postMessage(
+      {
+        id,
+        messages: messages.map(message => {
+          const m = { ...message };
+
+          if (m.type === MessageType.GET || m.type === MessageType.SET) {
+            m.prop = m.prop.toString();
+          }
+
+          return m;
+        })
+      } as Command,
+      transfers
+    );
   });
 }
 
