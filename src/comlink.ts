@@ -24,6 +24,7 @@ export { Endpoint };
 
 export const proxyMarker = Symbol("Comlink.proxy");
 export const createEndpoint = Symbol("Comlink.endpoint");
+export const releaseProxy = Symbol("Comlink.releaseProxy");
 const throwSet = new WeakSet();
 
 // prettier-ignore
@@ -96,7 +97,7 @@ export const transferHandlers = new Map<string, TransferHandler>([
 ]);
 
 export function expose(obj: any, ep: Endpoint = self as any) {
-  ep.addEventListener("message", (async (ev: MessageEvent) => {
+  ep.addEventListener("message", async function callback(ev: MessageEvent) {
     if (!ev || !ev.data) {
       return;
     }
@@ -139,6 +140,11 @@ export function expose(obj: any, ep: Endpoint = self as any) {
             returnValue = transfer(port1, [port1]);
           }
           break;
+        case MessageType.RELEASE:
+          {
+            returnValue = undefined;
+          }
+          break;
         default:
           console.warn("Unrecognized message", ev.data);
       }
@@ -148,22 +154,54 @@ export function expose(obj: any, ep: Endpoint = self as any) {
     }
     const [wireValue, transferables] = toWireValue(returnValue);
     ep.postMessage({ ...wireValue, id }, transferables);
-  }) as any);
+    if (type === MessageType.RELEASE) {
+      // detach and deactive after sending release response above.
+      ep.removeEventListener("message", callback as any);
+      closeEndPoint(ep);
+    }
+  } as any);
   if (ep.start) {
     ep.start();
   }
+}
+
+function isMessagePort(endpoint: Endpoint): endpoint is MessagePort {
+  return endpoint.constructor.name === "MessagePort";
+}
+
+function closeEndPoint(endpoint: Endpoint) {
+  if (isMessagePort(endpoint)) endpoint.close();
 }
 
 export function wrap<T>(ep: Endpoint): Remote<T> {
   return createProxy<T>(ep) as any;
 }
 
+function throwIfProxyReleased(isReleased: boolean) {
+  if (isReleased) {
+    throw new Error("Proxy has been released and is not useable");
+  }
+}
+
 function createProxy<T>(
   ep: Endpoint,
   path: (string | number | symbol)[] = []
 ): Remote<T> {
-  const proxy: Function = new Proxy(function() {}, {
+  let isProxyReleased = false;
+  const proxy = new Proxy(function() {}, {
     get(_target, prop) {
+      throwIfProxyReleased(isProxyReleased);
+      if (prop === releaseProxy) {
+        return () => {
+          return requestResponseMessage(ep, {
+            type: MessageType.RELEASE,
+            path: path.map(p => p.toString())
+          }).then(() => {
+            closeEndPoint(ep);
+            isProxyReleased = true;
+          });
+        };
+      }
       if (prop === "then") {
         if (path.length === 0) {
           return { then: () => proxy };
@@ -177,6 +215,7 @@ function createProxy<T>(
       return createProxy(ep, [...path, prop]);
     },
     set(_target, prop, rawValue) {
+      throwIfProxyReleased(isProxyReleased);
       // FIXME: ES6 Proxy Handler `set` methods are supposed to return a
       // boolean. To show good will, we return true asynchronously ¯\_(ツ)_/¯
       const [value, transferables] = toWireValue(rawValue);
@@ -191,6 +230,7 @@ function createProxy<T>(
       ).then(fromWireValue) as any;
     },
     apply(_target, _thisArg, rawArgumentList) {
+      throwIfProxyReleased(isProxyReleased);
       const last = path[path.length - 1];
       if ((last as any) === createEndpoint) {
         return requestResponseMessage(ep, {
@@ -213,6 +253,7 @@ function createProxy<T>(
       ).then(fromWireValue);
     },
     construct(_target, rawArgumentList) {
+      throwIfProxyReleased(isProxyReleased);
       const [argumentList, transferables] = processArguments(rawArgumentList);
       return requestResponseMessage(
         ep,
