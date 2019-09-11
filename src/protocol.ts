@@ -66,7 +66,8 @@ export const enum MessageType {
   SET,
   APPLY,
   CONSTRUCT,
-  ENDPOINT
+  ENDPOINT,
+  RELEASE
 }
 
 export interface GetMessage {
@@ -101,9 +102,16 @@ export interface EndpointMessage {
   type: MessageType.ENDPOINT;
 }
 
+export interface ReleaseMessage {
+  id?: MessageID;
+  type: MessageType.RELEASE;
+  path: string[];
+}
+
 export type Message =
   | GetMessage
   | SetMessage
   | ApplyMessage
   | ConstructMessage
-  | EndpointMessage;
+  | EndpointMessage
+  | ReleaseMessage;
