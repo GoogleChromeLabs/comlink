@@ -24,6 +24,7 @@ export { Endpoint };
 
 export const proxyMarker = Symbol("Comlink.proxy");
 export const createEndpoint = Symbol("Comlink.endpoint");
+export const releaseProxy = Symbol("Comlink.releaseProxy");
 const throwSet = new WeakSet();
 
 // prettier-ignore
@@ -45,9 +46,7 @@ export type Remote<T> =
     T extends { new (...args: infer R1): infer R2 }
       ? { new (...args: R1): Promise<Remote<R2>> }
       : unknown
-  ) & {
-    releaseProxy: () => Promise<void>;
-  }
+  )
 
 export interface TransferHandler {
   canHandle(obj: any): boolean;
@@ -158,7 +157,7 @@ export function expose(obj: any, ep: Endpoint = self as any) {
     if (type === MessageType.RELEASE) {
       // detach and deactive after sending release response above.
       ep.removeEventListener("message", callback as any);
-      deactiveEndPoint(ep);
+      closeEndPoint(ep);
     }
   } as any);
   if (ep.start) {
@@ -170,7 +169,7 @@ function isMessagePort(endpoint: Endpoint): endpoint is MessagePort {
   return endpoint.constructor.name === "MessagePort";
 }
 
-function deactiveEndPoint(endpoint: Endpoint) {
+function closeEndPoint(endpoint: Endpoint) {
   if (isMessagePort(endpoint)) endpoint.close();
 }
 
@@ -192,13 +191,13 @@ function createProxy<T>(
   const proxy = new Proxy(function() {}, {
     get(_target, prop) {
       throwIfProxyReleased(isProxyReleased);
-      if (prop === "releaseProxy") {
+      if (prop === releaseProxy) {
         return () => {
           return requestResponseMessage(ep, {
             type: MessageType.RELEASE,
             path: path.map(p => p.toString())
           }).then(() => {
-            deactiveEndPoint(ep);
+            closeEndPoint(ep);
             isProxyReleased = true;
           });
         };
