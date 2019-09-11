@@ -46,7 +46,7 @@ export type Remote<T> =
     T extends { new (...args: infer R1): infer R2 }
       ? { new (...args: R1): Promise<Remote<R2>> }
       : unknown
-  )
+  );
 
 export interface TransferHandler {
   canHandle(obj: any): boolean;
