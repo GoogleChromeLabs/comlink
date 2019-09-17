@@ -29,6 +29,69 @@ On mobile phones, and especially on low-end mobile phones, it is important to ke
 
 Comlink turns this messaged-based API into a something more developer-friendly by providing an RPC implementation: Values from one thread can be used within the other thread (and vice versa) just like local values.
 
+## Examples
+
+### [Running a simple function](https://github.com/GoogleChromeLabs/comlink/tree/master/docs/examples/01-simple-example)
+
+**main.js**
+```javascript
+import * as Comlink from "https://unpkg.com/comlink@alpha/dist/esm/comlink.mjs";
+  async function init() {
+    const worker = new Worker("worker.js");
+    // WebWorkers use `postMessage` and therefore work with Comlink.
+    const obj = Comlink.wrap(worker);
+    alert(`Counter: ${await obj.counter}`);
+    await obj.inc();
+    alert(`Counter: ${await obj.counter}`);
+  }
+  init();
+```
+
+**worker.js**
+```javascript
+importScripts("https://unpkg.com/comlink@alpha/dist/umd/comlink.js");
+// importScripts("../../../dist/umd/comlink.js");
+
+const obj = {
+  counter: 0,
+  inc() {
+    this.counter++;
+  }
+};
+
+Comlink.expose(obj);
+```
+
+### [Callbacks](https://github.com/torch2424/comlink/tree/master/docs/examples/02-callback-example)
+
+**main.js**
+```javascript
+import * as Comlink from "https://unpkg.com/comlink@alpha/dist/esm/comlink.mjs";
+  // import * as Comlink from "../../../dist/esm/comlink.mjs";
+  function callback(value) {
+    alert(`Result: ${value}`);
+  }
+  async function init() {
+    const remoteFunction = Comlink.wrap(new Worker("worker.js"));
+    await remoteFunction(Comlink.proxy(callback));
+  }
+  init();
+```
+
+**worker.js**
+```javascript
+importScripts("https://unpkg.com/comlink@alpha/dist/umd/comlink.js");
+// importScripts("../../../dist/umd/comlink.js");
+
+async function remoteFunction(cb) {
+  await cb("A string from a worker");
+}
+
+Comlink.expose(remoteFunction);
+```
+
+**For additional examples, please see the [docs/examples](./docs/examples) directory in the project.**
+
 ## API
 
 ### `Comlink.wrap(endpoint)` and `Comlink.expose(value, endpoint?)`
