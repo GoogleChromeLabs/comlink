@@ -192,6 +192,10 @@ Comlink works with Node’s [`worker_threads`][worker_threads] module. Take a lo
 [event]: https://developer.mozilla.org/en-US/docs/Web/API/Event
 [worker_threads]: https://nodejs.org/api/worker_threads.html
 
+## Additional Resources
+
+- [Simplify Web Worker code with Comlink](https://davidea.st/articles/comlink-simple-web-worker)
+
 ---
 
 License Apache-2.0
