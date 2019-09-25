@@ -96,7 +96,11 @@ export const transferHandlers = new Map<string, TransferHandler>([
   ]
 ]);
 
-export function expose(obj: any, ep: Endpoint = self as any) {
+export function expose(
+  obj: any,
+  ep: Endpoint = self as any,
+  verbose: boolean = false
+) {
   ep.addEventListener("message", async function callback(ev: MessageEvent) {
     if (!ev || !ev.data) {
       return;
@@ -146,7 +150,9 @@ export function expose(obj: any, ep: Endpoint = self as any) {
           }
           break;
         default:
-          console.warn("Unrecognized message", ev.data);
+          if (verbose) {
+            console.warn("Unrecognized message", ev.data);
+          }
       }
     } catch (e) {
       returnValue = e;
