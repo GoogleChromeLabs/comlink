@@ -145,8 +145,6 @@ export function expose(obj: any, ep: Endpoint = self as any) {
             returnValue = undefined;
           }
           break;
-        default:
-          console.warn("Unrecognized message", ev.data);
       }
     } catch (e) {
       returnValue = e;
