@@ -36,7 +36,7 @@ Comlink turns this messaged-based API into a something more developer-friendly b
 **main.js**
 
 ```javascript
-import * as Comlink from "https://unpkg.com/comlink@latest/dist/esm/comlink.mjs";
+import * as Comlink from "https://unpkg.com/comlink/dist/esm/comlink.mjs";
 async function init() {
   const worker = new Worker("worker.js");
   // WebWorkers use `postMessage` and therefore work with Comlink.
@@ -51,7 +51,7 @@ init();
 **worker.js**
 
 ```javascript
-importScripts("https://unpkg.com/comlink@latest/dist/umd/comlink.js");
+importScripts("https://unpkg.com/comlink/dist/umd/comlink.js");
 // importScripts("../../../dist/umd/comlink.js");
 
 const obj = {
@@ -69,7 +69,7 @@ Comlink.expose(obj);
 **main.js**
 
 ```javascript
-import * as Comlink from "https://unpkg.com/comlink@latest/dist/esm/comlink.mjs";
+import * as Comlink from "https://unpkg.com/comlink/dist/esm/comlink.mjs";
 // import * as Comlink from "../../../dist/esm/comlink.mjs";
 function callback(value) {
   alert(`Result: ${value}`);
@@ -84,7 +84,7 @@ init();
 **worker.js**
 
 ```javascript
-importScripts("https://unpkg.com/comlink@latest/dist/umd/comlink.js");
+importScripts("https://unpkg.com/comlink/dist/umd/comlink.js");
 // importScripts("../../../dist/umd/comlink.js");
 
 async function remoteFunction(cb) {
