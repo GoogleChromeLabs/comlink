@@ -1,9 +1,10 @@
 {
   "name": "comlink",
-  "version": "4.0.3",
+  "version": "4.0.4",
   "description": "Comlink makes WebWorkers enjoyable",
   "main": "dist/umd/comlink.js",
   "module": "dist/esm/comlink.mjs",
+  "browser": "dist/umd/comlink.es3.min.js",
   "types": "dist/umd/comlink.d.ts",
   "scripts": {
     "build": "rollup -c",
