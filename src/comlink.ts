@@ -97,7 +97,7 @@ export const transferHandlers = new Map<string, TransferHandler>([
 ]);
 
 export function expose(obj: any, ep: Endpoint = self as any) {
-  ep.addEventListener("message", async function callback(ev: MessageEvent) {
+  ep.addEventListener("message", function callback(ev: MessageEvent) {
     if (!ev || !ev.data) {
       return;
     }
@@ -113,7 +113,7 @@ export function expose(obj: any, ep: Endpoint = self as any) {
       switch (type) {
         case MessageType.GET:
           {
-            returnValue = await rawValue;
+            returnValue = rawValue;
           }
           break;
         case MessageType.SET:
@@ -124,12 +124,12 @@ export function expose(obj: any, ep: Endpoint = self as any) {
           break;
         case MessageType.APPLY:
           {
-            returnValue = await rawValue.apply(parent, argumentList);
+            returnValue = rawValue.apply(parent, argumentList);
           }
           break;
         case MessageType.CONSTRUCT:
           {
-            const value = await new rawValue(...argumentList);
+            const value = new rawValue(...argumentList);
             returnValue = proxy(value);
           }
           break;
@@ -150,13 +150,15 @@ export function expose(obj: any, ep: Endpoint = self as any) {
       returnValue = e;
       throwSet.add(e);
     }
-    const [wireValue, transferables] = toWireValue(returnValue);
-    ep.postMessage({ ...wireValue, id }, transferables);
-    if (type === MessageType.RELEASE) {
-      // detach and deactive after sending release response above.
-      ep.removeEventListener("message", callback as any);
-      closeEndPoint(ep);
-    }
+    Promise.resolve(returnValue).then(returnValue => {
+      const [wireValue, transferables] = toWireValue(returnValue);
+      ep.postMessage({ ...wireValue, id }, transferables);
+      if (type === MessageType.RELEASE) {
+        // detach and deactive after sending release response above.
+        ep.removeEventListener("message", callback as any);
+        closeEndPoint(ep);
+      }
+    });
   } as any);
   if (ep.start) {
     ep.start();
