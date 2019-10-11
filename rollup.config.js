@@ -1,10 +1,9 @@
 import typescript from "rollup-plugin-typescript2";
 import { terser } from "rollup-plugin-terser";
 
-function config({ format, minify, input }) {
+function config({ format, minify, input, ext = "js" }) {
   const dir = `dist/${format}/`;
   const minifierSuffix = minify ? ".min" : "";
-  const ext = format === "esm" ? "mjs" : "js";
   return {
     input: `./src/${input}.ts`,
     output: {
@@ -40,12 +39,14 @@ function config({ format, minify, input }) {
 require("rimraf").sync("dist");
 
 export default [
+  { input: "comlink", format: "esm", minify: false, ext: "mjs" },
+  { input: "comlink", format: "esm", minify: true, ext: "mjs" },
   { input: "comlink", format: "esm", minify: false },
   { input: "comlink", format: "esm", minify: true },
   { input: "comlink", format: "umd", minify: false },
   { input: "comlink", format: "umd", minify: true },
-  { input: "node-adapter", format: "esm", minify: false },
-  { input: "node-adapter", format: "esm", minify: true },
+  { input: "node-adapter", format: "esm", minify: false, ext: "mjs" },
+  { input: "node-adapter", format: "esm", minify: true, ext: "mjs" },
   { input: "node-adapter", format: "umd", minify: false },
   { input: "node-adapter", format: "umd", minify: true }
 ].map(config);
