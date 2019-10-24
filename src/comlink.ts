@@ -150,8 +150,7 @@ export function expose(obj: any, ep: Endpoint = self as any) {
       returnValue = e;
       throwSet.add(e);
     }
-    Promise
-      .resolve(returnValue)
+    Promise.resolve(returnValue)
       .catch(e => {
         throwSet.add(e);
         return e;
