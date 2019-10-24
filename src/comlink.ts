@@ -150,15 +150,21 @@ export function expose(obj: any, ep: Endpoint = self as any) {
       returnValue = e;
       throwSet.add(e);
     }
-    Promise.resolve(returnValue).then(returnValue => {
-      const [wireValue, transferables] = toWireValue(returnValue);
-      ep.postMessage({ ...wireValue, id }, transferables);
-      if (type === MessageType.RELEASE) {
-        // detach and deactive after sending release response above.
-        ep.removeEventListener("message", callback as any);
-        closeEndPoint(ep);
-      }
-    });
+    Promise
+      .resolve(returnValue)
+      .catch(e => {
+        throwSet.add(e);
+        return e;
+      })
+      .then(returnValue => {
+        const [wireValue, transferables] = toWireValue(returnValue);
+        ep.postMessage({ ...wireValue, id }, transferables);
+        if (type === MessageType.RELEASE) {
+          // detach and deactive after sending release response above.
+          ep.removeEventListener("message", callback as any);
+          closeEndPoint(ep);
+        }
+      });
   } as any);
   if (ep.start) {
     ep.start();
