@@ -116,6 +116,20 @@ describe("Comlink in the same realm", function() {
     }
   });
 
+  it("can forward an async function error", async function() {
+    const thing = Comlink.wrap(this.port1);
+    Comlink.expose({
+      async throwError() {
+        throw new Error("Should have thrown");
+      }
+    }, this.port2);
+    try {
+      await thing.throwError();
+    } catch (err) {
+      expect(err.message).to.equal("Should have thrown");
+    }
+  });
+
   it("can rethrow non-error objects", async function() {
     const thing = Comlink.wrap(this.port1);
     Comlink.expose(_ => {
