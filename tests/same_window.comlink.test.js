@@ -116,6 +116,27 @@ describe("Comlink in the same realm", function() {
     }
   });
 
+  it("can throw customized error object with an additional params", async function() {
+    const thing = Comlink.wrap(this.port1);
+    Comlink.expose(_ => {
+      class CustomError extends Error {
+        customField = null;
+        constructor (message, customField) {
+          super(message);
+          this.customField = customField;
+          Object.setPrototypeOf(this, CustomError.prototype);
+        }
+      }
+      throw new CustomError("Some error message", "custom field test");
+    }, this.port2);
+    try {
+      await thing();
+    } catch (err) {
+      expect(err.message).to.equal("Some error message");
+      expect(err.customField).to.equal("custom field test");
+    }
+  });
+
   it("can forward an async function error", async function() {
     const thing = Comlink.wrap(this.port1);
     Comlink.expose({

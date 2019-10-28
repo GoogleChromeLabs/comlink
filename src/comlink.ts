@@ -79,6 +79,7 @@ export const transferHandlers = new Map<string, TransferHandler>([
         let serialized = obj;
         if (isError) {
           serialized = {
+            ...obj,
             isError,
             message: obj.message,
             stack: obj.stack
