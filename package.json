@@ -32,7 +32,7 @@
     "chai": "4.2.0",
     "conditional-type-checks": "1.0.1",
     "husky": "3.0.7",
-    "karma": "4.3.0",
+    "karma": "4.4.1",
     "karma-chai": "0.1.0",
     "karma-chrome-launcher": "3.1.0",
     "karma-detect-browsers": "2.3.3",
