@@ -141,7 +141,7 @@ Comlink.transferHandlers.set("EVENT", {
   serialize: ev => {
     return [{
       target: {
-        id: ev.target.id
+        id: ev.target.id,
         classList: [...ev.target.classList]
       }
     }, []];
