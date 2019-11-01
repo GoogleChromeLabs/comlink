@@ -176,6 +176,10 @@ const port = myProxy[Comlink.createEndpoint]();
 const newProxy = Comlink.wrap(port);
 ```
 
+## TypeScript
+
+Comlink does provide TypeScript types. When you `expose()` something of type `T`, the corresponding `wrap()` call will return something of type `Comlink.Remote<T>`. While this type has been battle-tested over some time now, it is implemented on a best-effort basis. There are some nuances that are incredibly hard if not impossible to encode correctly in TypeScript’s type system. It _may_ sometimes be necessary to force a certain type using `as unknown as <type>`.
+
 ## Node
 
 Comlink works with Node’s [`worker_threads`][worker_threads] module. Take a look at the example in the `docs` folder.
