@@ -178,8 +178,8 @@ function closeEndPoint(endpoint: Endpoint) {
   if (isMessagePort(endpoint)) endpoint.close();
 }
 
-export function wrap<T>(ep: Endpoint): Remote<T> {
-  return createProxy<T>(ep) as any;
+export function wrap<T>(ep: Endpoint, target?: any): Remote<T> {
+  return createProxy<T>(ep, [], target) as any;
 }
 
 function throwIfProxyReleased(isReleased: boolean) {
@@ -190,10 +190,11 @@ function throwIfProxyReleased(isReleased: boolean) {
 
 function createProxy<T>(
   ep: Endpoint,
-  path: (string | number | symbol)[] = []
+  path: (string | number | symbol)[] = [],
+  target: object = function() {}
 ): Remote<T> {
   let isProxyReleased = false;
-  const proxy = new Proxy(function() {}, {
+  const proxy = new Proxy(target, {
     get(_target, prop) {
       throwIfProxyReleased(isProxyReleased);
       if (prop === releaseProxy) {
