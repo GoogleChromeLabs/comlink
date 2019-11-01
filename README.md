@@ -139,14 +139,17 @@ Each function parameter and return value is given to _all_ registered transfer h
 Comlink.transferHandlers.set("EVENT", {
   canHandle: obj => obj instanceof Event,
   serialize: ev => {
-    return [{
-      target: {
-        id: ev.target.id,
-        classList: [...ev.target.classList]
-      }
-    }, []];
+    return [
+      {
+        target: {
+          id: ev.target.id,
+          classList: [...ev.target.classList]
+        }
+      },
+      []
+    ];
   },
-  deserialize: obj => obj,
+  deserialize: obj => obj
 });
 ```
 
