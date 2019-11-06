@@ -139,14 +139,17 @@ Each function parameter and return value is given to _all_ registered transfer h
 Comlink.transferHandlers.set("EVENT", {
   canHandle: obj => obj instanceof Event,
   serialize: ev => {
-    return [{
-      target: {
-        id: ev.target.id,
-        classList: [...ev.target.classList]
-      }
-    }, []];
+    return [
+      {
+        target: {
+          id: ev.target.id,
+          classList: [...ev.target.classList]
+        }
+      },
+      []
+    ];
   },
-  deserialize: obj => obj,
+  deserialize: obj => obj
 });
 ```
 
@@ -172,6 +175,10 @@ Calling it will return a new `MessagePort`, that has been hooked up to the same 
 const port = myProxy[Comlink.createEndpoint]();
 const newProxy = Comlink.wrap(port);
 ```
+
+## TypeScript
+
+Comlink does provide TypeScript types. When you `expose()` something of type `T`, the corresponding `wrap()` call will return something of type `Comlink.Remote<T>`. While this type has been battle-tested over some time now, it is implemented on a best-effort basis. There are some nuances that are incredibly hard if not impossible to encode correctly in TypeScript’s type system. It _may_ sometimes be necessary to force a certain type using `as unknown as <type>`.
 
 ## Node
 

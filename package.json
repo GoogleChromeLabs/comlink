@@ -1,6 +1,6 @@
 {
   "name": "comlink",
-  "version": "4.0.5",
+  "version": "4.1.0",
   "description": "Comlink makes WebWorkers enjoyable",
   "main": "dist/umd/comlink.js",
   "module": "dist/esm/comlink.mjs",
@@ -31,8 +31,8 @@
   "devDependencies": {
     "chai": "4.2.0",
     "conditional-type-checks": "1.0.1",
-    "husky": "3.0.7",
-    "karma": "4.3.0",
+    "husky": "3.0.9",
+    "karma": "4.4.1",
     "karma-chai": "0.1.0",
     "karma-chrome-launcher": "3.1.0",
     "karma-detect-browsers": "2.3.3",
@@ -40,13 +40,13 @@
     "karma-mocha": "1.3.0",
     "karma-safari-launcher": "1.0.0",
     "karma-safaritechpreview-launcher": "2.0.2",
-    "mocha": "6.2.1",
+    "mocha": "6.2.2",
     "prettier": "1.18.2",
     "rimraf": "3.0.0",
-    "rollup": "1.22.0",
+    "rollup": "1.26.2",
     "rollup-plugin-terser": "5.1.2",
     "rollup-plugin-typescript2": "0.24.3",
-    "typescript": "3.6.3"
+    "typescript": "3.6.4"
   },
   "dependencies": {}
 }
