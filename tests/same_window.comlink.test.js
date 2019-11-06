@@ -518,6 +518,12 @@ describe("Comlink in the same realm", function() {
     await instance[Comlink.releaseProxy]();
     expect(() => instance.method()).to.throw();
   });
+
+  it('can proxy with a given target', async function() {
+    const thing = Comlink.wrap(this.port1, { value: {} });
+    Comlink.expose({ value: 4 }, this.port2);
+    expect(await thing.value).to.equal(4);
+  });
 });
 
 function guardedIt(f) {
