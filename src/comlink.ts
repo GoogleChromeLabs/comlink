@@ -73,10 +73,6 @@ export type Remote<T> =
     [releaseProxy]: () => void;
   };
 
-declare var x: Remote<number>;
-
-declare var y: PromiseLike<number>;
-
 export interface TransferHandler {
   canHandle(obj: any): boolean;
   serialize(obj: any): [any, Transferable[]];
