@@ -21,6 +21,7 @@ import {
   WireValueType
 } from "./protocol";
 import { TransferHandlerMap } from "./transferHandlerMap";
+export * from "./transferHandlerMap";
 export { Endpoint };
 
 export const proxyMarker = Symbol("Comlink.proxy");
