@@ -10,6 +10,9 @@ export namespace TransferHandler {
   export type Any = TransferHandler | SerializeOnly | DeserializeOnly;
 }
 
+type MapValueType<M extends Map<any, any>> = M extends Map<any, infer U>
+  ? U
+  : never;
 namespace TransferHandlerMap {
   export type Name = string; //| number;
   export type Type = keyof TransferHandlerMap["_map"];
@@ -19,20 +22,18 @@ namespace TransferHandlerMap {
     | T[0]
     | (T[1] extends undefined ? never : T[1])
     | (T[2] extends undefined ? never : T[2]);
-  export type MapValueType<M extends Map<any, any>> = M extends Map<
-    any,
-    infer U
-  >
-    ? U
-    : never;
 
-  //   export type ModelTypes<T extends TypeModel> = TYPES_KEYS<typeof MODE_TRANSFER_TYPES_MAP[T]>;
   /**
-   * use extends check, to make some type which is extends TypeModel can workable.
+   * use **extends** checker, to make some type which is <extends TypeModel> can work to.
+   * @type { TYPES_KEYS<typeof MODE_TRANSFER_TYPES_MAP[T]> }
    */
   export type ModelTypes<T extends TypeModel> = T extends TypeModel
     ? TYPES_KEYS<typeof MODE_TRANSFER_TYPES_MAP[T]>
-    : never; //typeof MODE_TRANSFER_TYPES_MAP[T];
+    : never;
+
+  export type Handler<M extends TypeModel> = MapValueType<
+    TransferHandlerMap["_map"][TransferHandlerMap.ModelTypes<M>]
+  >;
 
   export interface Both extends TransferHandler {
     type: "both";
@@ -137,9 +138,7 @@ export class TransferHandlerMap {
     for (const type of MODE_TRANSFER_TYPES_MAP[mode]) {
       const transferHandler = this._map[type].get(name);
       if (transferHandler) {
-        return transferHandler as TransferHandlerMap.MapValueType<
-          TransferHandlerMap["_map"][TransferHandlerMap.ModelTypes<M>]
-        >;
+        return transferHandler as TransferHandlerMap.Handler<M>;
       }
     }
   }
@@ -166,16 +165,17 @@ export class TransferHandlerMap {
       this._map[type].clear();
     }
   }
-  forEach(
+  forEach<M extends TransferHandlerMap.TypeModel>(
     callbackfn: (
-      value: TransferHandlerMap.Name,
-      key: TransferHandlerMap.Any
-    ) => void
+      value: TransferHandlerMap.Handler<M>,
+      key: TransferHandlerMap.Name,
+      map: ReadonlyMap<TransferHandlerMap.Name, TransferHandlerMap.Handler<M>>
+    ) => void,
+    thisArg?: any,
+    mode: M = "any" as M
   ) {
-    for (const type of ANY_TRANSFER_TYPES) {
-      for (const item of this._map[type]) {
-        callbackfn(item[0], item[1]);
-      }
+    for (const type of MODE_TRANSFER_TYPES_MAP[mode]) {
+      this._map[type].forEach(callbackfn as any, thisArg);
     }
   }
   get size() {
@@ -205,12 +205,7 @@ export class TransferHandlerMap {
   *entries<M extends TransferHandlerMap.TypeModel>(mode: M = "any" as M) {
     for (const type of MODE_TRANSFER_TYPES_MAP[mode]) {
       yield* this._map[type].entries() as IterableIterator<
-        [
-          TransferHandlerMap.Name,
-          TransferHandlerMap.MapValueType<
-            TransferHandlerMap["_map"][TransferHandlerMap.ModelTypes<M>]
-          >
-        ]
+        [TransferHandlerMap.Name, TransferHandlerMap.Handler<M>]
       >;
     }
   }
@@ -230,9 +225,7 @@ export class TransferHandlerMap {
   *values<M extends TransferHandlerMap.TypeModel>(mode: M = "any" as M) {
     for (const type of MODE_TRANSFER_TYPES_MAP[mode]) {
       yield* this._map[type].values() as IterableIterator<
-        TransferHandlerMap.MapValueType<
-          TransferHandlerMap["_map"][TransferHandlerMap.ModelTypes<M>]
-        >
+        TransferHandlerMap.Handler<M>
       >;
     }
   }
