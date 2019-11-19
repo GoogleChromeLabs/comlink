@@ -41,7 +41,7 @@
     "karma-safari-launcher": "1.0.0",
     "karma-safaritechpreview-launcher": "2.0.2",
     "mocha": "6.2.2",
-    "prettier": "1.18.2",
+    "prettier": "1.19.1",
     "rimraf": "3.0.0",
     "rollup": "1.26.2",
     "rollup-plugin-terser": "5.1.2",
