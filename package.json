@@ -30,7 +30,7 @@
   "license": "Apache-2.0",
   "devDependencies": {
     "chai": "4.2.0",
-    "conditional-type-checks": "1.0.1",
+    "conditional-type-checks": "1.0.4",
     "husky": "3.0.9",
     "karma": "4.4.1",
     "karma-chai": "0.1.0",
