@@ -29,45 +29,46 @@ export const createEndpoint = Symbol("Comlink.endpoint");
 export const releaseProxy = Symbol("Comlink.releaseProxy");
 const throwSet = new WeakSet();
 
+type Promise1<T> = T extends Promise<any> ? T : Promise<T>;
 // prettier-ignore
 type Promisify<T> =
   T extends { [proxyMarker]: boolean }
-    ? Promise<Remote<T>>
-    : T extends (...args: infer R1) => infer R2
-        ? (...args: R1) => Promisify<R2>
-        : Promise<T>;
+  ? Promise1<Remote<T>>
+  : T extends (...args: infer R1) => infer R2
+  ? (...args: R1) => Promisify<R2>
+  : Promise1<T>;
 
 // prettier-ignore
 export type Remote<T> =
   (
     T extends (...args: infer R1) => infer R2
-      ? (...args: R1) => Promisify<R2>
-      : unknown
+    ? (...args: R1) => Promisify<R2>
+    : unknown
   ) &
   (
-    T extends { new (...args: infer R1): infer R2 }
-      ? { new (...args: R1): Promise<Remote<R2>> }
-      : unknown
+    T extends { new(...args: infer R1): infer R2 }
+    ? { new(...args: R1): Promise1<Remote<R2>> }
+    : unknown
   ) &
   (
     T extends Object
-      ? { [K in keyof T]: Remote<T[K]> }
-      : unknown
+    ? { [K in keyof T]: Remote<T[K]> }
+    : unknown
   ) &
   (
     T extends string
-      ? Promise<string>
-      : unknown
+    ? Promise1<string>
+    : unknown
   ) &
   (
     T extends number
-      ? Promise<number>
-      : unknown
+    ? Promise1<number>
+    : unknown
   ) &
   (
     T extends boolean
-      ? Promise<boolean>
-      : unknown
+    ? Promise1<boolean>
+    : unknown
   ) & {
     [createEndpoint]: MessagePort;
     [releaseProxy]: () => void;
