@@ -118,11 +118,14 @@ describe("Comlink in the same realm", function() {
 
   it("can forward an async function error", async function() {
     const thing = Comlink.wrap(this.port1);
-    Comlink.expose({
-      async throwError() {
-        throw new Error("Should have thrown");
-      }
-    }, this.port2);
+    Comlink.expose(
+      {
+        async throwError() {
+          throw new Error("Should have thrown");
+        }
+      },
+      this.port2
+    );
     try {
       await thing.throwError();
     } catch (err) {
@@ -519,7 +522,7 @@ describe("Comlink in the same realm", function() {
     expect(() => instance.method()).to.throw();
   });
 
-  it('can proxy with a given target', async function() {
+  it("can proxy with a given target", async function() {
     const thing = Comlink.wrap(this.port1, { value: {} });
     Comlink.expose({ value: 4 }, this.port2);
     expect(await thing.value).to.equal(4);

@@ -20,6 +20,8 @@ import {
   WireValue,
   WireValueType
 } from "./protocol";
+import { TransferHandlerMap } from "./transferHandlerMap";
+export * from "./transferHandlerMap";
 export { Endpoint };
 
 export const proxyMarker = Symbol("Comlink.proxy");
@@ -27,53 +29,50 @@ export const createEndpoint = Symbol("Comlink.endpoint");
 export const releaseProxy = Symbol("Comlink.releaseProxy");
 const throwSet = new WeakSet();
 
+type Promise1<T> = T extends Promise<any> ? T : Promise<T>;
 // prettier-ignore
 type Promisify<T> =
   T extends { [proxyMarker]: boolean }
-    ? Promise<Remote<T>>
-    : T extends (...args: infer R1) => infer R2
-        ? (...args: R1) => Promisify<R2>
-        : Promise<T>;
+  ? Promise1<Remote<T>>
+  : T extends (...args: infer R1) => infer R2
+  ? (...args: R1) => Promisify<R2>
+  : Promise1<T>;
 
 // prettier-ignore
 export type Remote<T> =
   (
     T extends (...args: infer R1) => infer R2
-      ? (...args: R1) => Promisify<R2>
-      : unknown
+    ? (...args: R1) => Promisify<R2>
+    : unknown
   ) &
   (
-    T extends { new (...args: infer R1): infer R2 }
-      ? { new (...args: R1): Promise<Remote<R2>> }
-      : unknown
+    T extends { new(...args: infer R1): infer R2 }
+    ? { new(...args: R1): Promise1<Remote<R2>> }
+    : unknown
   ) &
   (
     T extends Object
-      ? { [K in keyof T]: Remote<T[K]> }
-      : unknown
+    ? { [K in keyof T]: Remote<T[K]> }
+    : unknown
   ) &
   (
     T extends string
-      ? Promise<string>
-      : unknown
+    ? Promise1<string>
+    : unknown
   ) &
   (
     T extends number
-      ? Promise<number>
-      : unknown
+    ? Promise1<number>
+    : unknown
   ) &
   (
     T extends boolean
-      ? Promise<boolean>
-      : unknown
+    ? Promise1<boolean>
+    : unknown
   ) & {
     [createEndpoint]: MessagePort;
     [releaseProxy]: () => void;
   };
-
-declare var x: Remote<number>;
-
-declare var y: PromiseLike<number>;
 
 export interface TransferHandler {
   canHandle(obj: any): boolean;
@@ -81,7 +80,7 @@ export interface TransferHandler {
   deserialize(obj: any): any;
 }
 
-export const transferHandlers = new Map<string, TransferHandler>([
+export const transferHandlers = new TransferHandlerMap([
   [
     "proxy",
     {
@@ -334,7 +333,7 @@ export function windowEndpoint(
 }
 
 function toWireValue(value: any): [WireValue, Transferable[]] {
-  for (const [name, handler] of transferHandlers) {
+  for (const [name, handler] of transferHandlers.entries("serializable")) {
     if (handler.canHandle(value)) {
       const [serializedValue, transferables] = handler.serialize(value);
       return [
@@ -359,7 +358,9 @@ function toWireValue(value: any): [WireValue, Transferable[]] {
 function fromWireValue(value: WireValue): any {
   switch (value.type) {
     case WireValueType.HANDLER:
-      return transferHandlers.get(value.name)!.deserialize(value.value);
+      return transferHandlers
+        .get(value.name, "deserializable")!
+        .deserialize(value.value);
     case WireValueType.RAW:
       return value.value;
   }
