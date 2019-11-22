@@ -19,7 +19,7 @@ import {
   PostMessageWithOrigin,
   WireValue,
   WireValueType
-} from "./protocol.js";
+} from "./protocol";
 export { Endpoint };
 
 export const proxyMarker = Symbol("Comlink.proxy");
@@ -66,7 +66,10 @@ export type Remote<T> =
     T extends boolean
       ? Promise<boolean>
       : unknown
-  );
+  ) & {
+    [createEndpoint]: MessagePort;
+    [releaseProxy]: () => void;
+  };
 
 declare var x: Remote<number>;
 

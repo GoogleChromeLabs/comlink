@@ -4,3 +4,4 @@ node_modules
 *.bak
 dist
 .*_cache*
+package-lock.json

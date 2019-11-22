@@ -30,8 +30,8 @@
   "license": "Apache-2.0",
   "devDependencies": {
     "chai": "4.2.0",
-    "conditional-type-checks": "1.0.1",
-    "husky": "3.0.9",
+    "conditional-type-checks": "1.0.4",
+    "husky": "3.1.0",
     "karma": "4.4.1",
     "karma-chai": "0.1.0",
     "karma-chrome-launcher": "3.1.0",
@@ -41,12 +41,12 @@
     "karma-safari-launcher": "1.0.0",
     "karma-safaritechpreview-launcher": "2.0.2",
     "mocha": "6.2.2",
-    "prettier": "1.18.2",
+    "prettier": "1.19.1",
     "rimraf": "3.0.0",
-    "rollup": "1.26.2",
+    "rollup": "1.27.2",
     "rollup-plugin-terser": "5.1.2",
-    "rollup-plugin-typescript2": "0.24.3",
-    "typescript": "3.6.4"
+    "rollup-plugin-typescript2": "0.25.2",
+    "typescript": "3.7.2"
   },
   "dependencies": {}
 }
