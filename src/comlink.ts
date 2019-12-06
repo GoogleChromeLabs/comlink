@@ -151,6 +151,9 @@ export function expose(obj: any, ep: Endpoint = self as any) {
           break;
         case MessageType.APPLY:
           {
+            if (typeof rawValue !== "function") {
+              throw Error(`${path.join(".")} is not a function`);
+            }
             returnValue = rawValue.apply(parent, argumentList);
           }
           break;

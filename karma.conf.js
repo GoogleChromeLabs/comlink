@@ -44,7 +44,7 @@ module.exports = function(config) {
         if (process.env.INSIDE_DOCKER) {
           return ["DockerChrome"];
         } else if (process.env.CHROME_ONLY) {
-          return ["SafariTechPreview"];
+          return ["ChromeHeadless"];
         } else {
           // Filtering SafariTechPreview because I am having
           // local issues and I have no idea how to fix them.

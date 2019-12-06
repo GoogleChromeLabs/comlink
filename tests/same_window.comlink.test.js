@@ -98,6 +98,21 @@ describe("Comlink in the same realm", function() {
     expect(await thing.x).to.be.undefined;
   });
 
+  it("gives a useful error message when invoking non-functions", async function() {
+    const thing = Comlink.wrap(this.port1);
+    Comlink.expose({
+      a() {
+        return 4;
+      }
+    }, this.port2);
+    try {
+      await thing.doesNotExist();
+      throw "Should have thrown";
+    } catch (err) {
+      expect(err.message).to.contain("doesNotExist")
+    }
+  });
+
   it("can keep the stack and message of thrown errors", async function() {
     let stack;
     const thing = Comlink.wrap(this.port1);
