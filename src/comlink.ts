@@ -323,11 +323,12 @@ export function proxy<T>(obj: T): T & { [proxyMarker]: true } {
 
 export function windowEndpoint(
   w: PostMessageWithOrigin,
-  context: EventSource = self
+  context: EventSource = self,
+  targetOrigin = "*"
 ): Endpoint {
   return {
     postMessage: (msg: any, transferables: Transferable[]) =>
-      w.postMessage(msg, "*", transferables),
+      w.postMessage(msg, targetOrigin, transferables),
     addEventListener: context.addEventListener.bind(context),
     removeEventListener: context.removeEventListener.bind(context)
   };

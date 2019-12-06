@@ -176,6 +176,14 @@ const port = myProxy[Comlink.createEndpoint]();
 const newProxy = Comlink.wrap(port);
 ```
 
+### `Comlink.windowEndpoint(window, context = self, targetOrigin = "*")`
+
+Windows and Web Workers have a slightly different variants of `postMessage`. If you want to use Comlink to communicate with an iframe or another window, you need to wrap it with `windowEndpoint()`.
+
+`window` is the window that should be communicate with. `context` is the `EventTarget` on which messages _from_ the `window` can be received (often `self`). `targetOrigin` is passed through to `postMessage` and allows to filter messages by origin. For details, see the documentation for [`Window.postMessage`](https://developer.mozilla.org/en-US/docs/Web/API/Window/postMessage).
+
+For a usage example, take a look at the non-worker examples in the `docs` folder.
+
 ## TypeScript
 
 Comlink does provide TypeScript types. When you `expose()` something of type `T`, the corresponding `wrap()` call will return something of type `Comlink.Remote<T>`. While this type has been battle-tested over some time now, it is implemented on a best-effort basis. There are some nuances that are incredibly hard if not impossible to encode correctly in TypeScript’s type system. It _may_ sometimes be necessary to force a certain type using `as unknown as <type>`.
