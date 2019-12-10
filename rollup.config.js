@@ -48,5 +48,9 @@ export default [
   { input: "node-adapter", format: "esm", minify: false, ext: "mjs" },
   { input: "node-adapter", format: "esm", minify: true, ext: "mjs" },
   { input: "node-adapter", format: "umd", minify: false },
-  { input: "node-adapter", format: "umd", minify: true }
+  { input: "node-adapter", format: "umd", minify: true },
+  { input: "web-extension-adapter", format: "esm", minify: false, ext: "mjs" },
+  { input: "web-extension-adapter", format: "esm", minify: true, ext: "mjs" },
+  { input: "web-extension-adapter", format: "umd", minify: false },
+  { input: "web-extension-adapter", format: "umd", minify: true }
 ].map(config);
