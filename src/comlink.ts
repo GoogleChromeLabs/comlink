@@ -67,6 +67,8 @@ export type Remote<T> =
       ? Promise<boolean>
       : unknown
   ) & {
+    (...args: any): void;
+    new: (...args: any) => void;
     [createEndpoint]: () => Promise<MessagePort>;
     [releaseProxy]: () => void;
   };
