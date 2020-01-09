@@ -50,8 +50,9 @@ module.exports = function(config) {
           // local issues and I have no idea how to fix them.
           // I know that’s not a good reason to disable tests,
           // but Safari TP is relatively unimportant.
+          // Added IE as well.
           return availableBrowsers.filter(
-            browser => browser !== "SafariTechPreview"
+            browser => browser !== "SafariTechPreview" && browser !== "IE"
           );
         }
       }
