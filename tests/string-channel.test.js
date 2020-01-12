@@ -16,24 +16,12 @@ import { wrap } from "/base/dist/esm/string-channel.mjs";
 
 describe("StringChannel", function() {
   beforeEach(function() {
-    const ts = new TransformStream();
-    this.readable = ts.readable;
-    this.writable = ts.writable;
-  });
+    const ts1 = new TransformStream();
+    const ts2 = new TransformStream();
 
-  it("can communicate by just using strings", function(done) {
-    const { readable, writable } = this;
-    const ep1 = wrap({
-      setMessageListener(f) {},
-      send(msg) {
-        const w = writable.getWriter();
-        w.write(msg);
-        w.releaseLock();
-      }
-    });
-    const ep2 = wrap({
+    this.ep1 = wrap({
       async setMessageListener(f) {
-        const r = readable.getReader();
+        const r = ts2.readable.getReader();
         while (true) {
           const { value, done } = await r.read();
           if (done) {
@@ -42,16 +30,40 @@ describe("StringChannel", function() {
           f(value);
         }
       },
-      send(msg) {}
+      send(msg) {
+        const w = ts1.writable.getWriter();
+        w.write(msg);
+        w.releaseLock();
+      }
     });
+    this.ep2 = wrap({
+      async setMessageListener(f) {
+        const r = ts1.readable.getReader();
+        while (true) {
+          const { value, done } = await r.read();
+          if (done) {
+            return;
+          }
+          f(value);
+        }
+      },
+      send(msg) {
+        const w = ts2.writable.getWriter();
+        w.write(msg);
+        w.releaseLock();
+      }
+    });
+  });
+
+  it("can communicate by just using strings", function(done) {
     const originalMessage = { a: 1, b: "hello" };
-    ep2.addEventListener("message", ({ data }) => {
+    this.ep2.addEventListener("message", ({ data }) => {
       expect(JSON.stringify(data)).to.equal(JSON.stringify(originalMessage));
       // Make sure it's a copy!
       expect(data).to.not.equal(originalMessage);
       done();
     });
-    ep1.postMessage(originalMessage);
+    this.ep1.postMessage(originalMessage);
   });
 });
 
