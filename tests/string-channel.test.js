@@ -63,7 +63,22 @@ describe("StringChannel", function() {
       expect(data).to.not.equal(originalMessage);
       done();
     });
+    this.ep2.start();
     this.ep1.postMessage(originalMessage);
+  });
+
+  xit("can transfer MessagePorts", function(done) {
+    const originalMessage = { a: 1, b: "hello" };
+    const mc = new MessageChannel();
+    this.ep2.addEventListener("message", ({ data }) => {
+      data.port.addEventListener("message", ({ data }) => {
+        expect(JSON.stringify(data)).to.equal(JSON.stringify(originalMessage));
+        done();
+      });
+      data.port.start();
+    });
+    this.ep1.postMessage({ port: mc.port2 }, [mc.port2]);
+    mc.port1.postMessage(originalMessage);
   });
 });
 
