@@ -45,6 +45,8 @@ export default [
   { input: "comlink", format: "esm", minify: true },
   { input: "comlink", format: "umd", minify: false },
   { input: "comlink", format: "umd", minify: true },
+  { input: "string-channel", format: "esm", minify: false, ext: "mjs" },
+  { input: "string-channel", format: "umd", minify: false },
   { input: "node-adapter", format: "esm", minify: false, ext: "mjs" },
   { input: "node-adapter", format: "esm", minify: true, ext: "mjs" },
   { input: "node-adapter", format: "umd", minify: false },
