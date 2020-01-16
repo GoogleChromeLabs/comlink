@@ -13,7 +13,7 @@
 
 export type StringListener = (msg: string) => void;
 export interface StringChannelEndpoint {
-  setMessageListener(listener: StringListener): void;
+  addMessageListener(listener: StringListener): void;
   send(msg: string): void;
 }
 
@@ -59,8 +59,6 @@ function replaceValueAtPath(value: any, path: string[], newValue: any): {} {
   value[lastProp] = newValue;
   return oldValue;
 }
-
-type MessageEventListener = (ev: MessageEvent) => any;
 
 const enum SerializableTransferableType {
   MessagePort,
@@ -132,7 +130,7 @@ interface StringChannelPayload {
 export function wrap(ep: StringChannelEndpoint, uid = "") {
   const { port1, port2 } = new MessageChannel();
 
-  ep.setMessageListener(msg => {
+  ep.addMessageListener(msg => {
     let payload: StringChannelPayload;
     payload = JSON.parse(msg);
     console.log("1a>", msg, uid);
