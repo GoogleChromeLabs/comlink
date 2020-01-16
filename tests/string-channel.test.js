@@ -71,7 +71,7 @@ describe("StringChannel", function() {
     this.ep1.postMessage(originalMessage);
   });
 
-  xit("can transfer MessagePorts", function(done) {
+  it("can transfer MessagePorts", function(done) {
     const originalMessage = { a: 1, b: "hello" };
     const mc = new MessageChannel();
     this.ep2.addEventListener("message", ({ data }) => {
@@ -81,6 +81,7 @@ describe("StringChannel", function() {
       });
       data.port.start();
     });
+    this.ep2.start();
     this.ep1.postMessage({ port: mc.port2 }, [mc.port2]);
     mc.port1.postMessage(originalMessage);
   });
