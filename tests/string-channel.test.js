@@ -16,13 +16,13 @@ import { wrap } from "/base/dist/esm/string-channel.mjs";
 
 describe("StringChannel", function() {
   beforeEach(function() {
-    let {readable: r1, writable: w1} = new TransformStream();
-    let {readable: r2, writable: w2}= new TransformStream();
+    let { readable: r1, writable: w1 } = new TransformStream();
+    let { readable: r2, writable: w2 } = new TransformStream();
 
     this.ep1 = wrap({
       async addMessageListener(f) {
         let rs;
-        const [r2, rs] = r2.tee();
+        [r2, rs] = r2.tee();
         const r = rs.getReader();
         while (true) {
           const { value, done } = await r.read();
@@ -33,7 +33,7 @@ describe("StringChannel", function() {
         }
       },
       send(msg) {
-        const w = ts1.writable.getWriter();
+        const w = w1.getWriter();
         w.write(msg);
         w.releaseLock();
       }
@@ -41,7 +41,7 @@ describe("StringChannel", function() {
     this.ep2 = wrap({
       async addMessageListener(f) {
         let rs;
-        const [r1, rs] = r1.tee();
+        [r1, rs] = r1.tee();
         const r = rs.getReader();
         while (true) {
           const { value, done } = await r.read();
@@ -52,7 +52,7 @@ describe("StringChannel", function() {
         }
       },
       send(msg) {
-        const w = ts2.writable.getWriter();
+        const w = w2.getWriter();
         w.write(msg);
         w.releaseLock();
       }
