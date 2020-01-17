@@ -4,8 +4,11 @@ const WebSocket = require("ws");
 const http = require("http");
 const { join } = require("path");
 
+const { MessageChannel, MessagePort } = require("worker_threads");
+globalThis.MessageChannel = MessageChannel;
+globalThis.MessagePort = MessagePort;
+
 const Comlink = require("../../../../dist/umd/comlink.js");
-const { websocketEndpoint } = require("./websocket-adapter.js");
 
 const app = Express();
 app.use("/dist/", Express.static("../../../../dist/"));
@@ -28,3 +31,19 @@ wss.on("connection", ws => {
 });
 
 server.listen("8080");
+
+const { wrap } = require("../../../../dist/umd/string-channel.experimental.js");
+const nodeEndpoint = require("../../../../dist/umd/node-adapter.js");
+
+function websocketEndpoint(ws) {
+  return nodeEndpoint(
+    wrap({
+      addMessageListener(f) {
+        ws.addEventListener("message", ev => f(ev.data));
+      },
+      send(msg) {
+        ws.send(msg);
+      }
+    })
+  );
+}

@@ -8,25 +8,31 @@
   async function run() {
     console.log("Opening WebSocket connection...");
     const ws = new WebSocket(`ws://${location.host}/ws`);
-    await new Promise(resolve =>
-      ws.addEventListener("open", resolve, { once: true })
-    );
-    const api = Comlink.wrap(
-      wrap({
-        addMessageListener(f) {
-          ws.addEventListener("message", ev => f(ev.data));
-        },
-        send(msg) {
-          ws.send(msg);
-        }
-      })
-    );
+    await websocketReady(ws);
+
+    const api = Comlink.wrap(websocketEndpoint(ws));
+
     document.querySelector("#trigger").addEventListener("click", async () => {
       await api.increase();
-      document.querySelector(
-        "#output"
-      ).textContent = `Counter: ${await api.counter}`;
+      console.log(`Counter: ${await api.counter}`);
     });
   }
   run();
+
+  function websocketReady(ws) {
+    return new Promise(resolve =>
+      ws.addEventListener("open", resolve, { once: true })
+    );
+  }
+
+  function websocketEndpoint(ws) {
+    return wrap({
+      addMessageListener(f) {
+        ws.addEventListener("message", ev => f(ev.data));
+      },
+      send(msg) {
+        ws.send(msg);
+      }
+    });
+  }
 </script>
