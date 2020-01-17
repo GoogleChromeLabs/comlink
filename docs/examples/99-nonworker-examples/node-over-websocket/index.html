@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<button id="trigger">Click me</button>
+<script type="module">
+  import * as Comlink from "/dist/esm/comlink.js";
+  import { wrap } from "/dist/esm/string-channel.experimental.js";
+
+  async function run() {
+    console.log("Opening WebSocket connection...");
+    const ws = new WebSocket(`ws://${location.host}/ws`);
+    await new Promise(resolve =>
+      ws.addEventListener("open", resolve, { once: true })
+    );
+    const api = Comlink.wrap(
+      wrap({
+        addMessageListener(f) {
+          ws.addEventListener("message", ev => f(ev.data));
+        },
+        send(msg) {
+          ws.send(msg);
+        }
+      })
+    );
+    document.querySelector("#trigger").addEventListener("click", async () => {
+      console.log(await api.hello());
+    });
+  }
+  run();
+</script>

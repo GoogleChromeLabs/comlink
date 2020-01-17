@@ -47,7 +47,8 @@
     "rollup-plugin-terser": "5.1.2",
     "rollup-plugin-typescript2": "0.25.3",
     "typescript": "3.7.3",
-    "web-streams-polyfill": "^2.0.6"
+    "web-streams-polyfill": "^2.0.6",
+    "ws": "^7.2.1"
   },
   "dependencies": {}
 }

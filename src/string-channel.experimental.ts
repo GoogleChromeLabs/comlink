@@ -89,6 +89,18 @@ function hexDecode(s: string): ArrayBuffer {
   ).buffer;
 }
 
+function addMessageListener(
+  target: EventTarget,
+  listener: (ev: MessageEvent) => void
+) {
+  if ("on" in target) {
+    return (target as any).on("message", (data: any) =>
+      listener({ data } as any)
+    );
+  }
+  target.addEventListener("message", listener as any);
+}
+
 const enum SerializedTransferableType {
   MessagePort,
   TypedArray
@@ -205,14 +217,14 @@ function makeTransferable(
     const uid = generateUID();
     messagePortMap.set(uid, ep);
     const wrapped = wrap(ep, uid);
-    v.addEventListener("message", ({ data }) => {
+    addMessageListener(v, ({ data }) => {
       wrapped.postMessage(
         data,
         findAllTransferables(data).map(v => v.value)
       );
     });
     v.start();
-    wrapped.addEventListener("message", ({ data }) => {
+    addMessageListener(wrapped, ({ data }) => {
       v.postMessage(
         data,
         findAllTransferables(data).map(v => v.value)
@@ -294,7 +306,7 @@ export function wrap(ep: StringChannelEndpoint, uid = "") {
     port2.postMessage(payload.data, transferables);
   });
 
-  port2.addEventListener("message", ({ data }) => {
+  addMessageListener(port2, ({ data }) => {
     const transfer: SerializedTransferable[] = [];
     for (const { path } of findAllTransferables(data)) {
       const oldValue = replaceValueAtPath(data, path, null);
