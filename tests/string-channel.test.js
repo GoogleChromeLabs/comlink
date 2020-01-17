@@ -85,6 +85,16 @@ describe("StringChannel", function() {
     this.ep1.postMessage({ port: mc.port2 }, [mc.port2]);
     mc.port1.postMessage(originalMessage);
   });
+
+  it("can transfer ArrayBuffers", function(done) {
+    const originalMessage = { a: 1, b: new Uint8Array([1, 2, 3]).buffer };
+    this.ep2.addEventListener("message", ({ data }) => {
+      expect([...new Uint8Array(data.b)]).to.deep.equal([1, 2, 3]);
+      done();
+    });
+    this.ep2.start();
+    this.ep1.postMessage(originalMessage);
+  });
 });
 
 function guardedIt(f) {

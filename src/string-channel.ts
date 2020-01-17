@@ -70,6 +70,10 @@ function replaceValueAtPath(value: any, path: string[], newValue: any): {} {
   return oldValue;
 }
 
+function padLeft(str: string, pad: string, length: number): string {
+  return (pad.repeat(length) + str).slice(-length);
+}
+
 const enum SerializedTransferableType {
   MessagePort,
   ArrayBuffer
@@ -118,6 +122,14 @@ function makeTransferable(
       path: [],
       value: uid
     };
+  } else if (v instanceof ArrayBuffer) {
+    return {
+      type: SerializedTransferableType.ArrayBuffer,
+      path: [],
+      value: [...new Uint8Array(v)]
+        .map(v => padLeft(v.toString(16), "0", 2))
+        .join("")
+    };
   }
   throw Error("Not transferable");
 }
@@ -133,6 +145,25 @@ function isTransferable(v: any): v is Transferable {
     return true;
   }
   return false;
+}
+
+function deserializeTransferable(
+  transfer: SerializedTransferable,
+  ep: StringChannelEndpoint
+): Transferable {
+  switch (transfer.type) {
+    case SerializedTransferableType.MessagePort:
+      return wrap(ep, transfer.value);
+    case SerializedTransferableType.ArrayBuffer:
+      return new Uint8Array(
+        transfer.value
+          .split(/(..)/)
+          .filter(Boolean)
+          .map(v => parseInt(v, 16))
+      ).buffer;
+    default:
+      throw Error("Unknown transferable");
+  }
 }
 
 interface StringChannelPayload {
@@ -152,14 +183,8 @@ export function wrap(ep: StringChannelEndpoint, uid = "") {
     }
     const transferables: Transferable[] = payload.transfer
       .map(transfer => {
-        let replacement;
-        switch (transfer.type) {
-          case SerializedTransferableType.MessagePort:
-            replacement = wrap(ep, transfer.value);
-            break;
-          default:
-            throw Error("Unknown transferable");
-        }
+        let replacement = deserializeTransferable(transfer, ep);
+
         replaceValueAtPath(payload.data, transfer.path, replacement);
         return replacement;
       })
