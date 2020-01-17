@@ -95,6 +95,16 @@ describe("StringChannel", function() {
     this.ep2.start();
     this.ep1.postMessage(originalMessage);
   });
+
+  it("can transfer TypedArrays", function(done) {
+    const originalMessage = { a: 1, b: new Uint8Array([1, 2, 3]) };
+    this.ep2.addEventListener("message", ({ data }) => {
+      expect([...data.b]).to.deep.equal([1, 2, 3]);
+      done();
+    });
+    this.ep2.start();
+    this.ep1.postMessage(originalMessage);
+  });
 });
 
 function guardedIt(f) {

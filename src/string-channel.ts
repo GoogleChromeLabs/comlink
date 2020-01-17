@@ -38,11 +38,11 @@ function* iterateAllProperties(
   if (visited.has(value)) return;
   if (typeof value === "string") return;
   if (typeof value === "object") visited.add(value);
-  if (ArrayBuffer.isView(value)) return;
-  // This one is not necessary to catch as `Object.keys(value)`
-  // will be an empty array.
-  // if (value instanceof ArrayBuffer) return;
   yield { value, path };
+
+  // Emit these objects, but don’t traverse them.
+  if (ArrayBuffer.isView(value)) return;
+  if (value instanceof ArrayBuffer) return;
 
   const keys = Object.keys(value);
   for (const key of keys) {
@@ -74,15 +74,117 @@ function padLeft(str: string, pad: string, length: number): string {
   return (pad.repeat(length) + str).slice(-length);
 }
 
-const enum SerializedTransferableType {
-  MessagePort,
-  ArrayBuffer
+function hexEncode(buffer: ArrayBuffer): string {
+  return [...new Uint8Array(buffer)]
+    .map(v => padLeft(v.toString(16), "0", 2))
+    .join("");
 }
 
-interface SerializedTransferableArrayBuffer {
-  type: SerializedTransferableType.ArrayBuffer;
+function hexDecode(s: string): ArrayBuffer {
+  return new Uint8Array(
+    s
+      .split(/(..)/)
+      .filter(Boolean)
+      .map(v => parseInt(v, 16))
+  ).buffer;
+}
+
+const enum SerializedTransferableType {
+  MessagePort,
+  TypedArray
+}
+
+const enum TypedArrayType {
+  Raw,
+  Int8,
+  Uint8,
+  Uint8Clamped,
+  Int16,
+  Uint16,
+  Int32,
+  Uint32,
+  Float32,
+  Float64,
+  BigInt64,
+  BigUint64
+}
+
+interface SerializedTransferableTypedArray {
+  type: SerializedTransferableType.TypedArray;
+  subtype: TypedArrayType;
   path: string[];
   value: string;
+}
+
+function getTypedArrayType(v: ArrayBuffer | ArrayBufferView): TypedArrayType {
+  if (!ArrayBuffer.isView(v)) {
+    return TypedArrayType.Raw;
+  }
+  if (v instanceof Int8Array) {
+    return TypedArrayType.Int8;
+  }
+  if (v instanceof Uint8Array) {
+    return TypedArrayType.Uint8;
+  }
+  if (v instanceof Uint8ClampedArray) {
+    return TypedArrayType.Uint8Clamped;
+  }
+  if (v instanceof Int16Array) {
+    return TypedArrayType.Int16;
+  }
+  if (v instanceof Uint16Array) {
+    return TypedArrayType.Uint16;
+  }
+  if (v instanceof Int32Array) {
+    return TypedArrayType.Int32;
+  }
+  if (v instanceof Uint32Array) {
+    return TypedArrayType.Uint32;
+  }
+  if (v instanceof Float32Array) {
+    return TypedArrayType.Float32;
+  }
+  if (v instanceof Float64Array) {
+    return TypedArrayType.Float64;
+  }
+  if (v instanceof BigInt64Array) {
+    return TypedArrayType.BigInt64;
+  }
+  if (v instanceof BigUint64Array) {
+    return TypedArrayType.BigUint64;
+  }
+  throw Error("Unknown ArrayBufferView type");
+}
+
+function getTypedViewConstructor(
+  type: TypedArrayType
+): (v: ArrayBuffer) => ArrayBufferView | ArrayBuffer {
+  switch (type) {
+    case TypedArrayType.Raw:
+      return v => v;
+    case TypedArrayType.Int8:
+      return v => new Int8Array(v);
+    case TypedArrayType.Uint8:
+      return v => new Uint8Array(v);
+    case TypedArrayType.Uint8Clamped:
+      return v => new Uint8ClampedArray(v);
+    case TypedArrayType.Int16:
+      return v => new Int16Array(v);
+    case TypedArrayType.Uint16:
+      return v => new Uint16Array(v);
+    case TypedArrayType.Int32:
+      return v => new Int32Array(v);
+    case TypedArrayType.Uint32:
+      return v => new Uint32Array(v);
+    case TypedArrayType.Float32:
+      return v => new Float32Array(v);
+    case TypedArrayType.Float64:
+      return v => new Float64Array(v);
+    case TypedArrayType.BigInt64:
+      return v => new BigInt64Array(v);
+    case TypedArrayType.BigUint64:
+      return v => new BigUint64Array(v);
+  }
 }
 
 interface SerializedTransferableMessagePort {
@@ -93,7 +195,7 @@ interface SerializedTransferableMessagePort {
 
 type SerializedTransferable =
   | SerializedTransferableMessagePort
-  | SerializedTransferableArrayBuffer;
+  | SerializedTransferableTypedArray;
 const messagePortMap = new Map<string, StringChannelEndpoint>();
 function makeTransferable(
   v: unknown,
@@ -122,13 +224,13 @@ function makeTransferable(
       path: [],
       value: uid
     };
-  } else if (v instanceof ArrayBuffer) {
+  } else if (v instanceof ArrayBuffer || ArrayBuffer.isView(v)) {
+    const buffer = (v as any).buffer || v;
     return {
-      type: SerializedTransferableType.ArrayBuffer,
+      type: SerializedTransferableType.TypedArray,
+      subtype: getTypedArrayType(v),
       path: [],
-      value: [...new Uint8Array(v)]
-        .map(v => padLeft(v.toString(16), "0", 2))
-        .join("")
+      value: hexEncode(buffer)
     };
   }
   throw Error("Not transferable");
@@ -150,17 +252,15 @@ function isTransferable(v: any): v is Transferable {
 function deserializeTransferable(
   transfer: SerializedTransferable,
   ep: StringChannelEndpoint
-): Transferable {
+): [any, Transferable] {
   switch (transfer.type) {
     case SerializedTransferableType.MessagePort:
-      return wrap(ep, transfer.value);
-    case SerializedTransferableType.ArrayBuffer:
-      return new Uint8Array(
-        transfer.value
-          .split(/(..)/)
-          .filter(Boolean)
-          .map(v => parseInt(v, 16))
-      ).buffer;
+      const port = wrap(ep, transfer.value);
+      return [port, port];
+    case SerializedTransferableType.TypedArray:
+      const constructor = getTypedViewConstructor(transfer.subtype);
+      const buffer = hexDecode(transfer.value);
+      return [constructor(buffer), buffer];
     default:
       throw Error("Unknown transferable");
   }
@@ -183,10 +283,12 @@ export function wrap(ep: StringChannelEndpoint, uid = "") {
     }
     const transferables: Transferable[] = payload.transfer
       .map(transfer => {
-        let replacement = deserializeTransferable(transfer, ep);
-
+        const [replacement, transferable] = deserializeTransferable(
+          transfer,
+          ep
+        );
         replaceValueAtPath(payload.data, transfer.path, replacement);
-        return replacement;
+        return transferable;
       })
       .filter(Boolean);
     port2.postMessage(payload.data, transferables);
