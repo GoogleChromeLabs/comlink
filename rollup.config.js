@@ -45,8 +45,22 @@ export default [
   { input: "comlink", format: "esm", minify: true },
   { input: "comlink", format: "umd", minify: false },
   { input: "comlink", format: "umd", minify: true },
-  { input: "string-channel", format: "esm", minify: false, ext: "mjs" },
-  { input: "string-channel", format: "umd", minify: false },
+  {
+    input: "string-channel.experimental",
+    format: "esm",
+    minify: false,
+    ext: "mjs"
+  },
+  {
+    input: "string-channel.experimental",
+    format: "esm",
+    minify: true,
+    ext: "mjs"
+  },
+  { input: "string-channel.experimental", format: "esm", minify: false },
+  { input: "string-channel.experimental", format: "esm", minify: true },
+  { input: "string-channel.experimental", format: "umd", minify: false },
+  { input: "string-channel.experimental", format: "umd", minify: true },
   { input: "node-adapter", format: "esm", minify: false, ext: "mjs" },
   { input: "node-adapter", format: "esm", minify: true, ext: "mjs" },
   { input: "node-adapter", format: "umd", minify: false },

@@ -12,7 +12,7 @@
  */
 
 import "/base/node_modules/web-streams-polyfill/dist/polyfill.es2018.js";
-import { wrap } from "/base/dist/esm/string-channel.mjs";
+import { wrap } from "/base/dist/esm/string-channel.experimental.mjs";
 
 describe("StringChannel", function() {
   beforeEach(function() {
