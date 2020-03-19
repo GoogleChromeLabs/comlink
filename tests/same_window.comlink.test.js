@@ -118,11 +118,14 @@ describe("Comlink in the same realm", function() {
 
   it("can forward an async function error", async function() {
     const thing = Comlink.wrap(this.port1);
-    Comlink.expose({
-      async throwError() {
-        throw new Error("Should have thrown");
-      }
-    }, this.port2);
+    Comlink.expose(
+      {
+        async throwError() {
+          throw new Error("Should have thrown");
+        }
+      },
+      this.port2
+    );
     try {
       await thing.throwError();
     } catch (err) {
@@ -316,7 +319,7 @@ describe("Comlink in the same realm", function() {
     const receive = await thing(array);
     expect(array).to.not.equal(receive);
     expect(array.byteLength).to.equal(receive.byteLength);
-    expect([...array]).to.deep.equal([...receive])
+    expect([...array]).to.deep.equal([...receive]);
   });
 
   guardedIt(isNotSafari11_1)("will copy nested TypedArrays", async function() {
@@ -329,7 +332,7 @@ describe("Comlink in the same realm", function() {
     });
     expect(array).to.not.equal(receive.array);
     expect(array.byteLength).to.equal(receive.array.byteLength);
-    expect([...array]).to.deep.equal([...receive.array])
+    expect([...array]).to.deep.equal([...receive.array]);
   });
 
   guardedIt(isNotSafari11_1)(
@@ -542,7 +545,7 @@ describe("Comlink in the same realm", function() {
     expect(() => instance.method()).to.throw();
   });
 
-  it('can proxy with a given target', async function() {
+  it("can proxy with a given target", async function() {
     const thing = Comlink.wrap(this.port1, { value: {} });
     Comlink.expose({ value: 4 }, this.port2);
     expect(await thing.value).to.equal(4);
