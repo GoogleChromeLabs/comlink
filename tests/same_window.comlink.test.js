@@ -309,6 +309,29 @@ describe("Comlink in the same realm", function() {
     expect(buffer.byteLength).to.equal(0);
   });
 
+  guardedIt(isNotSafari11_1)("will copy TypedArrays", async function() {
+    const thing = Comlink.wrap(this.port1);
+    Comlink.expose(b => b, this.port2);
+    const array = new Uint8Array([1, 2, 3]);
+    const receive = await thing(array);
+    expect(array).to.not.equal(receive);
+    expect(array.byteLength).to.equal(receive.byteLength);
+    expect([...array]).to.deep.equal([...receive])
+  });
+
+  guardedIt(isNotSafari11_1)("will copy nested TypedArrays", async function() {
+    const thing = Comlink.wrap(this.port1);
+    Comlink.expose(b => b, this.port2);
+    const array = new Uint8Array([1, 2, 3]);
+    const receive = await thing({
+      v: 1,
+      array
+    });
+    expect(array).to.not.equal(receive.array);
+    expect(array.byteLength).to.equal(receive.array.byteLength);
+    expect([...array]).to.deep.equal([...receive.array])
+  });
+
   guardedIt(isNotSafari11_1)(
     "will transfer deeply nested buffers",
     async function() {
