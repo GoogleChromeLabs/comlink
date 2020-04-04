@@ -80,7 +80,7 @@ describe("Comlink in the same realm", function() {
     expect(await thing.value).to.equal(4);
   });
 
-  it("can work functions on an object", async function() {
+  it("can work with functions on an object", async function() {
     const thing = Comlink.wrap(this.port1);
     Comlink.expose({ f: _ => 4 }, this.port2);
     expect(await thing.f()).to.equal(4);
