@@ -147,6 +147,21 @@ describe("Comlink in the same realm", function() {
     }
   });
 
+  it("can rethrow scalars", async function() {
+    const thing = Comlink.wrap(this.port1);
+    Comlink.expose(_ => {
+      throw "oops";
+    }, this.port2);
+    try {
+      await thing();
+      throw "Should have thrown";
+    } catch (err) {
+      expect(err).to.not.eq("Should have thrown");
+      expect(err).to.be("oops");
+      expect(typeof err).to.be("string");
+    }
+  });
+
   it("can work with parameterized functions", async function() {
     const thing = Comlink.wrap(this.port1);
     Comlink.expose((a, b) => a + b, this.port2);
