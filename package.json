@@ -8,7 +8,8 @@
   "scripts": {
     "build": "rollup -c",
     "test:unit": "karma start",
-    "test:types": "tsc -t esnext -m esnext --lib esnext,dom --moduleResolution node --noEmit tests/type-checks.ts",
+    "test:types": "tsc -p ./tests/tsconfig.json",
+    "test:types:watch": "npm run test:types -- --watch",
     "test": "npm run fmt_test && npm run build && npm run test:types && npm run test:unit",
     "fmt": "prettier --write ./*.{mjs,js,ts,md,json,html} ./{src,docs,tests}/{,**/}*.{mjs,js,ts,md,json,html}",
     "fmt_test": "test $(prettier -l ./*.{mjs,js,ts,md,json,html} ./{src,docs,tests}/{**/,}*.{mjs,js,ts,md,json,html} | wc -l) -eq 0",
@@ -46,7 +47,7 @@
     "rollup": "1.27.8",
     "rollup-plugin-terser": "5.1.2",
     "rollup-plugin-typescript2": "0.25.3",
-    "typescript": "3.7.3"
+    "typescript": "3.8.3"
   },
   "dependencies": {}
 }
