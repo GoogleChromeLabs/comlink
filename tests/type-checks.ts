@@ -102,8 +102,6 @@ async function closureSoICanUseAwait() {
   {
     Comlink.wrap(new MessageChannel().port1);
     Comlink.expose({}, new MessageChannel().port2);
-    const connection = new RTCPeerConnection();
-    const channel = connection.createDataChannel("comlink");
 
     interface Baz {
       baz: number;
