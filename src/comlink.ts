@@ -25,7 +25,7 @@ export { Endpoint };
 export const proxyMarker = Symbol("Comlink.proxy");
 export const createEndpoint = Symbol("Comlink.endpoint");
 export const releaseProxy = Symbol("Comlink.releaseProxy");
-const throwSet = new WeakSet();
+const throwMarker = Symbol("Comlink.thrown");
 
 /**
  * Interface of values that were marked to be proxied with `comlink.proxy()`.
@@ -201,24 +201,23 @@ export const transferHandlers = new Map<string, TransferHandler>([
   [
     "throw",
     {
-      canHandle: obj => throwSet.has(obj),
-      serialize(obj) {
-        const isError = obj instanceof Error;
-        let serialized = obj;
+      canHandle: obj => typeof obj === "object" && throwMarker in obj,
+      serialize({ value }) {
+        const isError = value instanceof Error;
+        let serialized = { isError, value };
         if (isError) {
-          serialized = {
-            isError,
-            message: obj.message,
-            stack: obj.stack
+          serialized.value = {
+            message: value.message,
+            stack: value.stack
           };
         }
         return [serialized, []];
       },
-      deserialize(obj) {
-        if ((obj as any).isError) {
-          throw Object.assign(new Error(), obj);
+      deserialize(serialized) {
+        if (serialized.isError) {
+          throw Object.assign(new Error(), serialized.value);
         }
-        throw obj;
+        throw serialized.value;
       }
     }
   ]
@@ -274,14 +273,12 @@ export function expose(obj: any, ep: Endpoint = self as any) {
           }
           break;
       }
-    } catch (e) {
-      returnValue = e;
-      throwSet.add(e);
+    } catch (value) {
+      returnValue = { value, [throwMarker]: 0 };
     }
     Promise.resolve(returnValue)
-      .catch(e => {
-        throwSet.add(e);
-        return e;
+      .catch(value => {
+        return { value, [throwMarker]: 0 };
       })
       .then(returnValue => {
         const [wireValue, transferables] = toWireValue(returnValue);
