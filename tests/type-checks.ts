@@ -1,11 +1,4 @@
-import {
-  assert,
-  Has,
-  NotHas,
-  IsAny,
-  IsExact,
-  IsNever
-} from "conditional-type-checks";
+import { assert, Has, NotHas, IsAny, IsExact } from "conditional-type-checks";
 
 import * as Comlink from "../src/comlink.js";
 
@@ -354,5 +347,24 @@ async function closureSoICanUseAwait() {
         });
       })
     );
+  }
+
+  // Transfer handlers
+  {
+    const urlTransferHandler: Comlink.TransferHandler<URL, string> = {
+      canHandle: (val): val is URL => {
+        assert<IsExact<typeof val, unknown>>(true);
+        return val instanceof URL;
+      },
+      serialize: url => {
+        assert<IsExact<typeof url, URL>>(true);
+        return [url.href, []];
+      },
+      deserialize: str => {
+        assert<IsExact<typeof str, string>>(true);
+        return new URL(str);
+      }
+    };
+    Comlink.transferHandlers.set("URL", urlTransferHandler);
   }
 }
