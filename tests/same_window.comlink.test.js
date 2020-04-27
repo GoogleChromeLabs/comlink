@@ -142,8 +142,23 @@ describe("Comlink in the same realm", function() {
       await thing();
       throw "Should have thrown";
     } catch (err) {
-      expect(err).to.not.eq("Should have thrown");
+      expect(err).to.not.equal("Should have thrown");
       expect(err.test).to.equal(true);
+    }
+  });
+
+  it("can rethrow scalars", async function() {
+    const thing = Comlink.wrap(this.port1);
+    Comlink.expose(_ => {
+      throw "oops";
+    }, this.port2);
+    try {
+      await thing();
+      throw "Should have thrown";
+    } catch (err) {
+      expect(err).to.not.equal("Should have thrown");
+      expect(err).to.equal("oops");
+      expect(typeof err).to.equal("string");
     }
   });
 
