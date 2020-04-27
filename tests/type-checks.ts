@@ -190,7 +190,9 @@ async function closureSoICanUseAwait() {
       Comlink.windowEndpoint(self)
     );
     const inst1 = await new ProxiedFooClass("test");
-    assert<IsExact<typeof inst1, Comlink.RemoteObject<Foo>>>(true);
+    assert<IsExact<typeof inst1, Comlink.Remote<Foo>>>(true);
+    inst1[Comlink.releaseProxy]();
+    inst1[Comlink.createEndpoint]();
 
     // @ts-expect-error
     // await new ProxiedFooClass(123);

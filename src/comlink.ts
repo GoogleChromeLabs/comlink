@@ -136,7 +136,7 @@ export type Remote<T> =
             ...args: {
               [I in keyof TArguments]: UnproxyOrClone<TArguments[I]>;
             }
-          ): Promisify<RemoteObject<TInstance>>;
+          ): Promisify<Remote<TInstance>>;
         }
       : unknown) &
     // Include additional special comlink methods available on the proxy.
