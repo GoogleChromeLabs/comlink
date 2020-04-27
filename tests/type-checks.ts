@@ -203,12 +203,16 @@ async function closureSoICanUseAwait() {
     //
 
     // Type round trips
+    // This tests that Local is the exact inverse of Remote for objects:
     assert<
       IsExact<
         Comlink.Local<Comlink.Remote<Comlink.ProxyMarked>>,
         Comlink.ProxyMarked
       >
     >(true);
+    // This tests that Local is the exact inverse of Remote for functions, with one difference:
+    // The local version of a remote function can be either implemented as a sync or async function,
+    // because Remote<T> always makes the function async.
     assert<
       IsExact<
         Comlink.Local<Comlink.Remote<(a: number) => string>>,
