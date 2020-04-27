@@ -142,7 +142,7 @@ describe("Comlink in the same realm", function() {
       await thing();
       throw "Should have thrown";
     } catch (err) {
-      expect(err).to.not.eq("Should have thrown");
+      expect(err).to.not.equal("Should have thrown");
       expect(err.test).to.equal(true);
     }
   });
@@ -156,9 +156,9 @@ describe("Comlink in the same realm", function() {
       await thing();
       throw "Should have thrown";
     } catch (err) {
-      expect(err).to.not.eq("Should have thrown");
-      expect(err).to.be("oops");
-      expect(typeof err).to.be("string");
+      expect(err).to.not.equal("Should have thrown");
+      expect(err).to.equal("oops");
+      expect(typeof err).to.equal("string");
     }
   });
 
