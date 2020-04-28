@@ -41,7 +41,7 @@ export const enum WireValueType {
   RAW,
   PROXY,
   THROW,
-  HANDLER
+  HANDLER,
 }
 
 export interface RawWireValue {
@@ -67,7 +67,7 @@ export const enum MessageType {
   APPLY,
   CONSTRUCT,
   ENDPOINT,
-  RELEASE
+  RELEASE,
 }
 
 export interface GetMessage {

@@ -13,20 +13,20 @@
 
 import * as Comlink from "/base/dist/esm/comlink.mjs";
 
-describe("Comlink across iframes", function() {
-  beforeEach(function() {
+describe("Comlink across iframes", function () {
+  beforeEach(function () {
     this.ifr = document.createElement("iframe");
     this.ifr.sandbox.add("allow-scripts", "allow-same-origin");
     this.ifr.src = "/base/tests/fixtures/iframe.html";
     document.body.appendChild(this.ifr);
-    return new Promise(resolve => (this.ifr.onload = resolve));
+    return new Promise((resolve) => (this.ifr.onload = resolve));
   });
 
-  afterEach(function() {
+  afterEach(function () {
     this.ifr.remove();
   });
 
-  it("can communicate", async function() {
+  it("can communicate", async function () {
     const proxy = Comlink.wrap(Comlink.windowEndpoint(this.ifr.contentWindow));
     expect(await proxy(1, 3)).to.equal(4);
   });

@@ -9,12 +9,12 @@ Comlink.transferHandlers.set("event", {
         targetClassList: obj &&
           obj.target &&
           obj.target.classList && [...obj.target.classList],
-        detail: obj && obj.detail
+        detail: obj && obj.detail,
       },
-      []
+      [],
     ];
   },
   deserialize(obj) {
     return obj;
-  }
+  },
 });

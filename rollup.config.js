@@ -10,7 +10,7 @@ function config({ format, minify, input, ext = "js" }) {
       name: "Comlink",
       file: `${dir}/${input}${minifierSuffix}.${ext}`,
       format,
-      sourcemap: true
+      sourcemap: true,
     },
     plugins: [
       typescript({
@@ -18,21 +18,21 @@ function config({ format, minify, input, ext = "js" }) {
         typescript: require("typescript"),
         tsconfigOverride: {
           compilerOptions: {
-            sourceMap: true
+            sourceMap: true,
           },
           // Don’t ask. Without this, the typescript plugin is convinced
           // to create subfolders and misplace the .d.ts files.
-          files: ["./src/comlink.ts", "./src/protocol.ts"]
-        }
+          files: ["./src/comlink.ts", "./src/protocol.ts"],
+        },
       }),
       minify
         ? terser({
             sourcemap: true,
             compress: true,
-            mangle: true
+            mangle: true,
           })
-        : undefined
-    ].filter(Boolean)
+        : undefined,
+    ].filter(Boolean),
   };
 }
 
@@ -48,5 +48,5 @@ export default [
   { input: "node-adapter", format: "esm", minify: false, ext: "mjs" },
   { input: "node-adapter", format: "esm", minify: true, ext: "mjs" },
   { input: "node-adapter", format: "umd", minify: false },
-  { input: "node-adapter", format: "umd", minify: true }
+  { input: "node-adapter", format: "umd", minify: true },
 ].map(config);

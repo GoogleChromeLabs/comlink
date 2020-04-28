@@ -18,7 +18,7 @@ import {
   MessageType,
   PostMessageWithOrigin,
   WireValue,
-  WireValueType
+  WireValueType,
 } from "./protocol";
 export { Endpoint };
 
@@ -223,7 +223,7 @@ const proxyTransferHandler: TransferHandler<object, MessagePort> = {
   deserialize(port) {
     port.start();
     return wrap(port);
-  }
+  },
 };
 
 interface ThrownValue {
@@ -251,8 +251,8 @@ const throwTransferHandler: TransferHandler<
         value: {
           message: value.message,
           name: value.name,
-          stack: value.stack
-        }
+          stack: value.stack,
+        },
       };
     } else {
       serialized = { isError: false, value };
@@ -267,7 +267,7 @@ const throwTransferHandler: TransferHandler<
       );
     }
     throw serialized.value;
-  }
+  },
 };
 
 /**
@@ -278,7 +278,7 @@ export const transferHandlers = new Map<
   TransferHandler<unknown, unknown>
 >([
   ["proxy", proxyTransferHandler],
-  ["throw", throwTransferHandler]
+  ["throw", throwTransferHandler],
 ]);
 
 export function expose(obj: any, ep: Endpoint = self as any) {
@@ -288,7 +288,7 @@ export function expose(obj: any, ep: Endpoint = self as any) {
     }
     const { id, type, path } = {
       path: [] as string[],
-      ...(ev.data as Message)
+      ...(ev.data as Message),
     };
     const argumentList = (ev.data.argumentList || []).map(fromWireValue);
     let returnValue;
@@ -335,10 +335,10 @@ export function expose(obj: any, ep: Endpoint = self as any) {
       returnValue = { value, [throwMarker]: 0 };
     }
     Promise.resolve(returnValue)
-      .catch(value => {
+      .catch((value) => {
         return { value, [throwMarker]: 0 };
       })
-      .then(returnValue => {
+      .then((returnValue) => {
         const [wireValue, transferables] = toWireValue(returnValue);
         ep.postMessage({ ...wireValue, id }, transferables);
         if (type === MessageType.RELEASE) {
@@ -374,7 +374,7 @@ function throwIfProxyReleased(isReleased: boolean) {
 function createProxy<T>(
   ep: Endpoint,
   path: (string | number | symbol)[] = [],
-  target: object = function() {}
+  target: object = function () {}
 ): Remote<T> {
   let isProxyReleased = false;
   const proxy = new Proxy(target, {
@@ -384,7 +384,7 @@ function createProxy<T>(
         return () => {
           return requestResponseMessage(ep, {
             type: MessageType.RELEASE,
-            path: path.map(p => p.toString())
+            path: path.map((p) => p.toString()),
           }).then(() => {
             closeEndPoint(ep);
             isProxyReleased = true;
@@ -397,7 +397,7 @@ function createProxy<T>(
         }
         const r = requestResponseMessage(ep, {
           type: MessageType.GET,
-          path: path.map(p => p.toString())
+          path: path.map((p) => p.toString()),
         }).then(fromWireValue);
         return r.then.bind(r);
       }
@@ -412,8 +412,8 @@ function createProxy<T>(
         ep,
         {
           type: MessageType.SET,
-          path: [...path, prop].map(p => p.toString()),
-          value
+          path: [...path, prop].map((p) => p.toString()),
+          value,
         },
         transferables
       ).then(fromWireValue) as any;
@@ -423,7 +423,7 @@ function createProxy<T>(
       const last = path[path.length - 1];
       if ((last as any) === createEndpoint) {
         return requestResponseMessage(ep, {
-          type: MessageType.ENDPOINT
+          type: MessageType.ENDPOINT,
         }).then(fromWireValue);
       }
       // We just pretend that `bind()` didn’t happen.
@@ -435,8 +435,8 @@ function createProxy<T>(
         ep,
         {
           type: MessageType.APPLY,
-          path: path.map(p => p.toString()),
-          argumentList
+          path: path.map((p) => p.toString()),
+          argumentList,
         },
         transferables
       ).then(fromWireValue);
@@ -448,12 +448,12 @@ function createProxy<T>(
         ep,
         {
           type: MessageType.CONSTRUCT,
-          path: path.map(p => p.toString()),
-          argumentList
+          path: path.map((p) => p.toString()),
+          argumentList,
         },
         transferables
       ).then(fromWireValue);
-    }
+    },
   });
   return proxy as any;
 }
@@ -464,7 +464,7 @@ function myFlat<T>(arr: (T | T[])[]): T[] {
 
 function processArguments(argumentList: any[]): [WireValue[], Transferable[]] {
   const processed = argumentList.map(toWireValue);
-  return [processed.map(v => v[0]), myFlat(processed.map(v => v[1]))];
+  return [processed.map((v) => v[0]), myFlat(processed.map((v) => v[1]))];
 }
 
 const transferCache = new WeakMap<any, Transferable[]>();
@@ -486,7 +486,7 @@ export function windowEndpoint(
     postMessage: (msg: any, transferables: Transferable[]) =>
       w.postMessage(msg, targetOrigin, transferables),
     addEventListener: context.addEventListener.bind(context),
-    removeEventListener: context.removeEventListener.bind(context)
+    removeEventListener: context.removeEventListener.bind(context),
   };
 }
 
@@ -498,18 +498,18 @@ function toWireValue(value: any): [WireValue, Transferable[]] {
         {
           type: WireValueType.HANDLER,
           name,
-          value: serializedValue
+          value: serializedValue,
         },
-        transferables
+        transferables,
       ];
     }
   }
   return [
     {
       type: WireValueType.RAW,
-      value
+      value,
     },
-    transferCache.get(value) || []
+    transferCache.get(value) || [],
   ];
 }
 
@@ -527,7 +527,7 @@ function requestResponseMessage(
   msg: Message,
   transfers?: Transferable[]
 ): Promise<WireValue> {
-  return new Promise(resolve => {
+  return new Promise((resolve) => {
     const id = generateUUID();
     ep.addEventListener("message", function l(ev: MessageEvent) {
       if (!ev.data || !ev.data.id || ev.data.id !== id) {

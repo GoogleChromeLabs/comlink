@@ -8,7 +8,7 @@
     const { port1, port2 } = new MessageChannel();
     const msg = {
       comlinkInit: true,
-      port: port1
+      port: port1,
     };
     navigator.serviceWorker.controller.postMessage(msg, [port1]);
 

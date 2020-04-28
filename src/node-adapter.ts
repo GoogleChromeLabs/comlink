@@ -51,6 +51,6 @@ export default function nodeEndpoint(nep: NodeEndpoint): Endpoint {
       nep.off("message", l);
       listeners.delete(eh);
     },
-    start: nep.start && nep.start.bind(nep)
+    start: nep.start && nep.start.bind(nep),
   };
 }

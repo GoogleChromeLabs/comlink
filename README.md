@@ -58,7 +58,7 @@ const obj = {
   counter: 0,
   inc() {
     this.counter++;
-  }
+  },
 };
 
 Comlink.expose(obj);
@@ -118,7 +118,7 @@ await myProxy.someFunction(Comlink.transfer(data, [data.buffer]));
 Lastly, you can use `Comlink.proxy(value)`. When using this Comlink will neither copy nor transfer the value, but instead send a proxy. Both threads now work on the same value. This is useful for callbacks, for example, as functions are neither structured cloneable nor transferable.
 
 ```js
-myProxy.onready = Comlink.proxy(data => {
+myProxy.onready = Comlink.proxy((data) => {
   /* ... */
 });
 ```
@@ -137,19 +137,19 @@ Each function parameter and return value is given to _all_ registered transfer h
 
 ```js
 Comlink.transferHandlers.set("EVENT", {
-  canHandle: obj => obj instanceof Event,
-  serialize: ev => {
+  canHandle: (obj) => obj instanceof Event,
+  serialize: (ev) => {
     return [
       {
         target: {
           id: ev.target.id,
-          classList: [...ev.target.classList]
-        }
+          classList: [...ev.target.classList],
+        },
       },
-      []
+      [],
     ];
   },
-  deserialize: obj => obj
+  deserialize: (obj) => obj,
 });
 ```
 

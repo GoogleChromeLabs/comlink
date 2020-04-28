@@ -22,5 +22,5 @@ Comlink.expose({
         ev.targetClassList
       )}`
     );
-  }
+  },
 });

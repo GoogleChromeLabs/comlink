@@ -5,6 +5,6 @@ import nodeEndpoint from "../../../dist/esm/node-adapter.mjs";
 const api = {
   doMath() {
     return 4;
-  }
+  },
 };
 Comlink.expose(api, nodeEndpoint(parentPort));

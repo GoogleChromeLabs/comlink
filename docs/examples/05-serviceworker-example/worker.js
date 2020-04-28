@@ -21,10 +21,10 @@ const obj = {
   counter: 0,
   inc() {
     this.counter++;
-  }
+  },
 };
 
-self.addEventListener("message", event => {
+self.addEventListener("message", (event) => {
   if (event.data.comlinkInit) {
     Comlink.expose(obj, event.data.port);
     return;

@@ -73,8 +73,8 @@ async function closureSoICanUseAwait() {
         return 9;
       },
       c: {
-        d: 3
-      }
+        d: 3,
+      },
     };
 
     const proxy = Comlink.wrap<typeof x>(0 as any);
@@ -252,9 +252,9 @@ async function closureSoICanUseAwait() {
 
         const subscriptionPromise = result.subscribe({
           [Comlink.proxyMarker]: true,
-          next: value => {
+          next: (value) => {
             assert<IsExact<typeof value, string>>(true);
-          }
+          },
         });
         assert<
           IsExact<
@@ -263,7 +263,7 @@ async function closureSoICanUseAwait() {
           >
         >(true);
         const subscriber = Comlink.proxy({
-          next: (value: string) => console.log(value)
+          next: (value: string) => console.log(value),
         });
         result.subscribe(subscriber);
 
@@ -315,7 +315,7 @@ async function closureSoICanUseAwait() {
             }
 
             return Comlink.proxy({ unsubscribe() {} });
-          }
+          },
         });
         assert<Has<typeof subscribable, Comlink.ProxyMarked>>(true);
         return subscribable;
@@ -343,7 +343,7 @@ async function closureSoICanUseAwait() {
               subscriber.next("abc");
             }
             return Comlink.proxy({ unsubscribe() {} });
-          }
+          },
         });
       })
     );
@@ -356,14 +356,14 @@ async function closureSoICanUseAwait() {
         assert<IsExact<typeof val, unknown>>(true);
         return val instanceof URL;
       },
-      serialize: url => {
+      serialize: (url) => {
         assert<IsExact<typeof url, URL>>(true);
         return [url.href, []];
       },
-      deserialize: str => {
+      deserialize: (str) => {
         assert<IsExact<typeof str, string>>(true);
         return new URL(str);
-      }
+      },
     };
     Comlink.transferHandlers.set("URL", urlTransferHandler);
   }
