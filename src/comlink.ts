@@ -25,6 +25,7 @@ export { Endpoint };
 export const proxyMarker = Symbol("Comlink.proxy");
 export const createEndpoint = Symbol("Comlink.endpoint");
 export const releaseProxy = Symbol("Comlink.releaseProxy");
+
 const throwMarker = Symbol("Comlink.thrown");
 
 /**
@@ -176,51 +177,108 @@ export type Local<T> =
         }
       : unknown);
 
-export interface TransferHandler {
-  canHandle(obj: any): boolean;
-  serialize(obj: any): [any, Transferable[]];
-  deserialize(obj: any): any;
+const isObject = (val: unknown): val is object =>
+  (typeof val === "object" && val !== null) || typeof val === "function";
+
+/**
+ * Customizes the serialization of certain values as determined by `canHandle()`.
+ *
+ * @template T The input type being handled by this transfer handler.
+ * @template S The serialized type sent over the wire.
+ */
+export interface TransferHandler<T, S> {
+  /**
+   * Gets called for every value to determine whether this transfer handler
+   * should serialize the value, which includes checking that it is of the right
+   * type (but can perform checks beyond that as well).
+   */
+  canHandle(value: unknown): value is T;
+
+  /**
+   * Gets called with the value if `canHandle()` returned `true` to produce a
+   * value that can be sent in a message, consisting of structured-cloneable
+   * values and/or transferrable objects.
+   */
+  serialize(value: T): [S, Transferable[]];
+
+  /**
+   * Gets called to deserialize an incoming value that was serialized in the
+   * other thread with this transfer handler (known through the name it was
+   * registered under).
+   */
+  deserialize(value: S): T;
 }
 
-export const transferHandlers = new Map<string, TransferHandler>([
-  [
-    "proxy",
-    {
-      canHandle: obj => obj && obj[proxyMarker],
-      serialize(obj) {
-        const { port1, port2 } = new MessageChannel();
-        expose(obj, port1);
-        return [port2, [port2]];
-      },
-      deserialize: (port: MessagePort) => {
-        port.start();
-        return wrap(port);
-      }
-    }
-  ],
-  [
-    "throw",
-    {
-      canHandle: obj => typeof obj === "object" && throwMarker in obj,
-      serialize({ value }) {
-        const isError = value instanceof Error;
-        let serialized = { isError, value };
-        if (isError) {
-          serialized.value = {
-            message: value.message,
-            stack: value.stack
-          };
+/**
+ * Internal transfer handle to handle objects marked to proxy.
+ */
+const proxyTransferHandler: TransferHandler<object, MessagePort> = {
+  canHandle: (val): val is ProxyMarked =>
+    isObject(val) && (val as ProxyMarked)[proxyMarker],
+  serialize(obj) {
+    const { port1, port2 } = new MessageChannel();
+    expose(obj, port1);
+    return [port2, [port2]];
+  },
+  deserialize(port) {
+    port.start();
+    return wrap(port);
+  }
+};
+
+interface ThrownValue {
+  [throwMarker]: unknown; // just needs to be present
+  value: unknown;
+}
+type SerializedThrownValue =
+  | { isError: true; value: Error }
+  | { isError: false; value: unknown };
+
+/**
+ * Internal transfer handler to handle thrown exceptions.
+ */
+const throwTransferHandler: TransferHandler<
+  ThrownValue,
+  SerializedThrownValue
+> = {
+  canHandle: (value): value is ThrownValue =>
+    isObject(value) && throwMarker in value,
+  serialize({ value }) {
+    let serialized: SerializedThrownValue;
+    if (value instanceof Error) {
+      serialized = {
+        isError: true,
+        value: {
+          message: value.message,
+          name: value.name,
+          stack: value.stack
         }
-        return [serialized, []];
-      },
-      deserialize(serialized) {
-        if (serialized.isError) {
-          throw Object.assign(new Error(), serialized.value);
-        }
-        throw serialized.value;
-      }
+      };
+    } else {
+      serialized = { isError: false, value };
     }
-  ]
+    return [serialized, []];
+  },
+  deserialize(serialized) {
+    if (serialized.isError) {
+      throw Object.assign(
+        new Error(serialized.value.message),
+        serialized.value
+      );
+    }
+    throw serialized.value;
+  }
+};
+
+/**
+ * Allows customizing the serialization of certain values.
+ */
+export const transferHandlers = new Map<
+  string,
+  TransferHandler<unknown, unknown>
+>([
+  ["proxy", proxyTransferHandler],
+  ["throw", throwTransferHandler]
 ]);
 
 export function expose(obj: any, ep: Endpoint = self as any) {

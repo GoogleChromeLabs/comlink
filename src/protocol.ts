@@ -54,7 +54,7 @@ export interface HandlerWireValue {
   id?: string;
   type: WireValueType.HANDLER;
   name: string;
-  value: {};
+  value: unknown;
 }
 
 export type WireValue = RawWireValue | HandlerWireValue;
