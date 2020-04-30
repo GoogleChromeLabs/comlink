@@ -13,97 +13,140 @@
 
 import "/base/node_modules/web-streams-polyfill/dist/polyfill.es2018.js";
 import { wrap } from "/base/dist/esm/string-channel.experimental.mjs";
+import * as comlink from "/base/dist/esm/comlink.mjs";
 
 describe("StringChannel", function() {
-  beforeEach(function() {
-    let { readable: r1, writable: w1 } = new TransformStream();
-    let { readable: r2, writable: w2 } = new TransformStream();
+  describe("with MessagePort", function() {
+    it("can proxy values", async function() {
+      const wrapMessagePort = port =>
+        wrap({
+          send: data => {
+            port.postMessage(data);
+          },
+          addMessageListener: listener => {
+            port.addEventListener("message", event => {
+              listener(event.data);
+            });
+          }
+        });
 
-    this.ep1 = wrap({
-      async addMessageListener(f) {
-        let rs;
-        [r2, rs] = r2.tee();
-        const r = rs.getReader();
-        while (true) {
-          const { value, done } = await r.read();
-          if (done) {
-            return;
+      const { port1, port2 } = new MessageChannel();
+
+      const fn = () => {
+        console.log("fn called");
+        return comlink.proxy({
+          ping: () => {
+            console.log("ping called");
+            return "pong";
           }
-          f(value);
-        }
-      },
-      send(msg) {
-        const w = w1.getWriter();
-        w.write(msg);
-        w.releaseLock();
-      }
-    });
-    this.ep2 = wrap({
-      async addMessageListener(f) {
-        let rs;
-        [r1, rs] = r1.tee();
-        const r = rs.getReader();
-        while (true) {
-          const { value, done } = await r.read();
-          if (done) {
-            return;
-          }
-          f(value);
-        }
-      },
-      send(msg) {
-        const w = w2.getWriter();
-        w.write(msg);
-        w.releaseLock();
-      }
+        });
+      };
+
+      comlink.expose(fn, wrapMessagePort(port1));
+
+      const proxyFn = comlink.wrap(wrapMessagePort(port2));
+
+      console.log("calling fn");
+      const proxyObj = await proxyFn(); // Never gets past here
+      console.log("calling ping");
+      const response = await proxyObj.ping();
+      expect(response).to.equal("pong");
     });
   });
 
-  it("can communicate by just using strings", function(done) {
-    const originalMessage = { a: 1, b: "hello" };
-    this.ep2.addEventListener("message", ({ data }) => {
-      expect(JSON.stringify(data)).to.equal(JSON.stringify(originalMessage));
-      // Make sure it's a copy!
-      expect(data).to.not.equal(originalMessage);
-      done();
-    });
-    this.ep2.start();
-    this.ep1.postMessage(originalMessage);
-  });
+  describe("With TransformStream", function() {
+    beforeEach(function() {
+      let { readable: r1, writable: w1 } = new TransformStream();
+      let { readable: r2, writable: w2 } = new TransformStream();
 
-  it("can transfer MessagePorts", function(done) {
-    const originalMessage = { a: 1, b: "hello" };
-    const mc = new MessageChannel();
-    this.ep2.addEventListener("message", ({ data }) => {
-      data.port.addEventListener("message", ({ data }) => {
+      this.ep1 = wrap({
+        async addMessageListener(f) {
+          let rs;
+          [r2, rs] = r2.tee();
+          const r = rs.getReader();
+          while (true) {
+            const { value, done } = await r.read();
+            if (done) {
+              return;
+            }
+            f(value);
+          }
+        },
+        send(msg) {
+          const w = w1.getWriter();
+          w.write(msg);
+          w.releaseLock();
+        }
+      });
+      this.ep2 = wrap({
+        async addMessageListener(f) {
+          let rs;
+          [r1, rs] = r1.tee();
+          const r = rs.getReader();
+          while (true) {
+            const { value, done } = await r.read();
+            if (done) {
+              return;
+            }
+            f(value);
+          }
+        },
+        send(msg) {
+          const w = w2.getWriter();
+          w.write(msg);
+          w.releaseLock();
+        }
+      });
+    });
+
+    it("can communicate by just using strings", function(done) {
+      const originalMessage = { a: 1, b: "hello" };
+      this.ep2.addEventListener("message", ({ data }) => {
         expect(JSON.stringify(data)).to.equal(JSON.stringify(originalMessage));
+        // Make sure it's a copy!
+        expect(data).to.not.equal(originalMessage);
         done();
       });
-      data.port.start();
+      this.ep2.start();
+      this.ep1.postMessage(originalMessage);
     });
-    this.ep2.start();
-    this.ep1.postMessage({ port: mc.port2 }, [mc.port2]);
-    mc.port1.postMessage(originalMessage);
-  });
 
-  it("can transfer ArrayBuffers", function(done) {
-    const originalMessage = { a: 1, b: new Uint8Array([1, 2, 3]).buffer };
-    this.ep2.addEventListener("message", ({ data }) => {
-      expect([...new Uint8Array(data.b)]).to.deep.equal([1, 2, 3]);
-      done();
+    it("can transfer MessagePorts", function(done) {
+      const originalMessage = { a: 1, b: "hello" };
+      const mc = new MessageChannel();
+      this.ep2.addEventListener("message", ({ data }) => {
+        data.port.addEventListener("message", ({ data }) => {
+          expect(JSON.stringify(data)).to.equal(
+            JSON.stringify(originalMessage)
+          );
+          done();
+        });
+        data.port.start();
+      });
+      this.ep2.start();
+      this.ep1.postMessage({ port: mc.port2 }, [mc.port2]);
+      mc.port1.postMessage(originalMessage);
     });
-    this.ep2.start();
-    this.ep1.postMessage(originalMessage);
-  });
 
-  it("can transfer TypedArrays", function(done) {
-    const originalMessage = { a: 1, b: new Uint8Array([1, 2, 3]) };
-    this.ep2.addEventListener("message", ({ data }) => {
-      expect([...data.b]).to.deep.equal([1, 2, 3]);
-      done();
+    it("can transfer ArrayBuffers", function(done) {
+      const originalMessage = { a: 1, b: new Uint8Array([1, 2, 3]).buffer };
+      this.ep2.addEventListener("message", ({ data }) => {
+        expect([...new Uint8Array(data.b)]).to.deep.equal([1, 2, 3]);
+        done();
+      });
+      this.ep2.start();
+      this.ep1.postMessage(originalMessage);
     });
-    this.ep2.start();
-    this.ep1.postMessage(originalMessage);
+
+    it("can transfer TypedArrays", function(done) {
+      const originalMessage = { a: 1, b: new Uint8Array([1, 2, 3]) };
+      this.ep2.addEventListener("message", ({ data }) => {
+        expect([...data.b]).to.deep.equal([1, 2, 3]);
+        done();
+      });
+      this.ep2.start();
+      this.ep1.postMessage(originalMessage);
+    });
   });
 });
 
