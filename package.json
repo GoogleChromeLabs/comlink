@@ -41,7 +41,7 @@
     "karma-mocha": "2.0.0",
     "karma-safari-launcher": "1.0.0",
     "karma-safaritechpreview-launcher": "2.0.2",
-    "mocha": "7.1.2",
+    "mocha": "7.2.0",
     "prettier": "2.0.5",
     "rimraf": "3.0.2",
     "rollup": "2.7.3",
