@@ -170,7 +170,7 @@ If the browser supports the [WeakRef proposal], `releaseProxy()` will be called 
 
 ### `Comlink.finalizer`
 
-If the object passed to `Comlink.expose()` has a function property `[Comlink.finalizer]`, this function will be called when `releaseProxy()` was called on the other end. Do not that the channel is considered closed at this point and no more communication can happen. This callback is for cleanup only.
+If the object passed to `Comlink.expose()` has a function property `[Comlink.finalizer]`, this function will be called when `releaseProxy()` was called on the other end. Do note that the channel is considered closed at this point and no more communication can happen. This callback is for cleanup only.
 
 ### `Comlink.createEndpoint`
 
