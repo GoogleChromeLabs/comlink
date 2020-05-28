@@ -25,6 +25,7 @@ export { Endpoint };
 export const proxyMarker = Symbol("Comlink.proxy");
 export const createEndpoint = Symbol("Comlink.endpoint");
 export const releaseProxy = Symbol("Comlink.releaseProxy");
+export const finalizer = Symbol("Comlink.finalizer");
 
 const throwMarker = Symbol("Comlink.thrown");
 
@@ -345,6 +346,9 @@ export function expose(obj: any, ep: Endpoint = self as any) {
           // detach and deactive after sending release response above.
           ep.removeEventListener("message", callback as any);
           closeEndPoint(ep);
+          if (finalizer in obj && typeof obj[finalizer] === "function") {
+            obj[finalizer]();
+          }
         }
       });
   } as any);
@@ -387,7 +391,7 @@ declare var FinalizationRegistry: FinalizationRegistry<Endpoint>;
 
 const proxyCounter = new WeakMap<Endpoint, number>();
 const proxyFinalizers =
-  "FinalizationRegstry" in self &&
+  "FinalizationRegistry" in self &&
   new FinalizationRegistry((ep: Endpoint) => {
     const newCount = (proxyCounter.get(ep) || 0) - 1;
     proxyCounter.set(ep, newCount);
