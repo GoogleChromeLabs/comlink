@@ -371,6 +371,39 @@ function throwIfProxyReleased(isReleased: boolean) {
   }
 }
 
+function releaseEndpoint(ep: Endpoint) {
+  return requestResponseMessage(ep, {
+    type: MessageType.RELEASE,
+  }).then(() => {
+    closeEndPoint(ep);
+  });
+}
+
+interface FinalizationRegistry<T> {
+  new (cb: (heldValue: T) => void): FinalizationRegistry<T>;
+  register(weakItem: any, heldValue: T, unregisterToken: any): void;
+}
+declare var FinalizationRegistry: FinalizationRegistry<Endpoint>;
+
+const proxyCounter = new WeakMap<Endpoint, number>();
+const proxyFinalizers =
+  "FinalizationRegstry" in self &&
+  new FinalizationRegistry((ep: Endpoint) => {
+    const newCount = (proxyCounter.get(ep) || 0) - 1;
+    proxyCounter.set(ep, newCount);
+    if (newCount === 0) {
+      releaseEndpoint(ep);
+    }
+  });
+
+function registerProxy(proxy: any, ep: Endpoint) {
+  const newCount = (proxyCounter.get(ep) || 0) + 1;
+  proxyCounter.set(ep, newCount);
+  if (proxyFinalizers) {
+    proxyFinalizers.register(proxy, ep, ep);
+  }
+}
+
 function createProxy<T>(
   ep: Endpoint,
   path: (string | number | symbol)[] = [],
@@ -382,13 +415,8 @@ function createProxy<T>(
       throwIfProxyReleased(isProxyReleased);
       if (prop === releaseProxy) {
         return () => {
-          return requestResponseMessage(ep, {
-            type: MessageType.RELEASE,
-            path: path.map((p) => p.toString()),
-          }).then(() => {
-            closeEndPoint(ep);
-            isProxyReleased = true;
-          });
+          releaseEndpoint(ep);
+          isProxyReleased = true;
         };
       }
       if (prop === "then") {
@@ -455,6 +483,7 @@ function createProxy<T>(
       ).then(fromWireValue);
     },
   });
+  registerProxy(proxy, ep);
   return proxy as any;
 }
 

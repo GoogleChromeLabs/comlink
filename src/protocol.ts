@@ -105,7 +105,6 @@ export interface EndpointMessage {
 export interface ReleaseMessage {
   id?: MessageID;
   type: MessageType.RELEASE;
-  path: string[];
 }
 
 export type Message =
