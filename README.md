@@ -166,6 +166,12 @@ const proxy = Comlink.wrap(port);
 proxy[Comlink.releaseProxy]();
 ```
 
+If the browser supports the [WeakRef proposal], `releaseProxy()` will be called automatically when the proxy created by `wrap()` gets garbage collected.
+
+### `Comlink.finalizer`
+
+If the object passed to `Comlink.expose()` has a function property `[Comlink.finalizer]`, this function will be called when `releaseProxy()` was called on the other end. Do not that the channel is considered closed at this point and no more communication can happen. This callback is for cleanup only.
+
 ### `Comlink.createEndpoint`
 
 Every proxy created by Comlink has the `[createEndpoint]` method.
@@ -206,6 +212,7 @@ Comlink works with Node’s [`worker_threads`][worker_threads] module. Take a lo
 [structured clone table]: structured-clone-table.md
 [event]: https://developer.mozilla.org/en-US/docs/Web/API/Event
 [worker_threads]: https://nodejs.org/api/worker_threads.html
+[weakref proposal]: https://github.com/tc39/proposal-weakrefs
 
 ## Additional Resources
 
