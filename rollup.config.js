@@ -27,7 +27,6 @@ function config({ format, minify, input, ext = "js" }) {
       }),
       minify
         ? terser({
-            sourcemap: true,
             compress: true,
             mangle: true,
           })
