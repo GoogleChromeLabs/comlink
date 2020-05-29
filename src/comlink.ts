@@ -400,7 +400,7 @@ const proxyFinalizers =
     }
   });
 
-function registerProxy(proxy: any, ep: Endpoint) {
+function registerProxy(proxy: object, ep: Endpoint) {
   const newCount = (proxyCounter.get(ep) || 0) + 1;
   proxyCounter.set(ep, newCount);
   if (proxyFinalizers) {
