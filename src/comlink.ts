@@ -385,7 +385,12 @@ function releaseEndpoint(ep: Endpoint) {
 
 interface FinalizationRegistry<T> {
   new (cb: (heldValue: T) => void): FinalizationRegistry<T>;
-  register(weakItem: object, heldValue: T, unregisterToken?: object | undefined): void;
+  register(
+    weakItem: object,
+    heldValue: T,
+    unregisterToken?: object | undefined
+  ): void;
+  unregister(unregisterToken: object): void;
 }
 declare var FinalizationRegistry: FinalizationRegistry<Endpoint>;
 
@@ -404,7 +409,13 @@ function registerProxy(proxy: object, ep: Endpoint) {
   const newCount = (proxyCounter.get(ep) || 0) + 1;
   proxyCounter.set(ep, newCount);
   if (proxyFinalizers) {
-    proxyFinalizers.register(proxy, ep, ep);
+    proxyFinalizers.register(proxy, ep, proxy);
+  }
+}
+
+function unregisterProxy(proxy: object) {
+  if (proxyFinalizers) {
+    proxyFinalizers.unregister(proxy);
   }
 }
 
@@ -419,6 +430,7 @@ function createProxy<T>(
       throwIfProxyReleased(isProxyReleased);
       if (prop === releaseProxy) {
         return () => {
+          unregisterProxy(proxy);
           releaseEndpoint(ep);
           isProxyReleased = true;
         };
