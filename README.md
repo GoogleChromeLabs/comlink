@@ -157,7 +157,7 @@ Note that this particular transfer handler won’t create an actual `Event`, but
 
 ### `Comlink.releaseProxy`
 
-Every proxy created by Comlink has the `[releaseProxy]` method.
+Every proxy created by Comlink has the `[releaseProxy]()` method.
 Calling it will detach the proxy and the exposed object from the message channel, allowing both ends to be garbage collected.
 
 ```js
@@ -166,16 +166,16 @@ const proxy = Comlink.wrap(port);
 proxy[Comlink.releaseProxy]();
 ```
 
-If the browser supports the [WeakRef proposal], `releaseProxy()` will be called automatically when the proxy created by `wrap()` gets garbage collected.
+If the browser supports the [WeakRef proposal], `[releaseProxy]()` will be called automatically when the proxy created by `wrap()` gets garbage collected.
 
 ### `Comlink.finalizer`
 
-If the object passed to `Comlink.expose()` has a function property `[Comlink.finalizer]`, this function will be called when `releaseProxy()` was called on the other end. Do note that the channel is considered closed at this point and no more communication can happen. This callback is for cleanup only.
+If an exposed object has a property `[Comlink.finalizer]`, the property will be invoked as a function when the proxy is being released. This can happen either through a manual invocation of `[releaseProxy]()` or automatically during garbage collection if the runtime supports the [WeakRef proposal] (see `Comlink.releaseProxy` above). Note that when the finalizer function is invoked, the endpoint is closed and no more communication can happen.
 
 ### `Comlink.createEndpoint`
 
-Every proxy created by Comlink has the `[createEndpoint]` method.
-Calling it will return a new `MessagePort`, that has been hooked up to the same object as the proxy that `[createEndpoint]` has been called on.
+Every proxy created by Comlink has the `[createEndpoint]()` method.
+Calling it will return a new `MessagePort`, that has been hooked up to the same object as the proxy that `[createEndpoint]()` has been called on.
 
 ```js
 const port = myProxy[Comlink.createEndpoint]();
