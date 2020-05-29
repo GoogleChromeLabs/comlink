@@ -385,7 +385,7 @@ function releaseEndpoint(ep: Endpoint) {
 
 interface FinalizationRegistry<T> {
   new (cb: (heldValue: T) => void): FinalizationRegistry<T>;
-  register(weakItem: any, heldValue: T, unregisterToken: any): void;
+  register(weakItem: object, heldValue: T, unregisterToken?: object | undefined): void;
 }
 declare var FinalizationRegistry: FinalizationRegistry<Endpoint>;
 
