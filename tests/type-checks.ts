@@ -324,11 +324,7 @@ async function closureSoICanUseAwait() {
     proxy2.registerProvider(
       // Async callback
       Comlink.proxy(async ({ textDocument }: Params) => {
-        // Disabling this test here for now as there seems to be a bug with the
-        // TypeScript compiler. It claims that this function does not return
-        // a proxy-marked value.
-        // @ts-expect-error
-        return Comlink.proxy({
+        const subscribable = Comlink.proxy({
           subscribe(
             subscriber: Comlink.Remote<Subscriber<string> & Comlink.ProxyMarked>
           ): Unsubscribable & Comlink.ProxyMarked {
@@ -349,6 +345,7 @@ async function closureSoICanUseAwait() {
             return Comlink.proxy({ unsubscribe() {} });
           },
         });
+        return subscribable;
       })
     );
   }
