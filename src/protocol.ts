@@ -17,6 +17,7 @@ export interface EventSource {
     listener: EventListenerOrEventListenerObject,
     options?: {}
   ): void;
+
   removeEventListener(
     type: string,
     listener: EventListenerOrEventListenerObject,
@@ -34,14 +35,15 @@ export interface PostMessageWithOrigin {
 
 export interface Endpoint extends EventSource {
   postMessage(message: any, transfer?: Transferable[]): void;
+
   start?: () => void;
 }
 
 export const enum WireValueType {
-  RAW = 'RAW',
-  PROXY = 'PROXY',
-  THROW = 'THROW',
-  HANDLER = 'HANDLER',
+  RAW = "RAW",
+  PROXY = "PROXY",
+  THROW = "THROW",
+  HANDLER = "HANDLER",
 }
 
 export interface RawWireValue {
@@ -62,12 +64,12 @@ export type WireValue = RawWireValue | HandlerWireValue;
 export type MessageID = string;
 
 export const enum MessageType {
-  GET = 'GET',
-  SET = 'SET',
-  APPLY = 'APPLY',
-  CONSTRUCT = 'CONSTRUCT',
-  ENDPOINT = 'ENDPOINT',
-  RELEASE = 'RELEASE',
+  GET = "GET",
+  SET = "SET",
+  APPLY = "APPLY",
+  CONSTRUCT = "CONSTRUCT",
+  ENDPOINT = "ENDPOINT",
+  RELEASE = "RELEASE",
 }
 
 export interface GetMessage {
