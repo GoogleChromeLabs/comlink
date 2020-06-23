@@ -155,10 +155,10 @@ async function closureSoICanUseAwait() {
     assert<Has<typeof r3, Promise<number>>>(true);
 
     // @ts-expect-error
-    // proxy.proxyProp.method(123);
+    proxy.proxyProp.method(123);
 
     // @ts-expect-error
-    // proxy.proxyProp.method();
+    proxy.proxyProp.method();
 
     const r4 = proxy.methodWithProxiedReturnValue();
     assert<IsAny<typeof r4>>(false);
@@ -188,10 +188,10 @@ async function closureSoICanUseAwait() {
     inst1[Comlink.createEndpoint]();
 
     // @ts-expect-error
-    // await new ProxiedFooClass(123);
+    await new ProxiedFooClass(123);
 
     // @ts-expect-error
-    // await new ProxiedFooClass();
+    await new ProxiedFooClass();
 
     //
     // Tests for advanced proxy use cases
@@ -302,12 +302,12 @@ async function closureSoICanUseAwait() {
             >(true);
 
             // @ts-expect-error
-            // subscriber.next();
+            subscriber.next();
 
             if (subscriber.next) {
               // Only checking for presence is not enough, since it could be a Promise
               // @ts-expect-error
-              // subscriber.next();
+              subscriber.next();
             }
 
             if (typeof subscriber.next === "function") {
@@ -324,7 +324,7 @@ async function closureSoICanUseAwait() {
     proxy2.registerProvider(
       // Async callback
       Comlink.proxy(async ({ textDocument }: Params) => {
-        return Comlink.proxy({
+        const subscribable = Comlink.proxy({
           subscribe(
             subscriber: Comlink.Remote<Subscriber<string> & Comlink.ProxyMarked>
           ): Unsubscribable & Comlink.ProxyMarked {
@@ -345,6 +345,7 @@ async function closureSoICanUseAwait() {
             return Comlink.proxy({ unsubscribe() {} });
           },
         });
+        return subscribable;
       })
     );
   }
