@@ -5,6 +5,7 @@
   "main": "dist/umd/comlink.js",
   "module": "dist/esm/comlink.mjs",
   "types": "dist/umd/comlink.d.ts",
+  "sideEffects": false,
   "scripts": {
     "build": "rollup -c",
     "test:unit": "karma start",
