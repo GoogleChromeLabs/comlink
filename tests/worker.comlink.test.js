@@ -33,4 +33,21 @@ describe("Comlink across workers", function () {
     const otherProxy = Comlink.wrap(otherEp);
     expect(await otherProxy(20, 1)).to.equal(21);
   });
+
+  it("honors terminate on the proxy", function () {
+    const originalTerminate = this.worker.terminate;
+
+    let terminateCalled = false;
+    // poorman's mock
+    this.worker.terminate = function () {
+      terminateCalled = true;
+    };
+
+    const proxy = Comlink.wrap(this.worker);
+    expect(terminateCalled).to.be.false;
+    proxy.terminate();
+    expect(terminateCalled).to.be.true;
+
+    this.worker.terminate = originalTerminate;
+  });
 });

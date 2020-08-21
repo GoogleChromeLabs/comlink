@@ -421,6 +421,12 @@ function createProxy<T>(
     apply(_target, _thisArg, rawArgumentList) {
       throwIfProxyReleased(isProxyReleased);
       const last = path[path.length - 1];
+      // Users would expect terminate to kill the Worker not call a terminate method inside the worker
+      if (last === "terminate" && ep instanceof Worker) {
+        isProxyReleased = true;
+        ep.terminate();
+        return Promise.resolve();
+      }
       if ((last as any) === createEndpoint) {
         return requestResponseMessage(ep, {
           type: MessageType.ENDPOINT,
