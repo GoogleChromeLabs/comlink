@@ -184,6 +184,19 @@ Windows and Web Workers have a slightly different variants of `postMessage`. If 
 
 For a usage example, take a look at the non-worker examples in the `docs` folder.
 
+### `<proxy>.terminate()`
+
+Web Workers must be terminated to release resources and threads. When using comlink with [`comlink-loader`](https://github.com/GoogleChromeLabs/comlink-loader) call the terminate method on the proxy returned by `comlink-loader` as comlink-loader doesn't give access to the underlying Worker object.
+
+```ts
+import MyWorker from "comlink-loader!./worker";
+const workerProxy = new MyWorker() as any;
+const result = await workerProxy.doSomething();
+workerProxy.terminate();
+```
+
+Note: `workerProxy[Comlink.releaseProxy]();` wouldn't work in this case as it only releases the endpoint created for the proxy.
+
 ## TypeScript
 
 Comlink does provide TypeScript types. When you `expose()` something of type `T`, the corresponding `wrap()` call will return something of type `Comlink.Remote<T>`. While this type has been battle-tested over some time now, it is implemented on a best-effort basis. There are some nuances that are incredibly hard if not impossible to encode correctly in TypeScript’s type system. It _may_ sometimes be necessary to force a certain type using `as unknown as <type>`.
