@@ -50,10 +50,8 @@ module.exports = function (config) {
           // local issues and I have no idea how to fix them.
           // I know that’s not a good reason to disable tests,
           // but Safari TP is relatively unimportant.
-          // Filtering Safari because of this https://github.com/karma-runner/karma-safari-launcher/issues/24
-          // Running Safari 13.1.2 (15609.3.5.1.3) on Mac OS Catalina (10.15.6 (19G73))
           return availableBrowsers.filter(
-            (browser) => browser !== "SafariTechPreview" && browser !== "Safari"
+            (browser) => browser !== "SafariTechPreview"
           );
         }
       },
