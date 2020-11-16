@@ -468,7 +468,7 @@ function processArguments(argumentList: any[]): [WireValue[], Transferable[]] {
 }
 
 const transferCache = new WeakMap<any, Transferable[]>();
-export function transfer(obj: any, transfers: Transferable[]) {
+export function transfer<T>(obj: T, transfers: Transferable[]): T {
   transferCache.set(obj, transfers);
   return obj;
 }
