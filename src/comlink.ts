@@ -401,6 +401,18 @@ function createProxy<T>(
         }).then(fromWireValue);
         return r.then.bind(r);
       }
+      // We just pretend that `call()` didn’t happen.
+      if (prop === "call") {
+        type Call = typeof Function.prototype.call;
+        const fakeCall: Call = (_, ...args) => (proxy as Function)(...args);
+        return fakeCall;
+      }
+      // We just pretend that `apply()` didn’t happen.
+      if (prop === "apply") {
+        type Apply = typeof Function.prototype.apply;
+        const fakeApply: Apply = (_, args) => (proxy as Function)(...args);
+        return fakeApply;
+      }
       return createProxy(ep, [...path, prop]);
     },
     set(_target, prop, rawValue) {
