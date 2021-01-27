@@ -116,6 +116,26 @@ describe("Comlink in the same realm", function () {
     }
   });
 
+  it("can keep properties of custom errors", async function () {
+    const thing = Comlink.wrap(this.port1);
+    Comlink.expose((_) => {
+      class CustomError extends Error {
+        constructor(message, data) {
+          super(message);
+          this.data = data;
+        }
+      }
+      throw new CustomError("OMG", "extra error details");
+    }, this.port2);
+    try {
+      await thing();
+      throw "Should have thrown";
+    } catch (err) {
+      expect(err).to.not.eq("Should have thrown");
+      expect(err.data).to.equal("extra error details");
+    }
+  });
+
   it("can forward an async function error", async function () {
     const thing = Comlink.wrap(this.port1);
     Comlink.expose(

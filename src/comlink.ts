@@ -249,6 +249,7 @@ const throwTransferHandler: TransferHandler<
       serialized = {
         isError: true,
         value: {
+          ...value,
           message: value.message,
           name: value.name,
           stack: value.stack,
