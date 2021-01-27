@@ -451,14 +451,14 @@ describe("Comlink in the same realm", function () {
     const thing = Comlink.wrap(this.port1);
     const obj = {
       onready: null,
-      call() {
+      run() {
         this.onready();
       },
     };
     Comlink.expose(obj, this.port2);
 
     thing.onready = Comlink.proxy(() => done());
-    thing.call();
+    thing.run();
   });
 
   it("will wrap marked parameter values, simple function", async function () {
