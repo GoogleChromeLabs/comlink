@@ -101,7 +101,7 @@ When using Comlink with a [`SharedWorker`](https://developer.mozilla.org/en-US/d
 1. Use the [`port`](https://developer.mozilla.org/en-US/docs/Web/API/SharedWorker/port) property, of the `SharedWorker` instance, when calling `Comlink.wrap`.
 2. Call `Comlink.expose` within the [`onconnect`](https://developer.mozilla.org/en-US/docs/Web/API/SharedWorkerGlobalScope/onconnect) callback of the shared worker.
 
-**Pro tip:** You can access DevTools for any shared worker currently running in Chrome by going to: [chrome://inspect/#workers](chrome://inspect/#workers).
+**Pro tip:** You can access DevTools for any shared worker currently running in Chrome by going to: **chrome://inspect/#workers**
 
 **main.js**
 
