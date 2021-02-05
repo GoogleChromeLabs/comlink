@@ -94,6 +94,60 @@ async function remoteFunction(cb) {
 Comlink.expose(remoteFunction);
 ```
 
+### [`SharedWorker`](./docs/examples/07-sharedworker-example)
+
+When using Comlink with a [`SharedWorker`](https://developer.mozilla.org/en-US/docs/Web/API/SharedWorker) you have to:
+
+1. Use the [`port`](https://developer.mozilla.org/en-US/docs/Web/API/SharedWorker/port) property, of the `SharedWorker` instance, when calling `Comlink.wrap`.
+2. Call `Comlink.expose` within the [`onconnect`](https://developer.mozilla.org/en-US/docs/Web/API/SharedWorkerGlobalScope/onconnect) callback of the shared worker.
+
+**Pro tip:** You can access DevTools for any shared worker currently running in Chrome by going to: **chrome://inspect/#workers**
+
+**main.js**
+
+```javascript
+import * as Comlink from "https://unpkg.com/comlink/dist/esm/comlink.mjs";
+async function init() {
+  const worker = new SharedWorker("worker.js");
+  /**
+   * SharedWorkers communicate via the `postMessage` function in their `port` property.
+   * Therefore you must use the SharedWorker's `port` property when calling `Comlink.wrap`.
+   */
+  const obj = Comlink.wrap(worker.port);
+  alert(`Counter: ${await obj.counter}`);
+  await obj.inc();
+  alert(`Counter: ${await obj.counter}`);
+}
+init();
+```
+
+**worker.js**
+
+```javascript
+importScripts("https://unpkg.com/comlink/dist/umd/comlink.js");
+// importScripts("../../../dist/umd/comlink.js");
+
+const obj = {
+  counter: 0,
+  inc() {
+    this.counter++;
+  },
+};
+
+/**
+ * When a connection is made into this shared worker, expose `obj`
+ * via the connection `port`.
+ */
+onconnect = function (event) {
+  const port = event.ports[0];
+
+  Comlink.expose(obj, port);
+};
+
+// Single line alternative:
+// onconnect = (e) => Comlink.expose(obj, e.ports[0]);
+```
+
 **For additional examples, please see the [docs/examples](./docs/examples) directory in the project.**
 
 ## API
