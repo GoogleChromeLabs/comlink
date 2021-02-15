@@ -283,7 +283,15 @@ export const transferHandlers = new Map<
 
 export function expose(obj: any, ep: Endpoint = self as any) {
   ep.addEventListener("message", function callback(ev: MessageEvent) {
-    if (!ev || !ev.data) {
+    if (
+      !ev ||
+      !ev.data ||
+      typeof ev.data !== "object" ||
+      typeof ev.data.id !== "string" ||
+      typeof ev.data.type !== "string" ||
+      (ev.data.type !== MessageType.SET &&
+        Object.hasOwnProperty.call(ev.data, "value"))
+    ) {
       return;
     }
     const { id, type, path } = {
