@@ -330,6 +330,8 @@ export function expose(obj: any, ep: Endpoint = self as any) {
             returnValue = undefined;
           }
           break;
+        default:
+          return;
       }
     } catch (value) {
       returnValue = { value, [throwMarker]: 0 };
