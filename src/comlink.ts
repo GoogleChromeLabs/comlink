@@ -29,6 +29,24 @@ export const releaseProxy = Symbol("Comlink.releaseProxy");
 const throwMarker = Symbol("Comlink.thrown");
 
 /**
+ * Imports required to support running in NodeJS.
+ *
+ * See use of the replace rollup plugin in rollup.config.js.
+ *
+ * Unfortunately, TLA (top-level await) is not widely supported in browsers yet, and even leaving this conditional
+ * statement can yield errors (see Firefox bug https://bugzilla.mozilla.org/show_bug.cgi?id=1693570).
+ * So the current solution to import the `worker_threads` module only works for the umd bundle.  Once TLA is widely
+ * supported the dynamic import solution can be enabled.
+ */
+import nodeEndpoint, { NodeEndpoint } from "./node-adapter";
+let NodeMessageChannel: unknown = undefined;
+if (typeof MessageChannel === "undefined") {
+  // The prettier-ignore below is needed for text replacement (see the use of the replace plugin on rollup.config.js)
+  // prettier-ignore
+  NodeMessageChannel = await import("worker_threads").then((module) => module.MessageChannel).catch((error) => undefined);
+}
+
+/**
  * Interface of values that were marked to be proxied with `comlink.proxy()`.
  * Can also be implemented by classes.
  */
@@ -216,9 +234,16 @@ const proxyTransferHandler: TransferHandler<object, MessagePort> = {
   canHandle: (val): val is ProxyMarked =>
     isObject(val) && (val as ProxyMarked)[proxyMarker],
   serialize(obj) {
-    const { port1, port2 } = new MessageChannel();
-    expose(obj, port1);
-    return [port2, [port2]];
+    if (NodeMessageChannel) {
+      // @ts-ignore
+      const { port1, port2 } = new NodeMessageChannel();
+      expose(obj, nodeEndpoint(port1));
+      return [port2, [port2]];
+    } else {
+      const { port1, port2 } = new MessageChannel();
+      expose(obj, port1);
+      return [port2, [port2]];
+    }
   },
   deserialize(port) {
     port.start();
