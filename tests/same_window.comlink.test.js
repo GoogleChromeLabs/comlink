@@ -475,7 +475,7 @@ describe("Comlink in the same realm", function () {
     ).to.equal(6);
   });
 
-  xit("will proxy deeply nested values", async function () {
+  it("will proxy deeply nested values", async function () {
     const thing = Comlink.wrap(this.port1);
     const obj = {
       a: {
@@ -493,6 +493,10 @@ describe("Comlink in the same realm", function () {
     expect(await b.v).to.equal(5);
     await (a.v = 8);
     await (b.v = 9);
+    // Workaround for a weird scheduling inconsistency in Firefox.
+    // This test failed, but not when run in isolation, and only
+    // in Firefox. I think there might be problem with task ordering.
+    await new Promise((resolve) => setTimeout(resolve, 1));
     expect(await thing.a.v).to.equal(4);
     expect(await thing.b.v).to.equal(9);
   });
