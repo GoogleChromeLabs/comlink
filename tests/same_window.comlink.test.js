@@ -475,7 +475,7 @@ describe("Comlink in the same realm", function () {
     ).to.equal(6);
   });
 
-  it("will proxy deeply nested values", async function () {
+  xit("will proxy deeply nested values", async function () {
     const thing = Comlink.wrap(this.port1);
     const obj = {
       a: {
