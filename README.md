@@ -31,7 +31,7 @@ Comlink turns this messaged-based API into a something more developer-friendly b
 
 ## Examples
 
-### [Running a simple function](https://github.com/GoogleChromeLabs/comlink/tree/master/docs/examples/01-simple-example)
+### [Running a simple function](./docs/examples/01-simple-example)
 
 **main.js**
 
@@ -64,7 +64,7 @@ const obj = {
 Comlink.expose(obj);
 ```
 
-### [Callbacks](https://github.com/torch2424/comlink/tree/master/docs/examples/02-callback-example)
+### [Callbacks](./docs/examples/02-callback-example)
 
 **main.js**
 
