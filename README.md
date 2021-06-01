@@ -246,6 +246,35 @@ Comlink does provide TypeScript types. When you `expose()` something of type `T`
 
 Comlink works with Node’s [`worker_threads`][worker_threads] module. Take a look at the example in the `docs` folder.
 
+### TypeScript and Node
+
+To use Comlink in a TypeScript project running on Node you have to:
+
+1. Install [@types/node](https://www.npmjs.com/package/@types/node) to import the [`worker_threads`][worker_threads] module
+2. Set `"type": "module"` in your `package.json` to use ESM instead of CommonJS
+3. Set `"module": "ESNext"` or `"ES2015"` in your `tsconfig.json` to emit ESM syntax
+4. Use `// @ts-ignore` to import code from files with `.mjs` extensions as long as TypeScript does not [support mjs natively](https://github.com/microsoft/TypeScript/issues/18442)
+5. Run your TypeScript code with an ESM loader (like [ts-node](https://github.com/TypeStrong/ts-node)): `node --loader ts-node/esm ./main.ts`
+
+```ts
+import { Worker } from "worker_threads";
+import { wrap } from "comlink";
+// @ts-ignore
+import nodeEndpoint from "comlink/dist/esm/node-adapter.mjs";
+
+interface WorkerAPI {
+  doMath: () => number;
+}
+
+async function init() {
+  const worker = new Worker("./worker.mjs");
+  const api = wrap<WorkerAPI>(nodeEndpoint(worker));
+  console.log(await api.doMath());
+}
+
+init();
+```
+
 [webworker]: https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API
 [umd]: https://github.com/umdjs/umd
 [transferable]: https://developer.mozilla.org/en-US/docs/Web/API/Transferable
