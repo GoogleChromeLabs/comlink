@@ -107,7 +107,7 @@ describe("StringChannel", function() {
     this.ep1.postMessage(originalMessage);
   });
 
-  it("can transfer Callbacks", async function() {
+  it("can transfer and call Callbacks", async function() {
     const originalObj = { a: () => Promise.resolve(false) };
     Comlink.expose(originalObj, this.ep1);
     const remoteObj = Comlink.wrap(this.ep2);
