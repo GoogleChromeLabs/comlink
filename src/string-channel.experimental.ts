@@ -230,6 +230,7 @@ function makeTransferable(
         findAllTransferables(data).map(v => v.value)
       );
     });
+    wrapped.start();
 
     return {
       type: SerializedTransferableType.MessagePort,
