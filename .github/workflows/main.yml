@@ -18,10 +18,9 @@ jobs:
         with:
           node-version: '14'
       - name: npm install, build, and test
-        run: npm install
-        run: npm run build --if-present
-        env:
-          CI: true
-        run: npm test
+        run: |
+          npm install
+          npm run build --if-present
+          npm test
         env:
           CI: true
