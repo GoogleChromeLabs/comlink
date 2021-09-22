@@ -148,6 +148,61 @@ onconnect = function (event) {
 // onconnect = (e) => Comlink.expose(obj, e.ports[0]);
 ```
 
+### [`Namespaces`](./docs/examples/08-namespaces-example)
+
+When you need to expose more objects from a thread you can use Comlink's namespaced APIs.
+This APIs allows you to independently expose objects and access them later from the main thread.
+
+**Note:** Also the `expose` and `wrap` APIs uses namespaces under the hood, they uses the default `Comlink.default` namespace.
+
+**main.js**
+
+```javascript
+import * as Comlink from "https://unpkg.com/comlink/dist/esm/comlink.mjs";
+async function init() {
+  // WebWorkers use `postMessage` and therefore work with Comlink.
+  const worker = new Worker("worker.js");
+
+  // 'wrap' uses the default namespace (Comlink.default)
+  const obj1 = Comlink.wrap(worker);
+
+  // this will connect to the 'my-namespace' namespace.
+  const obj2 = Comlink.wrapNamespaced(worker, "my-namespace");
+
+  alert(await obj2.sayHi("user"));
+
+  alert(`Counter: ${await obj1.counter}`);
+  await obj1.inc();
+  alert(`Counter: ${await obj1.counter}`);
+}
+init();
+```
+
+**worker.js**
+
+```javascript
+importScripts("https://unpkg.com/comlink/dist/umd/comlink.js");
+
+const obj1 = {
+  counter: 0,
+  inc() {
+    this.counter++;
+  },
+};
+
+const obj2 = {
+  sayHi(name) {
+    return "Hi, " + name;
+  },
+};
+
+// 'expose' uses the default namespace (Comlink.default)
+Comlink.expose(obj1);
+
+// this will expose obj2 under the 'my-namespace' namespace
+Comlink.exposeNamespaced(obj2, "my-namespace");
+```
+
 **For additional examples, please see the [docs/examples](./docs/examples) directory in the project.**
 
 ## API
@@ -157,6 +212,14 @@ onconnect = function (event) {
 Comlink’s goal is to make _exposed_ values from one thread available in the other. `expose` exposes `value` on `endpoint`, where `endpoint` is a [`postMessage`-like interface][endpoint].
 
 `wrap` wraps the _other_ end of the message channel and returns a proxy. The proxy will have all properties and functions of the exposed value, but access and invocations are inherently asynchronous. This means that a function that returns a number will now return _a promise_ for a number. **As a rule of thumb: If you are using the proxy, put `await` in front of it.** Exceptions will be caught and re-thrown on the other side.
+
+### `Comlink.wrapNamespaced(endpoint, namespace)` and `Comlink.exposeNamespaced(value, namespace, endpoint?)`
+
+To allow one thread to _expose_ more that one object independently from other objects already _exposed_ Comlink allows you to specify a custom namespace.
+
+The `expose` API uses `exposeNamespaced` with `Comlink.default` as the default namespace.
+
+The same is true for the `wrap` API that uses `wrapNamespaced` with `Comlink.default` as the default namespace.
 
 ### `Comlink.transfer(value, transferables)` and `Comlink.proxy(value)`
 
@@ -208,6 +271,12 @@ Comlink.transferHandlers.set("EVENT", {
 ```
 
 Note that this particular transfer handler won’t create an actual `Event`, but just an object that has the `event.target.id` and `event.target.classList` property. Often, this is enough. If not, the transfer handler can be easily augmented to provide all necessary data.
+
+### `Comlink.defaultNamespace`
+
+This constant hold the value of the default namespace used by `Comlink.wrap` and `Comlink.expose`.
+
+It's value is `Comlink.default`.
 
 ### `Comlink.releaseProxy`
 

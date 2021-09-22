@@ -319,6 +319,23 @@ describe("Comlink in the same realm", function () {
     expect(await instance._counter).to.equal(4);
   });
 
+  it("can work different namespaces", async function () {
+    const objDefault = { value: "default" };
+    const objNamespaced = { value: "custom" };
+
+    const proxyDefault = Comlink.wrap(this.port1);
+    Comlink.expose(objDefault, this.port2);
+
+    const proxyNamespaced = Comlink.wrapNamespaced(
+      this.port1,
+      "custom-namespace"
+    );
+    Comlink.exposeNamespaced(objNamespaced, "custom-namespace", this.port2);
+
+    expect(await proxyDefault.value).to.equal(objDefault.value);
+    expect(await proxyNamespaced.value).to.equal(objNamespaced.value);
+  });
+
   const hasBroadcastChannel = (_) => "BroadcastChannel" in self;
   guardedIt(hasBroadcastChannel)(
     "will work with BroadcastChannel",

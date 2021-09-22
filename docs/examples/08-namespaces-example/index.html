@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+
+<script type="module">
+  import * as Comlink from "https://unpkg.com/comlink/dist/esm/comlink.mjs";
+  // import * as Comlink from "../../../dist/esm/comlink.mjs";
+
+  async function init() {
+    // WebWorkers use `postMessage` and therefore work with Comlink.
+    const worker = new Worker("worker.js");
+
+    // 'wrap' uses the default namespace (Comlink.default)
+    const obj1 = Comlink.wrap(worker);
+
+    // this will connect to the 'my-namespace' namespace.
+    const obj2 = Comlink.wrapNamespaced(worker, "my-namespace");
+
+    alert(await obj2.sayHi("user"));
+
+    alert(`Counter: ${await obj1.counter}`);
+    await obj1.inc();
+    alert(`Counter: ${await obj1.counter}`);
+  }
+
+  init();
+</script>

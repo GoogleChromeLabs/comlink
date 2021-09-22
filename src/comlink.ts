@@ -15,12 +15,15 @@ import {
   Endpoint,
   EventSource,
   Message,
+  MessageNamespace,
   MessageType,
   PostMessageWithOrigin,
   WireValue,
   WireValueType,
 } from "./protocol";
 export { Endpoint };
+
+export const defaultNamespace: MessageNamespace = "Comlink.default";
 
 export const proxyMarker = Symbol("Comlink.proxy");
 export const createEndpoint = Symbol("Comlink.endpoint");
@@ -281,9 +284,17 @@ export const transferHandlers = new Map<
   ["throw", throwTransferHandler],
 ]);
 
-export function expose(obj: any, ep: Endpoint = self as any) {
+export function expose(obj: any, ep?: Endpoint) {
+  return exposeNamespaced(obj, defaultNamespace, ep);
+}
+
+export function exposeNamespaced(
+  obj: any,
+  namespace: MessageNamespace,
+  ep: Endpoint = self as any
+) {
   ep.addEventListener("message", function callback(ev: MessageEvent) {
-    if (!ev || !ev.data) {
+    if (!ev || !ev.data || (ev.data as Message).namespace !== namespace) {
       return;
     }
     const { id, type, path } = {
@@ -342,7 +353,7 @@ export function expose(obj: any, ep: Endpoint = self as any) {
       })
       .then((returnValue) => {
         const [wireValue, transferables] = toWireValue(returnValue);
-        ep.postMessage({ ...wireValue, id }, transferables);
+        ep.postMessage({ ...wireValue, id, namespace }, transferables);
         if (type === MessageType.RELEASE) {
           // detach and deactive after sending release response above.
           ep.removeEventListener("message", callback as any);
@@ -364,7 +375,15 @@ function closeEndPoint(endpoint: Endpoint) {
 }
 
 export function wrap<T>(ep: Endpoint, target?: any): Remote<T> {
-  return createProxy<T>(ep, [], target) as any;
+  return wrapNamespaced(ep, defaultNamespace, target);
+}
+
+export function wrapNamespaced<T>(
+  ep: Endpoint,
+  namespace: MessageNamespace,
+  target?: any
+): Remote<T> {
+  return createProxy<T>(ep, namespace, [], target) as any;
 }
 
 function throwIfProxyReleased(isReleased: boolean) {
@@ -375,6 +394,7 @@ function throwIfProxyReleased(isReleased: boolean) {
 
 function createProxy<T>(
   ep: Endpoint,
+  namespace: MessageNamespace,
   path: (string | number | symbol)[] = [],
   target: object = function () {}
 ): Remote<T> {
@@ -384,7 +404,7 @@ function createProxy<T>(
       throwIfProxyReleased(isProxyReleased);
       if (prop === releaseProxy) {
         return () => {
-          return requestResponseMessage(ep, {
+          return requestResponseMessage(ep, namespace, {
             type: MessageType.RELEASE,
             path: path.map((p) => p.toString()),
           }).then(() => {
@@ -397,13 +417,13 @@ function createProxy<T>(
         if (path.length === 0) {
           return { then: () => proxy };
         }
-        const r = requestResponseMessage(ep, {
+        const r = requestResponseMessage(ep, namespace, {
           type: MessageType.GET,
           path: path.map((p) => p.toString()),
         }).then(fromWireValue);
         return r.then.bind(r);
       }
-      return createProxy(ep, [...path, prop]);
+      return createProxy(ep, namespace, [...path, prop]);
     },
     set(_target, prop, rawValue) {
       throwIfProxyReleased(isProxyReleased);
@@ -412,6 +432,7 @@ function createProxy<T>(
       const [value, transferables] = toWireValue(rawValue);
       return requestResponseMessage(
         ep,
+        namespace,
         {
           type: MessageType.SET,
           path: [...path, prop].map((p) => p.toString()),
@@ -424,17 +445,18 @@ function createProxy<T>(
       throwIfProxyReleased(isProxyReleased);
       const last = path[path.length - 1];
       if ((last as any) === createEndpoint) {
-        return requestResponseMessage(ep, {
+        return requestResponseMessage(ep, namespace, {
           type: MessageType.ENDPOINT,
         }).then(fromWireValue);
       }
       // We just pretend that `bind()` didn’t happen.
       if (last === "bind") {
-        return createProxy(ep, path.slice(0, -1));
+        return createProxy(ep, namespace, path.slice(0, -1));
       }
       const [argumentList, transferables] = processArguments(rawArgumentList);
       return requestResponseMessage(
         ep,
+        namespace,
         {
           type: MessageType.APPLY,
           path: path.map((p) => p.toString()),
@@ -448,6 +470,7 @@ function createProxy<T>(
       const [argumentList, transferables] = processArguments(rawArgumentList);
       return requestResponseMessage(
         ep,
+        namespace,
         {
           type: MessageType.CONSTRUCT,
           path: path.map((p) => p.toString()),
@@ -526,13 +549,19 @@ function fromWireValue(value: WireValue): any {
 
 function requestResponseMessage(
   ep: Endpoint,
+  namespace: MessageNamespace,
   msg: Message,
   transfers?: Transferable[]
 ): Promise<WireValue> {
   return new Promise((resolve) => {
     const id = generateUUID();
     ep.addEventListener("message", function l(ev: MessageEvent) {
-      if (!ev.data || !ev.data.id || ev.data.id !== id) {
+      if (
+        !ev.data ||
+        !ev.data.id ||
+        ev.data.id !== id ||
+        ev.data.namespace !== namespace
+      ) {
         return;
       }
       ep.removeEventListener("message", l as any);
@@ -541,7 +570,7 @@ function requestResponseMessage(
     if (ep.start) {
       ep.start();
     }
-    ep.postMessage({ id, ...msg }, transfers);
+    ep.postMessage({ ...msg, id, namespace }, transfers);
   });
 }
 

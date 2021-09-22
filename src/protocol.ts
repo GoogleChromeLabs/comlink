@@ -47,13 +47,15 @@ export const enum WireValueType {
 }
 
 export interface RawWireValue {
-  id?: string;
+  id?: MessageID;
+  namespace?: MessageNamespace;
   type: WireValueType.RAW;
   value: {};
 }
 
 export interface HandlerWireValue {
-  id?: string;
+  id?: MessageID;
+  namespace?: MessageNamespace;
   type: WireValueType.HANDLER;
   name: string;
   value: unknown;
@@ -62,6 +64,7 @@ export interface HandlerWireValue {
 export type WireValue = RawWireValue | HandlerWireValue;
 
 export type MessageID = string;
+export type MessageNamespace = string;
 
 export const enum MessageType {
   GET = "GET",
@@ -74,12 +77,14 @@ export const enum MessageType {
 
 export interface GetMessage {
   id?: MessageID;
+  namespace?: MessageNamespace;
   type: MessageType.GET;
   path: string[];
 }
 
 export interface SetMessage {
   id?: MessageID;
+  namespace?: MessageNamespace;
   type: MessageType.SET;
   path: string[];
   value: WireValue;
@@ -87,6 +92,7 @@ export interface SetMessage {
 
 export interface ApplyMessage {
   id?: MessageID;
+  namespace?: MessageNamespace;
   type: MessageType.APPLY;
   path: string[];
   argumentList: WireValue[];
@@ -94,6 +100,7 @@ export interface ApplyMessage {
 
 export interface ConstructMessage {
   id?: MessageID;
+  namespace?: MessageNamespace;
   type: MessageType.CONSTRUCT;
   path: string[];
   argumentList: WireValue[];
@@ -101,11 +108,13 @@ export interface ConstructMessage {
 
 export interface EndpointMessage {
   id?: MessageID;
+  namespace?: MessageNamespace;
   type: MessageType.ENDPOINT;
 }
 
 export interface ReleaseMessage {
   id?: MessageID;
+  namespace?: MessageNamespace;
   type: MessageType.RELEASE;
   path: string[];
 }
