@@ -1,1 +1,1 @@
-This example shows how to expose multiple object under different namespaces.
+This example shows how to expose multiple objects under different namespaces.

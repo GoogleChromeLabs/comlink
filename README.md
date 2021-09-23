@@ -151,9 +151,9 @@ onconnect = function (event) {
 ### [`Namespaces`](./docs/examples/08-namespaces-example)
 
 When you need to expose more objects from a thread you can use Comlink's namespaced APIs.
-This APIs allows you to independently expose objects and access them later from the main thread.
+These APIs allow you to independently expose objects and access them later from the main thread.
 
-**Note:** Also the `expose` and `wrap` APIs uses namespaces under the hood, they uses the default `Comlink.default` namespace.
+**Note:** Also the `expose` and `wrap` APIs use namespaces under the hood, they use the default `Comlink.default` namespace.
 
 **main.js**
 
@@ -215,7 +215,7 @@ Comlink’s goal is to make _exposed_ values from one thread available in the ot
 
 ### `Comlink.wrapNamespaced(endpoint, namespace)` and `Comlink.exposeNamespaced(value, namespace, endpoint?)`
 
-To allow one thread to _expose_ more that one object independently from other objects already _exposed_ Comlink allows you to specify a custom namespace.
+To allow one thread to _expose_ more than one object independently from other objects already _exposed_ Comlink allows you to specify a custom namespace.
 
 The `expose` API uses `exposeNamespaced` with `Comlink.default` as the default namespace.
 
@@ -274,9 +274,9 @@ Note that this particular transfer handler won’t create an actual `Event`, but
 
 ### `Comlink.defaultNamespace`
 
-This constant hold the value of the default namespace used by `Comlink.wrap` and `Comlink.expose`.
+This constant holds the value of the default namespace used by `Comlink.wrap` and `Comlink.expose`.
 
-It's value is `Comlink.default`.
+Its value is `Comlink.default`.
 
 ### `Comlink.releaseProxy`
 
