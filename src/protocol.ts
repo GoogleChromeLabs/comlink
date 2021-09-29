@@ -37,6 +37,11 @@ export interface Endpoint extends EventSource {
   postMessage(message: any, transfer?: Transferable[]): void;
 
   start?: () => void;
+  configuration?: EndpointConfiguration;
+}
+
+export interface EndpointConfiguration {
+  allowedOrigins?: string[];
 }
 
 export const enum WireValueType {

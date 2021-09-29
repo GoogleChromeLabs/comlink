@@ -126,6 +126,13 @@ async function closureSoICanUseAwait() {
         return Comlink.proxy({ baz: 123, method: () => 123 });
       }
     }
+
+    const configuredEndpoint = Comlink.configuredEndpoint(
+      new MessageChannel().port1,
+      { allowedOrigins: ["http://surma.dev", "https://surma.dev"] }
+    );
+    assert<IsExact<typeof configuredEndpoint, Comlink.Endpoint>>(true);
+
     const proxy = Comlink.wrap<Foo>(Comlink.windowEndpoint(self));
     assert<IsExact<typeof proxy, Comlink.Remote<Foo>>>(true);
 

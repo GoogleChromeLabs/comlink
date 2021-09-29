@@ -13,6 +13,7 @@
 
 import {
   Endpoint,
+  EndpointConfiguration,
   EventSource,
   Message,
   MessageType,
@@ -20,7 +21,7 @@ import {
   WireValue,
   WireValueType,
 } from "./protocol";
-export { Endpoint };
+export { Endpoint, EndpointConfiguration };
 
 export const proxyMarker = Symbol("Comlink.proxy");
 export const createEndpoint = Symbol("Comlink.endpoint");
@@ -283,7 +284,7 @@ export const transferHandlers = new Map<
 
 export function expose(obj: any, ep: Endpoint = self as any) {
   ep.addEventListener("message", function callback(ev: MessageEvent) {
-    if (!ev || !ev.data) {
+    if (!ev || !ev.data || discardOrigin(ep, ev.origin)) {
       return;
     }
     const { id, type, path } = {
@@ -489,6 +490,21 @@ export function windowEndpoint(
       w.postMessage(msg, targetOrigin, transferables),
     addEventListener: context.addEventListener.bind(context),
     removeEventListener: context.removeEventListener.bind(context),
+    configuration: {
+      allowedOrigins: targetOrigin !== "*" ? [targetOrigin] : void 0,
+    },
+  };
+}
+
+export function configuredEndpoint(
+  ep: Endpoint,
+  configuration: EndpointConfiguration | undefined
+): Endpoint {
+  return {
+    postMessage: ep.postMessage.bind(ep),
+    addEventListener: ep.addEventListener.bind(ep),
+    removeEventListener: ep.removeEventListener.bind(ep),
+    configuration,
   };
 }
 
@@ -532,7 +548,7 @@ function requestResponseMessage(
   return new Promise((resolve) => {
     const id = generateUUID();
     ep.addEventListener("message", function l(ev: MessageEvent) {
-      if (!ev.data || !ev.data.id || ev.data.id !== id) {
+      if (!ev.data?.id || ev.data.id !== id || discardOrigin(ep, ev.origin)) {
         return;
       }
       ep.removeEventListener("message", l as any);
@@ -543,6 +559,15 @@ function requestResponseMessage(
     }
     ep.postMessage({ id, ...msg }, transfers);
   });
+}
+
+function discardOrigin(ep: Endpoint, origin: string): boolean {
+  const allowedOrigins = ep.configuration?.allowedOrigins;
+
+  return (
+    !!allowedOrigins?.length &&
+    !allowedOrigins?.some((o) => o === "*" || o === origin)
+  );
 }
 
 function generateUUID(): string {
