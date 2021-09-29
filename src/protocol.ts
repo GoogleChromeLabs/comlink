@@ -37,15 +37,6 @@ export interface Endpoint extends EventSource {
   postMessage(message: any, transfer?: Transferable[]): void;
 
   start?: () => void;
-  configuration?: EndpointConfiguration;
-}
-
-export interface EndpointConfiguration {
-  /**
-   * If this property is set, and has at least one element, only messages whose origin match any of the
-   * origins present inside this property are allowed to be processed by comlink.
-   */
-  allowedOrigins?: string[];
 }
 
 export const enum WireValueType {
