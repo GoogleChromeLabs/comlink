@@ -637,6 +637,17 @@ describe("Comlink in the same realm", function () {
     Comlink.expose({ value: 4 }, this.port2);
     expect(await thing.value).to.equal(4);
   });
+
+  it("can handle unserializable types", async function () {
+    const thing = Comlink.wrap(this.port1, { value: {}});
+    Comlink.expose({ value: () => 'boom'}, this.port2);
+    
+    try {
+      await thing.value;
+    } catch (err) {
+      expect(err.message).to.equal("Unserializable return value");
+    }
+  });
 });
 
 function guardedIt(f) {
