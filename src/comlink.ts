@@ -282,6 +282,10 @@ export const transferHandlers = new Map<
 ]);
 
 export function expose(obj: any, ep: Endpoint = self as any) {
+  const sendResponse = (returnValue: any, id: string | undefined) => {
+    const [wireValue, transferables] = toWireValue(returnValue);
+    ep.postMessage({ ...wireValue, id }, transferables);
+  };
   ep.addEventListener("message", function callback(ev: MessageEvent) {
     if (!ev || !ev.data) {
       return;
@@ -292,6 +296,7 @@ export function expose(obj: any, ep: Endpoint = self as any) {
     };
     const argumentList = (ev.data.argumentList || []).map(fromWireValue);
     let returnValue;
+    let release = () => {};
     try {
       const parent = path.slice(0, -1).reduce((obj, prop) => obj[prop], obj);
       const rawValue = path.reduce((obj, prop) => obj[prop], obj);
@@ -328,27 +333,28 @@ export function expose(obj: any, ep: Endpoint = self as any) {
         case MessageType.RELEASE:
           {
             returnValue = undefined;
+            release = () => {
+              ep.removeEventListener("message", callback as any);
+              closeEndPoint(ep);
+            };
           }
           break;
         default:
           return;
       }
-    } catch (value) {
-      returnValue = { value, [throwMarker]: 0 };
+      if (returnValue instanceof Promise) {
+        Promise
+          .resolve(returnValue)
+          .then((returnValue: any) => sendResponse(returnValue, id))
+          .then(release)
+          .catch(error => { setTimeout(() => { throw { id, origError: error } }, 0); });
+      } else {
+        sendResponse(returnValue, id);
+        release();
+      }
+    } catch (error) {
+      throw { id, origError: error };
     }
-    Promise.resolve(returnValue)
-      .catch((value) => {
-        return { value, [throwMarker]: 0 };
-      })
-      .then((returnValue) => {
-        const [wireValue, transferables] = toWireValue(returnValue);
-        ep.postMessage({ ...wireValue, id }, transferables);
-        if (type === MessageType.RELEASE) {
-          // detach and deactive after sending release response above.
-          ep.removeEventListener("message", callback as any);
-          closeEndPoint(ep);
-        }
-      });
   } as any);
   if (ep.start) {
     ep.start();
@@ -529,15 +535,48 @@ function requestResponseMessage(
   msg: Message,
   transfers?: Transferable[]
 ): Promise<WireValue> {
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     const id = generateUUID();
-    ep.addEventListener("message", function l(ev: MessageEvent) {
-      if (!ev.data || !ev.data.id || ev.data.id !== id) {
+
+    const removeEventListeners = (ep: Endpoint) => {
+      ep.removeEventListener("message", onMessage as EventListener);
+      if (isMessagePort(ep)) {
+        window.removeEventListener("error", onError as EventListener);
+      } else {
+        ep.removeEventListener("error", onError as EventListener);
+      }
+    };
+    function onMessage(event: MessageEvent) {
+      const { data } = event;
+      if (!data || !data.id || data.id !== id) {
         return;
       }
-      ep.removeEventListener("message", l as any);
-      resolve(ev.data);
-    } as any);
+
+      removeEventListeners(ep);
+
+      resolve(data);
+    }
+    function onError(event: ErrorEvent) {
+      const { error } = event;
+      if (!error || !error.id || error.id !== id) {
+        if (!error) {
+          const { message, filename, lineno, colno } = event;
+          console.error('Unhandled error:', message, filename, lineno, colno);
+        }
+        return;
+      }
+
+      removeEventListeners(ep);
+
+      reject(error.origError);
+    }
+    ep.addEventListener("message", onMessage as EventListener);
+    if (isMessagePort(ep)) {
+      window.addEventListener("error", onError as EventListener);
+    } else {
+      ep.addEventListener("error", onError as EventListener);
+    }
+
     if (ep.start) {
       ep.start();
     }
