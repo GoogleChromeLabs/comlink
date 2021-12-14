@@ -13,6 +13,7 @@
 
 import "/base/node_modules/web-streams-polyfill/dist/polyfill.es2018.js";
 import { wrap } from "/base/dist/esm/string-channel.experimental.mjs";
+import * as Comlink from "/base/dist/esm/comlink.mjs";
 
 describe("StringChannel", function() {
   beforeEach(function() {
@@ -104,6 +105,19 @@ describe("StringChannel", function() {
     });
     this.ep2.start();
     this.ep1.postMessage(originalMessage);
+  });
+
+  it("can transfer and call Callbacks", async function() {
+    const originalObj = { a: () => Promise.resolve(false) };
+    Comlink.expose(originalObj, this.ep1);
+    const remoteObj = Comlink.wrap(this.ep2);
+
+    // This set action is asynchronous no way to await here
+    remoteObj.a = Comlink.proxy(() => true);
+    // Waiting for setter to actually activate
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    const result = await originalObj.a();
+    expect(result).to.be.true;
   });
 });
 
