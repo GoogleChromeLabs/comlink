@@ -20,7 +20,7 @@ import {
   WireValue,
   WireValueType,
 } from "./protocol";
-export { Endpoint };
+export type { Endpoint };
 
 export const proxyMarker = Symbol("Comlink.proxy");
 export const createEndpoint = Symbol("Comlink.endpoint");
