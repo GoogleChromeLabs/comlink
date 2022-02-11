@@ -98,83 +98,102 @@ describe("Comlink in the same realm", function () {
     expect(await thing.x).to.be.undefined;
   });
 
-  it("can keep the stack and message of thrown errors", async function () {
-    let stack;
-    const thing = Comlink.wrap(this.port1);
-    Comlink.expose((_) => {
-      const error = Error("OMG");
-      stack = error.stack;
-      throw error;
-    }, this.port2);
-    try {
-      await thing();
-      throw "Should have thrown";
-    } catch (err) {
-      expect(err).to.not.eq("Should have thrown");
-      expect(err.message).to.equal("OMG");
-      expect(err.stack).to.equal(stack);
-    }
-  });
+  describe("Comlink in the same realm. Uncaught exceptions.", function () {
+    const onerror = window.onerror;
 
-  it("can forward an async function error", async function () {
-    const thing = Comlink.wrap(this.port1);
-    Comlink.expose(
-      {
+    beforeEach(function () {
+      window.onerror = null;
+    });
+
+    afterEach(function () {
+      window.onerror = onerror;
+    });
+
+    it("can keep the stack and message of thrown errors", async function () {
+      let stack;
+      const thing = Comlink.wrap(this.port1);
+      Comlink.expose((_) => {
+        const error = Error("OMG");
+        stack = error.stack;
+        throw error;
+      }, this.port2);
+      try {
+        await thing();
+        throw "Should have thrown";
+      } catch (err) {
+        expect(err).to.not.eq("Should have thrown");
+        expect(err.message).to.equal("OMG");
+        expect(err.stack).to.equal(stack);
+      }
+    });
+
+    it("can forward an async function error", async function () {
+      const thing = Comlink.wrap(this.port1);
+      Comlink.expose({
         async throwError() {
           throw new Error("Should have thrown");
         },
-      },
-      this.port2
-    );
-    try {
-      await thing.throwError();
-    } catch (err) {
-      expect(err.message).to.equal("Should have thrown");
-    }
-  });
+      }, this.port2);
+      try {
+        await thing.throwError();
+      } catch (err) {
+        expect(err.message).to.equal("Should have thrown");
+      }
+    });
 
-  it("can rethrow non-error objects", async function () {
-    const thing = Comlink.wrap(this.port1);
-    Comlink.expose((_) => {
-      throw { test: true };
-    }, this.port2);
-    try {
-      await thing();
-      throw "Should have thrown";
-    } catch (err) {
-      expect(err).to.not.equal("Should have thrown");
-      expect(err.test).to.equal(true);
-    }
-  });
+    it("can rethrow non-error objects", async function () {
+      const thing = Comlink.wrap(this.port1);
+      Comlink.expose((_) => {
+        throw { test: true };
+      }, this.port2);
+      try {
+        await thing();
+        throw "Should have thrown";
+      } catch (err) {
+        expect(err).to.not.equal("Should have thrown");
+        expect(err.test).to.equal(true);
+      }
+    });
 
-  it("can rethrow scalars", async function () {
-    const thing = Comlink.wrap(this.port1);
-    Comlink.expose((_) => {
-      throw "oops";
-    }, this.port2);
-    try {
-      await thing();
-      throw "Should have thrown";
-    } catch (err) {
-      expect(err).to.not.equal("Should have thrown");
-      expect(err).to.equal("oops");
-      expect(typeof err).to.equal("string");
-    }
-  });
+    it("can rethrow scalars", async function () {
+      const thing = Comlink.wrap(this.port1);
+      Comlink.expose((_) => {
+        throw "oops";
+      }, this.port2);
+      try {
+        await thing();
+        throw "Should have thrown";
+      } catch (err) {
+        expect(err).to.not.equal("Should have thrown");
+        expect(err).to.equal("oops");
+        expect(typeof err).to.equal("string");
+      }
+    });
 
-  it("can rethrow null", async function () {
-    const thing = Comlink.wrap(this.port1);
-    Comlink.expose((_) => {
-      throw null;
-    }, this.port2);
-    try {
-      await thing();
-      throw "Should have thrown";
-    } catch (err) {
-      expect(err).to.not.equal("Should have thrown");
-      expect(err).to.equal(null);
-      expect(typeof err).to.equal("object");
-    }
+    it("can rethrow null", async function () {
+      const thing = Comlink.wrap(this.port1);
+      Comlink.expose((_) => {
+        throw null;
+      }, this.port2);
+      try {
+        await thing();
+        throw "Should have thrown";
+      } catch (err) {
+        expect(err).to.not.equal("Should have thrown");
+        expect(err).to.equal(null);
+        expect(typeof err).to.equal("object");
+      }
+    });
+
+    it("can handle throwing class instance methods", async function () {
+      const thing = Comlink.wrap(this.port1);
+      Comlink.expose(SampleClass, this.port2);
+      const instance = await new thing();
+      return instance
+        .throwsAnError()
+        .then((_) => Promise.reject())
+        .catch((err) => {});
+    });
   });
 
   it("can work with parameterized functions", async function () {
@@ -236,16 +255,6 @@ describe("Comlink in the same realm", function () {
     expect(await instance.counter).to.equal(1);
     await instance.increaseCounter();
     expect(await instance.counter).to.equal(2);
-  });
-
-  it("can handle throwing class instance methods", async function () {
-    const thing = Comlink.wrap(this.port1);
-    Comlink.expose(SampleClass, this.port2);
-    const instance = await new thing();
-    return instance
-      .throwsAnError()
-      .then((_) => Promise.reject())
-      .catch((err) => {});
   });
 
   it("can work with class instance methods multiple times", async function () {
