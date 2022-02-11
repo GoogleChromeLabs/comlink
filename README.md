@@ -248,7 +248,7 @@ Comlink works with Node’s [`worker_threads`][worker_threads] module. Take a lo
 
 [webworker]: https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API
 [umd]: https://github.com/umdjs/umd
-[transferable]: https://developer.mozilla.org/en-US/docs/Web/API/Transferable
+[transferable]: https://developer.mozilla.org/en-US/docs/Glossary/Transferable_objects
 [messageport]: https://developer.mozilla.org/en-US/docs/Web/API/MessagePort
 [examples]: https://github.com/GoogleChromeLabs/comlink/tree/master/docs/examples
 [dist]: https://github.com/GoogleChromeLabs/comlink/tree/master/dist
