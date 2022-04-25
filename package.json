@@ -33,7 +33,7 @@
   "devDependencies": {
     "chai": "4.2.0",
     "conditional-type-checks": "1.0.5",
-    "husky": "4.2.5",
+    "husky": "4.3.8",
     "karma": "^5.0.9",
     "karma-chai": "0.1.0",
     "karma-chrome-launcher": "3.1.0",
