@@ -86,6 +86,7 @@ async function closureSoICanUseAwait() {
     assert<Has<typeof b, () => Promise<number>>>(true);
     assert<IsAny<typeof b>>(false);
     const subproxy = proxy.c;
+    assert<Has<typeof subproxy, { d: Promise<number> }>>(true);
     assert<Has<typeof subproxy, Promise<{ d: number }>>>(true);
     assert<IsAny<typeof subproxy>>(false);
     const copy = await proxy.c;

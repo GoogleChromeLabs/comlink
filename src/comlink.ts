@@ -61,7 +61,12 @@ type RemoteProperty<T> =
   // If the value is a method, comlink will proxy it automatically.
   // Objects are only proxied if they are marked to be proxied.
   // Otherwise, the property is converted to a Promise that resolves the cloned value.
-  T extends Function | ProxyMarked ? Remote<T> : Promisify<T>;
+  T extends Function | ProxyMarked
+    ? Remote<T>
+    : Promisify<T> &
+        (T extends Record<keyof any, unknown>
+          ? { [P in keyof T]: RemoteProperty<T[P]> }
+          : unknown);
 
 /**
  * Takes the raw type of a property as a remote thread would see it through a proxy (e.g. when passed in as a function
