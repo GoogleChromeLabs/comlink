@@ -281,9 +281,32 @@ export const transferHandlers = new Map<
   ["throw", throwTransferHandler],
 ]);
 
-export function expose(obj: any, ep: Endpoint = self as any) {
+function isAllowedOrigin(
+  origins: (string | RegExp)[],
+  origin: string
+): boolean {
+  for (const allowedOrigin of origins) {
+    if (origin === allowedOrigin || allowedOrigin === "*") {
+      return true;
+    }
+    if (allowedOrigin instanceof RegExp && allowedOrigin.test(origin)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+export function expose(
+  obj: any,
+  ep: Endpoint = self as any,
+  origins: (string | RegExp)[] = ["*"]
+) {
   ep.addEventListener("message", function callback(ev: MessageEvent) {
     if (!ev || !ev.data) {
+      return;
+    }
+    if (!isAllowedOrigin(origins, ev.origin)) {
+      console.warn(`Invalid origin '${ev.origin}' for comlink proxy`);
       return;
     }
     const { id, type, path } = {
