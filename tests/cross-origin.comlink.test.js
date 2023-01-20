@@ -27,7 +27,7 @@ describe("Comlink origin filtering", function () {
           // tell the iframe it can start the attack
           ifr.contentWindow.postMessage("start", "*");
         } else if (ev.data === "done") {
-          // confirm the attack succeeded
+          // confirm the attack failed, the prototype was not updated
           expect(Object.prototype.foo).to.be.undefined;
           expect(obj.my).to.equal("value");
           resolve();
@@ -60,7 +60,7 @@ describe("Comlink origin filtering", function () {
           // tell the iframe it can start the attack
           ifr.contentWindow.postMessage("start", "*");
         } else if (ev.data === "done") {
-          // confirm the attack succeeded
+          // confirm the attack succeeded, the prototype was updated
           expect(Object.prototype.foo).to.equal("x");
           expect(obj.my).to.equal("value");
           resolve();
