@@ -285,7 +285,7 @@ function isAllowedOrigin(
   allowedOrigins: (string | RegExp)[],
   origin: string
 ): boolean {
-  for (const allowedOrigin of origins) {
+  for (const allowedOrigin of allowedOrigins) {
     if (origin === allowedOrigin || allowedOrigin === "*") {
       return true;
     }
@@ -299,13 +299,13 @@ function isAllowedOrigin(
 export function expose(
   obj: any,
   ep: Endpoint = self as any,
-  origins: (string | RegExp)[] = ["*"]
+  allowedOrigins: (string | RegExp)[] = ["*"]
 ) {
   ep.addEventListener("message", function callback(ev: MessageEvent) {
     if (!ev || !ev.data) {
       return;
     }
-    if (!isAllowedOrigin(origins, ev.origin)) {
+    if (!isAllowedOrigin(allowedOrigins, ev.origin)) {
       console.warn(`Invalid origin '${ev.origin}' for comlink proxy`);
       return;
     }
