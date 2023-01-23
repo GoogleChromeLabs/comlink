@@ -282,7 +282,7 @@ export const transferHandlers = new Map<
 ]);
 
 function isAllowedOrigin(
-  origins: (string | RegExp)[],
+  allowedOrigins: (string | RegExp)[],
   origin: string
 ): boolean {
   for (const allowedOrigin of origins) {
