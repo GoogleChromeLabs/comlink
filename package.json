@@ -7,7 +7,7 @@
   "types": "dist/umd/comlink.d.ts",
   "sideEffects": false,
   "scripts": {
-    "build": "rollup -c",
+    "build": "rollup -c && denoify --out deno",
     "test:unit": "karma start",
     "test:types": "tsc -p ./tests/tsconfig.json",
     "test:types:watch": "npm run test:types -- --watch",
@@ -33,6 +33,7 @@
   "devDependencies": {
     "chai": "4.2.0",
     "conditional-type-checks": "1.0.5",
+    "denoify": "^0.9.1",
     "husky": "4.2.5",
     "karma": "^5.0.9",
     "karma-chai": "0.1.0",
