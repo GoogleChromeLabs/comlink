@@ -579,6 +579,59 @@ describe("Comlink in the same realm", function () {
     expect(() => instance.method()).to.throw();
   });
 
+  it("released proxy should invoke finalizer", async function () {
+    let finalized = false;
+    Comlink.expose(
+      {
+        a: "thing",
+        [Comlink.finalizer]: () => {
+          finalized = true;
+        },
+      },
+      this.port2
+    );
+    const instance = Comlink.wrap(this.port1);
+    expect(await instance.a).to.equal("thing");
+    await instance[Comlink.releaseProxy]();
+    // wait a beat to let the events process
+    await new Promise((resolve) => setTimeout(resolve, 1));
+    expect(finalized).to.be.true;
+  });
+
+  // commented out this test as it could be unreliable in various browsers as
+  // it has to wait for GC to kick in which could happen at any timing
+  // this does seem to work when testing locally
+  it.skip("released proxy via GC should invoke finalizer", async function () {
+    let finalized = false;
+    Comlink.expose(
+      {
+        a: "thing",
+        [Comlink.finalizer]: () => {
+          finalized = true;
+        },
+      },
+      this.port2
+    );
+
+    let registry;
+
+    // set a long enough timeout to wait for a garbage collection
+    this.timeout(10000);
+    // promise will resolve when the proxy is garbage collected
+    await new Promise(async (resolve, reject) => {
+      registry = new FinalizationRegistry((heldValue) => {
+        heldValue();
+      });
+
+      const instance = Comlink.wrap(this.port1);
+      registry.register(instance, resolve);
+      expect(await instance.a).to.equal("thing");
+    });
+    // wait a beat to let the events process
+    await new Promise((resolve) => setTimeout(resolve, 1));
+    expect(finalized).to.be.true;
+  });
+
   it("can proxy with a given target", async function () {
     const thing = Comlink.wrap(this.port1, { value: {} });
     Comlink.expose({ value: 4 }, this.port2);
