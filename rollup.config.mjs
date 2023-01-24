@@ -1,5 +1,6 @@
-import typescript from "rollup-plugin-typescript2";
-import { terser } from "rollup-plugin-terser";
+import typescript from "@rollup/plugin-typescript";
+import terser from "@rollup/plugin-terser";
+import { sync } from "rimraf";
 
 function config({ format, minify, input, ext = "js" }) {
   const dir = `dist/${format}/`;
@@ -14,15 +15,12 @@ function config({ format, minify, input, ext = "js" }) {
     },
     plugins: [
       typescript({
-        clean: true,
-        typescript: require("typescript"),
-        tsconfigOverride: {
-          compilerOptions: {
-            sourceMap: true,
-          },
-          // Don’t ask. Without this, the typescript plugin is convinced
-          // to create subfolders and misplace the .d.ts files.
-          files: ["./src/comlink.ts", "./src/protocol.ts"],
+        tsconfig: "./tsconfig.json",
+        compilerOptions: {
+          declaration: true,
+          declarationDir: ".",
+          sourceMap: true,
+          outDir: "dist",
         },
       }),
       minify
@@ -35,7 +33,7 @@ function config({ format, minify, input, ext = "js" }) {
   };
 }
 
-require("rimraf").sync("dist");
+sync("dist");
 
 export default [
   { input: "comlink", format: "esm", minify: false, ext: "mjs" },
