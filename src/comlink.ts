@@ -398,7 +398,7 @@ function throwIfProxyReleased(isReleased: boolean) {
 
 function createProxy<T>(
   ep: Endpoint,
-  path: (string | number | symbol)[] = [],
+  path: PropertyKey[] = [],
   target: object = function () {}
 ): Remote<T> {
   let isProxyReleased = false;
@@ -409,7 +409,7 @@ function createProxy<T>(
         return () => {
           return requestResponseMessage(ep, {
             type: MessageType.RELEASE,
-            path: path.map((p) => p.toString()),
+            path: path.map(String),
           }).then(() => {
             closeEndPoint(ep);
             isProxyReleased = true;
@@ -422,7 +422,7 @@ function createProxy<T>(
         }
         const r = requestResponseMessage(ep, {
           type: MessageType.GET,
-          path: path.map((p) => p.toString()),
+          path: path.map(String),
         }).then(fromWireValue);
         return r.then.bind(r);
       }
@@ -437,7 +437,7 @@ function createProxy<T>(
         ep,
         {
           type: MessageType.SET,
-          path: [...path, prop].map((p) => p.toString()),
+          path: [...path, prop].map(String),
           value,
         },
         transferables
@@ -460,7 +460,7 @@ function createProxy<T>(
         ep,
         {
           type: MessageType.APPLY,
-          path: path.map((p) => p.toString()),
+          path: path.map(String),
           argumentList,
         },
         transferables
@@ -473,7 +473,7 @@ function createProxy<T>(
         ep,
         {
           type: MessageType.CONSTRUCT,
-          path: path.map((p) => p.toString()),
+          path: path.map(String),
           argumentList,
         },
         transferables
