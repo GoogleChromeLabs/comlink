@@ -152,9 +152,10 @@ onconnect = function (event) {
 
 ## API
 
-### `Comlink.wrap(endpoint)` and `Comlink.expose(value, endpoint?)`
+### `Comlink.wrap(endpoint)` and `Comlink.expose(value, endpoint?, allowedOrigins?)`
 
-Comlink’s goal is to make _exposed_ values from one thread available in the other. `expose` exposes `value` on `endpoint`, where `endpoint` is a [`postMessage`-like interface][endpoint].
+Comlink’s goal is to make _exposed_ values from one thread available in the other. `expose` exposes `value` on `endpoint`, where `endpoint` is a [`postMessage`-like interface][endpoint] and `allowedOrigins` is an array of
+RegExp or strings defining which origins should be allowed access (defaults to special case of `['*']` for all origins).
 
 `wrap` wraps the _other_ end of the message channel and returns a proxy. The proxy will have all properties and functions of the exposed value, but access and invocations are inherently asynchronous. This means that a function that returns a number will now return _a promise_ for a number. **As a rule of thumb: If you are using the proxy, put `await` in front of it.** Exceptions will be caught and re-thrown on the other side.
 
