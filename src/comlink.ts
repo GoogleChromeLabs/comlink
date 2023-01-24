@@ -25,6 +25,7 @@ export { Endpoint };
 export const proxyMarker = Symbol("Comlink.proxy");
 export const createEndpoint = Symbol("Comlink.endpoint");
 export const releaseProxy = Symbol("Comlink.releaseProxy");
+export const finalizer = Symbol("Comlink.finalizer");
 
 const throwMarker = Symbol("Comlink.thrown");
 
@@ -347,6 +348,9 @@ export function expose(obj: any, ep: Endpoint = self as any) {
           // detach and deactive after sending release response above.
           ep.removeEventListener("message", callback as any);
           closeEndPoint(ep);
+          if (finalizer in obj && typeof obj[finalizer] === "function") {
+            obj[finalizer]();
+          }
         }
       });
   } as any);
@@ -373,6 +377,50 @@ function throwIfProxyReleased(isReleased: boolean) {
   }
 }
 
+function releaseEndpoint(ep: Endpoint) {
+  return requestResponseMessage(ep, {
+    type: MessageType.RELEASE,
+  }).then(() => {
+    closeEndPoint(ep);
+  });
+}
+
+interface FinalizationRegistry<T> {
+  new (cb: (heldValue: T) => void): FinalizationRegistry<T>;
+  register(
+    weakItem: object,
+    heldValue: T,
+    unregisterToken?: object | undefined
+  ): void;
+  unregister(unregisterToken: object): void;
+}
+declare var FinalizationRegistry: FinalizationRegistry<Endpoint>;
+
+const proxyCounter = new WeakMap<Endpoint, number>();
+const proxyFinalizers =
+  "FinalizationRegistry" in self &&
+  new FinalizationRegistry((ep: Endpoint) => {
+    const newCount = (proxyCounter.get(ep) || 0) - 1;
+    proxyCounter.set(ep, newCount);
+    if (newCount === 0) {
+      releaseEndpoint(ep);
+    }
+  });
+
+function registerProxy(proxy: object, ep: Endpoint) {
+  const newCount = (proxyCounter.get(ep) || 0) + 1;
+  proxyCounter.set(ep, newCount);
+  if (proxyFinalizers) {
+    proxyFinalizers.register(proxy, ep, proxy);
+  }
+}
+
+function unregisterProxy(proxy: object) {
+  if (proxyFinalizers) {
+    proxyFinalizers.unregister(proxy);
+  }
+}
+
 function createProxy<T>(
   ep: Endpoint,
   path: (string | number | symbol)[] = [],
@@ -384,13 +432,9 @@ function createProxy<T>(
       throwIfProxyReleased(isProxyReleased);
       if (prop === releaseProxy) {
         return () => {
-          return requestResponseMessage(ep, {
-            type: MessageType.RELEASE,
-            path: path.map((p) => p.toString()),
-          }).then(() => {
-            closeEndPoint(ep);
-            isProxyReleased = true;
-          });
+          unregisterProxy(proxy);
+          releaseEndpoint(ep);
+          isProxyReleased = true;
         };
       }
       if (prop === "then") {
@@ -457,6 +501,7 @@ function createProxy<T>(
       ).then(fromWireValue);
     },
   });
+  registerProxy(proxy, ep);
   return proxy as any;
 }
 
