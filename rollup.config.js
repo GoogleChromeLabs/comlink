@@ -1,9 +1,11 @@
 import typescript from "rollup-plugin-typescript2";
 import { terser } from "rollup-plugin-terser";
+import replace from "@rollup/plugin-replace";
 
 function config({ format, minify, input, ext = "js" }) {
-  const dir = `dist/${format}/`;
+  const dir = `dist/${format}`;
   const minifierSuffix = minify ? ".min" : "";
+  const workerThreadsImport = 'await import("worker_threads")';
   return {
     input: `./src/${input}.ts`,
     output: {
@@ -11,8 +13,21 @@ function config({ format, minify, input, ext = "js" }) {
       file: `${dir}/${input}${minifierSuffix}.${ext}`,
       format,
       sourcemap: true,
+      inlineDynamicImports: true,
     },
+    external: ["worker_threads"],
     plugins: [
+      replace({
+        include: ["src/comlink.ts"],
+        delimiters: ["", ""],
+        preventAssignment: true,
+        values: {
+          [workerThreadsImport]:
+            (format === "esm"
+              ? "undefined;//"
+              : 'require("worker_threads");//') + workerThreadsImport,
+        },
+      }),
       typescript({
         clean: true,
         typescript: require("typescript"),
