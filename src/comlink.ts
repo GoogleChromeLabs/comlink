@@ -22,12 +22,22 @@ export const finalizer = Symbol("Comlink.finalizer");
 
 const throwMarker = Symbol("Comlink.thrown");
 
+type ExposeSpecLeave = "function" | "primitive";
+
+type ExposeSpec = ExposeSpecLeave | { [key: string]: ExposeSpec };
+
+type ExposeOptions = {
+  spec?: ExposeSpec;
+  set?: boolean;
+  allowedOrigins?: (string | RegExp)[];
+};
+
 /**
  * Interface of values that were marked to be proxied with `comlink.proxy()`.
  * Can also be implemented by classes.
  */
 export interface ProxyMarked {
-  [proxyMarker]: true;
+  [proxyMarker]: true | ExposeSpec;
 }
 
 /**
@@ -208,10 +218,11 @@ export interface TransferHandler<T, S> {
  */
 const proxyTransferHandler: TransferHandler<object, MessagePort> = {
   canHandle: (val): val is ProxyMarked =>
-    isObject(val) && (val as ProxyMarked)[proxyMarker],
+    isObject(val) && Boolean((val as ProxyMarked)[proxyMarker]),
   serialize(obj) {
     const { port1, port2 } = new MessageChannel();
-    expose(obj, port1);
+    const options = (obj as ProxyMarked)[proxyMarker];
+    expose(obj, port1, typeof options === "object" ? options : undefined);
     return [port2, [port2]];
   },
   deserialize(port) {
@@ -293,8 +304,14 @@ function isAllowedOrigin(
 export function expose(
   obj: any,
   ep: Endpoint = globalThis as any,
-  allowedOrigins: (string | RegExp)[] = ["*"]
+  options?: ExposeOptions | ExposeOptions["allowedOrigins"]
 ) {
+  const allowedOrigins = Array.isArray(options)
+    ? options
+    : options?.allowedOrigins ?? ["*"];
+
+  const exposeOptions = Array.isArray(options) ? {} : options;
+
   ep.addEventListener("message", function callback(ev: MessageEvent) {
     if (!ev || !ev.data) {
       return;
@@ -310,8 +327,36 @@ export function expose(
     const argumentList = (ev.data.argumentList || []).map(fromWireValue);
     let returnValue;
     try {
-      const parent = path.slice(0, -1).reduce((obj, prop) => obj[prop], obj);
-      const rawValue = path.reduce((obj, prop) => obj[prop], obj);
+      // if no spec was provided, no restrictions should be set
+      const unrestricted = exposeOptions?.spec == null;
+
+      let parent = obj;
+      let rawValue = obj;
+
+      // the spec that applies to rawValue, or undefined if an invalid access is attempted
+      let spec: ExposeSpec | undefined = exposeOptions?.spec;
+      // the spec that applies to parent
+      let parentSpec = spec;
+
+      for (const component of path) {
+        parent = rawValue;
+        parentSpec = spec;
+
+        if (unrestricted) {
+          rawValue = rawValue[component];
+          continue;
+        }
+
+        if (typeof spec === "object" && spec.hasOwnProperty(component)) {
+          rawValue = rawValue[component];
+          spec = spec[component];
+        } else {
+          rawValue = undefined;
+          spec = undefined;
+          break;
+        }
+      }
+
       switch (type) {
         case MessageType.GET:
           {
@@ -320,17 +365,44 @@ export function expose(
           break;
         case MessageType.SET:
           {
-            parent[path.slice(-1)[0]] = fromWireValue(ev.data.value);
-            returnValue = true;
+            returnValue = false;
+
+            // setting might be globally disabled
+            const set = exposeOptions?.set !== false;
+
+            // we allow setting on primitives, or in objects for primitive fields
+            const allowed =
+              unrestricted ||
+              parentSpec === "primitive" ||
+              spec === "primitive";
+
+            if (!allowed) {
+              parent = undefined;
+            }
+
+            // we enter the if on `allowed === false` to trigger the error
+            if (set || !allowed) {
+              parent[path.slice(-1)[0]] = fromWireValue(ev.data.value);
+              returnValue = true;
+            }
           }
           break;
         case MessageType.APPLY:
           {
+            if (!(unrestricted || spec === "function")) {
+              rawValue = undefined;
+            }
+
             returnValue = rawValue.apply(parent, argumentList);
           }
           break;
         case MessageType.CONSTRUCT:
           {
+            // there is no obvious way to configure this proxy if a spec was given
+            if (!unrestricted) {
+              rawValue = undefined;
+            }
+
             const value = new rawValue(...argumentList);
             returnValue = proxy(value);
           }
@@ -338,7 +410,7 @@ export function expose(
         case MessageType.ENDPOINT:
           {
             const { port1, port2 } = new MessageChannel();
-            expose(obj, port2);
+            expose(obj, port2, options);
             returnValue = transfer(port1, [port1]);
           }
           break;
@@ -544,8 +616,11 @@ export function transfer<T>(obj: T, transfers: Transferable[]): T {
   return obj;
 }
 
-export function proxy<T extends {}>(obj: T): T & ProxyMarked {
-  return Object.assign(obj, { [proxyMarker]: true }) as any;
+export function proxy<T extends {}>(
+  obj: T,
+  options?: ExposeOptions
+): T & ProxyMarked {
+  return Object.assign(obj, { [proxyMarker]: options ?? true }) as any;
 }
 
 export function windowEndpoint(
