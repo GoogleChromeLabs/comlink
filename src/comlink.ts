@@ -368,11 +368,12 @@ export function expose(
             obj[finalizer]();
           }
         }
-      }).catch((error) => {
+      })
+      .catch((error) => {
         // Send Serialization Error To Caller
-        const [wireValue, transferables] = toWireValue({ 
+        const [wireValue, transferables] = toWireValue({
           value: new TypeError("Unserializable return value"),
-          [throwMarker]: 0
+          [throwMarker]: 0,
         });
         ep.postMessage({ ...wireValue, id }, transferables);
       });
