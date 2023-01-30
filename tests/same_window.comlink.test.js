@@ -639,9 +639,9 @@ describe("Comlink in the same realm", function () {
   });
 
   it("can handle unserializable types", async function () {
-    const thing = Comlink.wrap(this.port1, { value: {}});
-    Comlink.expose({ value: () => 'boom'}, this.port2);
-    
+    const thing = Comlink.wrap(this.port1, { value: {} });
+    Comlink.expose({ value: () => "boom" }, this.port2);
+
     try {
       await thing.value;
     } catch (err) {
