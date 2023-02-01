@@ -553,11 +553,53 @@ export function windowEndpoint(
   context: EventSource = self,
   targetOrigin = "*"
 ): Endpoint {
+  const messageListeners = new WeakMap<
+    EventListenerOrEventListenerObject,
+    Function
+  >();
+
   return {
     postMessage: (msg: any, transferables: Transferable[]) =>
       w.postMessage(msg, targetOrigin, transferables),
-    addEventListener: context.addEventListener.bind(context),
-    removeEventListener: context.removeEventListener.bind(context),
+    addEventListener: (
+      type: string,
+      listener: EventListenerOrEventListenerObject,
+      options?: {}
+    ) => {
+      if (type !== "message") {
+        context.addEventListener(type, listener, options);
+        return;
+      }
+
+      function callback(this: any, evt: MessageEvent) {
+        if (targetOrigin !== "*" && targetOrigin !== evt?.origin) return;
+
+        (listener as EventListener).call(this, evt);
+      }
+
+      messageListeners.set(listener, callback);
+
+      context.addEventListener(type, callback as any, options);
+    },
+    removeEventListener: (
+      type: string,
+      listener: EventListenerOrEventListenerObject,
+      options?: {}
+    ) => {
+      if (type !== "message") {
+        context.removeEventListener(type, listener, options);
+        return;
+      }
+
+      if (messageListeners.has(listener)) {
+        context.removeEventListener(
+          type,
+          messageListeners.get(listener) as any,
+          options
+        );
+        messageListeners.delete(listener);
+      }
+    },
   };
 }
 

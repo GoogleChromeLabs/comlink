@@ -1,0 +1,8 @@
+<script type="module">
+  import * as Comlink from "/base/dist/esm/comlink.mjs";
+
+  Comlink.expose(
+    (a, b) => a + b,
+    Comlink.windowEndpoint(self.parent, self, "https://surma.dev")
+  );
+</script>

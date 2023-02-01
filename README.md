@@ -243,6 +243,8 @@ Windows and Web Workers have a slightly different variants of `postMessage`. If 
 
 `window` is the window that should be communicate with. `context` is the `EventTarget` on which messages _from_ the `window` can be received (often `self`). `targetOrigin` is passed through to `postMessage` and allows to filter messages by origin. For details, see the documentation for [`Window.postMessage`](https://developer.mozilla.org/en-US/docs/Web/API/Window/postMessage).
 
+**Note:** `targetOrigin` will be also used to filter incoming messages received by the `context.addEventListener` callback.
+
 For a usage example, take a look at the non-worker examples in the `docs` folder.
 
 ## TypeScript
