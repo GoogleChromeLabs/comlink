@@ -292,7 +292,7 @@ function isAllowedOrigin(
 
 export function expose(
   obj: any,
-  ep: Endpoint = self as any,
+  ep: Endpoint = globalThis as any,
   allowedOrigins: (string | RegExp)[] = ["*"]
 ) {
   ep.addEventListener("message", function callback(ev: MessageEvent) {
@@ -422,7 +422,7 @@ declare var FinalizationRegistry: FinalizationRegistry<Endpoint>;
 
 const proxyCounter = new WeakMap<Endpoint, number>();
 const proxyFinalizers =
-  "FinalizationRegistry" in self &&
+  "FinalizationRegistry" in globalThis &&
   new FinalizationRegistry((ep: Endpoint) => {
     const newCount = (proxyCounter.get(ep) || 0) - 1;
     proxyCounter.set(ep, newCount);
@@ -550,7 +550,7 @@ export function proxy<T extends {}>(obj: T): T & ProxyMarked {
 
 export function windowEndpoint(
   w: PostMessageWithOrigin,
-  context: EventSource = self,
+  context: EventSource = globalThis,
   targetOrigin = "*"
 ): Endpoint {
   return {
