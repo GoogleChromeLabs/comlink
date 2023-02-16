@@ -343,7 +343,11 @@ export function expose(obj: any, ep: Endpoint = self as any) {
       })
       .then((returnValue) => {
         const [wireValue, transferables] = toWireValue(returnValue);
-        ep.postMessage({ ...wireValue, id }, transferables);
+        if (ev.source?.postMessage) {
+          ev.source!.postMessage({ ...wireValue, id }, transferables);
+        } else {
+          ep.postMessage({ ...wireValue, id }, transferables);                       
+        }
         if (type === MessageType.RELEASE) {
           // detach and deactive after sending release response above.
           ep.removeEventListener("message", callback as any);
