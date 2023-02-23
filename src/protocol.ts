@@ -34,8 +34,6 @@ export interface Endpoint extends EventSource {
 
 export const enum WireValueType {
   RAW = "RAW",
-  PROXY = "PROXY",
-  THROW = "THROW",
   HANDLER = "HANDLER",
 }
 
