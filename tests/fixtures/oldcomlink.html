@@ -1,0 +1,29 @@
+<script type="module">
+  // We import v4.3.0 instead of latest main
+  import * as Comlink from "/base/node_modules/comlink/dist/esm/comlink.mjs";
+
+  const parentEndpoint = Comlink.windowEndpoint(self.parent);
+
+  class Test {
+    add(a, b) {
+      return a + b;
+    }
+
+    callme(port) {
+      Comlink.wrap(port).maybe();
+    }
+
+    pong(ping) {
+      return ping;
+    }
+  }
+
+  Comlink.expose(new Test(), parentEndpoint);
+  Comlink.transferHandlers.set("pingpong", {
+    canHandle: (obj) => obj === "ping",
+    serialize: (obj) => {
+      return ["pong", []];
+    },
+    deserialize: (obj) => "ping",
+  });
+</script>

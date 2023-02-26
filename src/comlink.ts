@@ -303,10 +303,17 @@ export function expose(
       console.warn(`Invalid origin '${ev.origin}' for comlink proxy`);
       return;
     }
-    const { id, type, path } = {
+    const { id, type, path, wireType } = {
       path: [] as string[],
-      ...(ev.data as Message),
+      ...(ev.data as Message | WireValue),
     };
+
+    // We ignore messages that are not for this event listener.
+    // This only happen when two-way communication is used.
+    if (wireType) {
+      return;
+    }
+
     const argumentList = (ev.data.argumentList || []).map(fromWireValue);
     let returnValue;
     try {
@@ -568,6 +575,7 @@ function toWireValue(value: any): [WireValue, Transferable[]] {
       return [
         {
           type: WireValueType.HANDLER,
+          wireType: true,
           name,
           value: serializedValue,
         },
@@ -578,6 +586,7 @@ function toWireValue(value: any): [WireValue, Transferable[]] {
   return [
     {
       type: WireValueType.RAW,
+      wireType: true,
       value,
     },
     transferCache.get(value) || [],

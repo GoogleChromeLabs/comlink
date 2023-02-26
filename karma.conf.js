@@ -25,6 +25,10 @@ module.exports = function (config) {
         included: false,
       },
       {
+        pattern: "node_modules/comlink/dist/esm/**/*.@(mjs|js)",
+        type: "module",
+      },
+      {
         pattern: "tests/*.test.js",
         type: "module",
       },
