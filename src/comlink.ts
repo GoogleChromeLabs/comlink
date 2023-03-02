@@ -295,6 +295,9 @@ export function expose(
   ep: Endpoint = globalThis as any,
   allowedOrigins: (string | RegExp)[] = ["*"]
 ) {
+  const newCount = (proxyCounter.get(ep) || 0) + 1;
+  proxyCounter.set(ep, newCount);
+
   ep.addEventListener("message", function callback(ev: MessageEvent) {
     if (!ev || !ev.data) {
       return;
