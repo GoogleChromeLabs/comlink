@@ -88,38 +88,40 @@ export const enum MessageType {
   RELEASE = "RELEASE",
 }
 
-interface BaseMessage {
+export interface GetMessage {
   id?: MessageID;
-}
-
-export interface GetMessage extends BaseMessage {
   type: MessageType.GET | V430MessageType.GET;
   path: string[];
 }
 
-export interface SetMessage extends BaseMessage {
+export interface SetMessage {
+  id?: MessageID;
   type: MessageType.SET | V430MessageType.SET;
   path: string[];
   value: WireValue;
 }
 
-export interface ApplyMessage extends BaseMessage {
+export interface ApplyMessage {
+  id?: MessageID;
   type: MessageType.APPLY | V430MessageType.APPLY;
   path: string[];
   argumentList: WireValue[];
 }
 
-export interface ConstructMessage extends BaseMessage {
+export interface ConstructMessage {
+  id?: MessageID;
   type: MessageType.CONSTRUCT | V430MessageType.CONSTRUCT;
   path: string[];
   argumentList: WireValue[];
 }
 
-export interface EndpointMessage extends BaseMessage {
+export interface EndpointMessage {
+  id?: MessageID;
   type: MessageType.ENDPOINT | V430MessageType.ENDPOINT;
 }
 
-export interface ReleaseMessage extends BaseMessage {
+export interface ReleaseMessage {
+  id?: MessageID;
   type: MessageType.RELEASE | V430MessageType.RELEASE;
 }
 
