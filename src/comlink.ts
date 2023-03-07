@@ -410,7 +410,11 @@ function isMessagePort(endpoint: Endpoint): endpoint is MessagePort {
 }
 
 function isEndpoint(endpoint: object): endpoint is Endpoint {
-  return "postMessage" in endpoint && "addEventListener" in endpoint && "removeEventListener" in endpoint;
+  return (
+    "postMessage" in endpoint &&
+    "addEventListener" in endpoint &&
+    "removeEventListener" in endpoint
+  );
 }
 
 function markV430Ports(...args: any[]) {

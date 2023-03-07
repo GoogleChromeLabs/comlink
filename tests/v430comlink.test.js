@@ -18,6 +18,7 @@ describe("Comlink across versions (4.3.0 to latest main)", function () {
   let oldTruncateThreshold;
   let notcalled;
   let error;
+  let iframePort;
 
   function unhandledrejectionCallback(ev) {
     notcalled = false;
@@ -40,7 +41,13 @@ describe("Comlink across versions (4.3.0 to latest main)", function () {
     this.ifr.sandbox.add("allow-scripts", "allow-same-origin");
     this.ifr.src = "/base/tests/fixtures/v430comlink.html";
     document.body.appendChild(this.ifr);
-    return new Promise((resolve) => (this.ifr.onload = resolve));
+    return new Promise((resolve) => (this.ifr.onload = resolve)).then(() => {
+      const iframeChannel = new MessageChannel();
+      iframePort = iframeChannel.port1;
+      this.ifr.contentWindow.postMessage(iframeChannel.port2, "*", [
+        iframeChannel.port2,
+      ]);
+    });
   });
 
   afterEach(function () {
@@ -53,7 +60,7 @@ describe("Comlink across versions (4.3.0 to latest main)", function () {
   });
 
   it("can send a proxy and call a function", async function () {
-    const iframe = Comlink.windowEndpoint(this.ifr.contentWindow);
+    const iframe = iframePort;
     const latest = Comlink.wrap(iframe);
 
     expect(await latest.acceptProxy(Comlink.proxy(() => 3))).to.equal(4);
@@ -62,7 +69,7 @@ describe("Comlink across versions (4.3.0 to latest main)", function () {
   });
 
   it("can send port that get wrapped and transfer by argument", async function () {
-    const iframe = Comlink.windowEndpoint(this.ifr.contentWindow);
+    const iframe = iframePort;
     const latest = Comlink.wrap(iframe);
     let maybecalled = false;
     class Test {
@@ -82,7 +89,7 @@ describe("Comlink across versions (4.3.0 to latest main)", function () {
 
   it("can send port that get wrapped and transfer by a setter", async function () {
     // Verify that it also works with a setter
-    const iframe = Comlink.windowEndpoint(this.ifr.contentWindow);
+    const iframe = iframePort;
     const latest = Comlink.wrap(iframe);
     const channel2 = new MessageChannel();
     let risecalled = false;
@@ -104,7 +111,7 @@ describe("Comlink across versions (4.3.0 to latest main)", function () {
   });
 
   it("works with custom handlers", async function () {
-    const iframe = Comlink.windowEndpoint(this.ifr.contentWindow);
+    const iframe = iframePort;
     const proxy = Comlink.wrap(iframe);
 
     Comlink.transferHandlers.set("pingpong", {

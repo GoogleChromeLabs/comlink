@@ -2,34 +2,45 @@
   // comlink main
   import * as Comlink from "/base/dist/esm/comlink.mjs";
 
-  const parentEndpoint = Comlink.windowEndpoint(self.parent);
-
-  class Test {
-    async acceptProxy(aProxy) {
-      return (await aProxy()) + 1;
+  window.addEventListener("message", function l(ev) {
+    if (
+      ev.data &&
+      typeof ev.data === "object" &&
+      ev.data.constructor.name === "MessagePort"
+    ) {
+      window.removeEventListener("message", l);
+      register(ev.data);
     }
-
-    callme(port) {
-      Comlink.wrap(port).maybe();
-    }
-
-    iwannabeaport = undefined;
-
-    wrapWannaBeAndCall() {
-      Comlink.wrap(this.iwannabeaport).rise();
-    }
-
-    pong(ping) {
-      return ping;
-    }
-  }
-
-  Comlink.expose(new Test(), parentEndpoint);
-  Comlink.transferHandlers.set("pingpong", {
-    canHandle: (obj) => obj === "ping",
-    serialize: (obj) => {
-      return ["pong", []];
-    },
-    deserialize: (obj) => "ping",
   });
+
+  function register(parentEndpoint) {
+    class Test {
+      async acceptProxy(aProxy) {
+        return (await aProxy()) + 1;
+      }
+
+      callme(port) {
+        Comlink.wrap(port).maybe();
+      }
+
+      iwannabeaport = undefined;
+
+      wrapWannaBeAndCall() {
+        Comlink.wrap(this.iwannabeaport).rise();
+      }
+
+      pong(ping) {
+        return ping;
+      }
+    }
+
+    Comlink.expose(new Test(), parentEndpoint);
+    Comlink.transferHandlers.set("pingpong", {
+      canHandle: (obj) => obj === "ping",
+      serialize: (obj) => {
+        return ["pong", []];
+      },
+      deserialize: (obj) => "ping",
+    });
+  }
 </script>
