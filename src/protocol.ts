@@ -32,24 +32,27 @@ export interface Endpoint extends EventSource {
   start?: () => void;
 }
 
-export const enum WireValueType {
+export const enum V430WireValueType {
   RAW,
-  PROXY,
-  THROW,
-  HANDLER,
+  HANDLER = 3,
+}
+
+export const enum WireValueType {
+  RAW = "RAW",
+  PROXY = "PROXY",
+  THROW = "THROW",
+  HANDLER = "HANDLER",
 }
 
 export interface RawWireValue {
   id?: string;
-  type: WireValueType.RAW;
-  wireType?: true;
+  type: WireValueType.RAW | V430WireValueType.RAW;
   value: {};
 }
 
 export interface HandlerWireValue {
   id?: string;
-  type: WireValueType.HANDLER;
-  wireType?: true;
+  type: WireValueType.HANDLER | V430WireValueType.HANDLER;
   name: string;
   value: unknown;
 }
@@ -58,7 +61,7 @@ export type WireValue = RawWireValue | HandlerWireValue;
 
 export type MessageID = string;
 
-export const enum MessageType {
+export const enum V430MessageType {
   GET,
   SET,
   APPLY,
@@ -67,40 +70,57 @@ export const enum MessageType {
   RELEASE,
 }
 
+export interface MessageTypeMap {
+  [MessageType.GET]: V430MessageType.GET;
+  [MessageType.SET]: V430MessageType.SET;
+  [MessageType.APPLY]: V430MessageType.APPLY;
+  [MessageType.CONSTRUCT]: V430MessageType.CONSTRUCT;
+  [MessageType.ENDPOINT]: V430MessageType.ENDPOINT;
+  [MessageType.RELEASE]: V430MessageType.RELEASE;
+}
+
+export const enum MessageType {
+  GET = "GET",
+  SET = "SET",
+  APPLY = "APPLY",
+  CONSTRUCT = "CONSTRUCT",
+  ENDPOINT = "ENDPOINT",
+  RELEASE = "RELEASE",
+}
+
 interface BaseMessage {
   id?: MessageID;
-  wireType?: undefined;
 }
 
 export interface GetMessage extends BaseMessage {
-  type: MessageType.GET;
+  type: MessageType.GET | V430MessageType.GET;
   path: string[];
 }
 
 export interface SetMessage extends BaseMessage {
-  type: MessageType.SET;
+  type: MessageType.SET | V430MessageType.SET;
   path: string[];
   value: WireValue;
 }
 
 export interface ApplyMessage extends BaseMessage {
-  type: MessageType.APPLY;
+  type: MessageType.APPLY | V430MessageType.APPLY;
   path: string[];
   argumentList: WireValue[];
 }
 
 export interface ConstructMessage extends BaseMessage {
-  type: MessageType.CONSTRUCT;
+  type: MessageType.CONSTRUCT | V430MessageType.CONSTRUCT;
   path: string[];
   argumentList: WireValue[];
 }
 
 export interface EndpointMessage extends BaseMessage {
-  type: MessageType.ENDPOINT;
+  type: MessageType.ENDPOINT | V430MessageType.ENDPOINT;
 }
 
 export interface ReleaseMessage extends BaseMessage {
-  type: MessageType.RELEASE;
+  type: MessageType.RELEASE | V430MessageType.RELEASE;
 }
 
 export type Message =

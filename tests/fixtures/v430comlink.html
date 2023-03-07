@@ -1,16 +1,22 @@
 <script type="module">
-  // We import v4.3.0 instead of latest main
-  import * as Comlink from "/base/node_modules/comlink/dist/esm/comlink.mjs";
+  // comlink main
+  import * as Comlink from "/base/dist/esm/comlink.mjs";
 
   const parentEndpoint = Comlink.windowEndpoint(self.parent);
 
   class Test {
-    add(a, b) {
-      return a + b;
+    async acceptProxy(aProxy) {
+      return (await aProxy()) + 1;
     }
 
     callme(port) {
       Comlink.wrap(port).maybe();
+    }
+
+    iwannabeaport = undefined;
+
+    wrapWannaBeAndCall() {
+      Comlink.wrap(this.iwannabeaport).rise();
     }
 
     pong(ping) {

@@ -6,8 +6,8 @@
           // send back a message to modify the prototype
           parent.postMessage(
             {
-              type: 1 /* MessageType.SET */,
-              value: { type: 0 /* WireValueType.RAW */, value: "x" },
+              type: "SET",
+              value: { type: "RAW", value: "x" },
               path: ["__proto__", "foo"],
             },
             "*"
