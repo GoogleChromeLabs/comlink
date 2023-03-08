@@ -8,11 +8,11 @@ import {
   Endpoint,
   EventSource,
   Message,
-  V430MessageType,
+  LegacyMessageType,
   MessageType,
   PostMessageWithOrigin,
   WireValue,
-  V430WireValueType,
+  LegacyWireValueType,
   WireValueType,
   MessageTypeMap,
 } from "./protocol";
@@ -204,9 +204,9 @@ export interface TransferHandler<T, S> {
    * registered under).
    *
    * @param value the serialized value to build a T from
-   * @param isV430 true if this was deserialized from a version of comlink older than 4.3.0
+   * @param legacy true if this was deserialized from a version of comlink older than 4.3.0
    */
-  deserialize(value: S, isV430: boolean): T;
+  deserialize(value: S, legacy: boolean): T;
 }
 
 /**
@@ -220,9 +220,9 @@ const proxyTransferHandler: TransferHandler<object, MessagePort> = {
     expose(obj, port1);
     return [port2, [port2]];
   },
-  deserialize(port, isV430) {
+  deserialize(port, legacy) {
     port.start();
-    return wrap(port, undefined, isV430);
+    return wrap(port, undefined, legacy);
   },
 };
 
@@ -314,45 +314,45 @@ export function expose(
       ...(ev.data as Message | WireValue),
     };
 
-    const isV430 = typeof type === "number";
+    const isLegacy = typeof type === "number";
     const argumentList = (ev.data.argumentList || []).map(fromWireValue);
 
-    markV430Ports(...argumentList);
+    markLegacyPorts(...argumentList);
 
     let returnValue;
     try {
       const parent = path.slice(0, -1).reduce((obj, prop) => obj[prop], obj);
       const rawValue = path.reduce((obj, prop) => obj[prop], obj);
       switch (type) {
-        case V430MessageType.GET:
+        case LegacyMessageType.GET:
         case MessageType.GET:
           {
             returnValue = rawValue;
           }
           break;
-        case V430MessageType.SET:
+        case LegacyMessageType.SET:
         case MessageType.SET:
           {
             const value = fromWireValue(ev.data.value);
-            markV430Ports(value);
+            markLegacyPorts(value);
             parent[path.slice(-1)[0]] = value;
             returnValue = true;
           }
           break;
-        case V430MessageType.APPLY:
+        case LegacyMessageType.APPLY:
         case MessageType.APPLY:
           {
             returnValue = rawValue.apply(parent, argumentList);
           }
           break;
-        case V430MessageType.CONSTRUCT:
+        case LegacyMessageType.CONSTRUCT:
         case MessageType.CONSTRUCT:
           {
             const value = new rawValue(...argumentList);
             returnValue = proxy(value);
           }
           break;
-        case V430MessageType.ENDPOINT:
+        case LegacyMessageType.ENDPOINT:
         case MessageType.ENDPOINT:
           {
             const { port1, port2 } = new MessageChannel();
@@ -360,7 +360,7 @@ export function expose(
             returnValue = transfer(port1, [port1]);
           }
           break;
-        case V430MessageType.RELEASE:
+        case LegacyMessageType.RELEASE:
         case MessageType.RELEASE:
           {
             returnValue = undefined;
@@ -377,7 +377,7 @@ export function expose(
         return { value, [throwMarker]: 0 };
       })
       .then((returnValue) => {
-        const [wireValue, transferables] = toWireValue(returnValue, isV430);
+        const [wireValue, transferables] = toWireValue(returnValue, isLegacy);
         ep.postMessage({ ...wireValue, id }, transferables);
         if (type === MessageType.RELEASE) {
           // detach and deactive after sending release response above.
@@ -395,7 +395,7 @@ export function expose(
             value: new TypeError("Unserializable return value"),
             [throwMarker]: 0,
           },
-          isV430
+          isLegacy
         );
         ep.postMessage({ ...wireValue, id }, transferables);
       });
@@ -417,10 +417,10 @@ function isEndpoint(endpoint: object): endpoint is Endpoint {
   );
 }
 
-function markV430Ports(...args: any[]) {
+function markLegacyPorts(...args: any[]) {
   for (const arg of args) {
     if (isObject(arg) && isEndpoint(arg) && isMessagePort(arg)) {
-      v430Endpoints.add(arg);
+      legacyEndpoints.add(arg);
     }
   }
 }
@@ -432,10 +432,10 @@ function closeEndPoint(endpoint: Endpoint) {
 export function wrap<T>(
   ep: Endpoint,
   target?: any,
-  isV430: boolean = false
+  legacy: boolean = false
 ): Remote<T> {
-  if (isV430) {
-    v430Endpoints.add(ep);
+  if (legacy) {
+    legacyEndpoints.add(ep);
   }
   return createProxy<T>(ep, [], target) as any;
 }
@@ -446,9 +446,9 @@ function throwIfProxyReleased(isReleased: boolean) {
   }
 }
 
-function releaseEndpoint(ep: Endpoint, isV430: boolean) {
+function releaseEndpoint(ep: Endpoint, legacy: boolean) {
   return requestResponseMessage(ep, {
-    type: msgType(MessageType.RELEASE, isV430),
+    type: msgType(MessageType.RELEASE, legacy),
   }).then(() => {
     closeEndPoint(ep);
   });
@@ -465,7 +465,7 @@ interface FinalizationRegistry<T> {
 }
 declare var FinalizationRegistry: FinalizationRegistry<Endpoint>;
 
-const v430Endpoints = new WeakSet<Endpoint>();
+const legacyEndpoints = new WeakSet<Endpoint>();
 const proxyCounter = new WeakMap<Endpoint, number>();
 const proxyFinalizers =
   "FinalizationRegistry" in globalThis &&
@@ -473,8 +473,8 @@ const proxyFinalizers =
     const newCount = (proxyCounter.get(ep) || 0) - 1;
     proxyCounter.set(ep, newCount);
     if (newCount === 0) {
-      releaseEndpoint(ep, v430Endpoints.has(ep));
-      v430Endpoints.delete(ep);
+      releaseEndpoint(ep, legacyEndpoints.has(ep));
+      legacyEndpoints.delete(ep);
     }
   });
 
@@ -498,14 +498,14 @@ function createProxy<T>(
   target: object = function () {}
 ): Remote<T> {
   let isProxyReleased = false;
-  const isV430 = v430Endpoints.has(ep);
+  const isLegacy = legacyEndpoints.has(ep);
   const proxy = new Proxy(target, {
     get(_target, prop) {
       throwIfProxyReleased(isProxyReleased);
       if (prop === releaseProxy) {
         return () => {
           unregisterProxy(proxy);
-          releaseEndpoint(ep, isV430);
+          releaseEndpoint(ep, isLegacy);
           isProxyReleased = true;
         };
       }
@@ -514,7 +514,7 @@ function createProxy<T>(
           return { then: () => proxy };
         }
         const r = requestResponseMessage(ep, {
-          type: msgType(MessageType.GET, isV430),
+          type: msgType(MessageType.GET, isLegacy),
           path: path.map((p) => p.toString()),
         }).then(fromWireValue);
         return r.then.bind(r);
@@ -525,11 +525,11 @@ function createProxy<T>(
       throwIfProxyReleased(isProxyReleased);
       // FIXME: ES6 Proxy Handler `set` methods are supposed to return a
       // boolean. To show good will, we return true asynchronously ¯\_(ツ)_/¯
-      const [value, transferables] = toWireValue(rawValue, isV430);
+      const [value, transferables] = toWireValue(rawValue, isLegacy);
       return requestResponseMessage(
         ep,
         {
-          type: msgType(MessageType.SET, isV430),
+          type: msgType(MessageType.SET, isLegacy),
           path: [...path, prop].map((p) => p.toString()),
           value,
         },
@@ -541,7 +541,7 @@ function createProxy<T>(
       const last = path[path.length - 1];
       if ((last as any) === createEndpoint) {
         return requestResponseMessage(ep, {
-          type: msgType(MessageType.ENDPOINT, isV430),
+          type: msgType(MessageType.ENDPOINT, isLegacy),
         }).then(fromWireValue);
       }
       // We just pretend that `bind()` didn’t happen.
@@ -550,12 +550,12 @@ function createProxy<T>(
       }
       const [argumentList, transferables] = processArguments(
         rawArgumentList,
-        isV430
+        isLegacy
       );
       return requestResponseMessage(
         ep,
         {
-          type: msgType(MessageType.APPLY, isV430),
+          type: msgType(MessageType.APPLY, isLegacy),
           path: path.map((p) => p.toString()),
           argumentList,
         },
@@ -566,12 +566,12 @@ function createProxy<T>(
       throwIfProxyReleased(isProxyReleased);
       const [argumentList, transferables] = processArguments(
         rawArgumentList,
-        isV430
+        isLegacy
       );
       return requestResponseMessage(
         ep,
         {
-          type: msgType(MessageType.CONSTRUCT, isV430),
+          type: msgType(MessageType.CONSTRUCT, isLegacy),
           path: path.map((p) => p.toString()),
           argumentList,
         },
@@ -589,9 +589,9 @@ function myFlat<T>(arr: (T | T[])[]): T[] {
 
 function processArguments(
   argumentList: any[],
-  isV430: boolean
+  isLegacy: boolean
 ): [WireValue[], Transferable[]] {
-  const processed = argumentList.map((arg) => toWireValue(arg, isV430));
+  const processed = argumentList.map((arg) => toWireValue(arg, isLegacy));
   return [processed.map((v) => v[0]), myFlat(processed.map((v) => v[1]))];
 }
 
@@ -618,13 +618,16 @@ export function windowEndpoint(
   };
 }
 
-function toWireValue(value: any, isV430: boolean): [WireValue, Transferable[]] {
+function toWireValue(
+  value: any,
+  isLegacy: boolean
+): [WireValue, Transferable[]] {
   for (const [name, handler] of transferHandlers) {
     if (handler.canHandle(value)) {
       const [serializedValue, transferables] = handler.serialize(value);
       return [
         {
-          type: isV430 ? V430WireValueType.HANDLER : WireValueType.HANDLER,
+          type: isLegacy ? LegacyWireValueType.HANDLER : WireValueType.HANDLER,
           name,
           value: serializedValue,
         },
@@ -634,7 +637,7 @@ function toWireValue(value: any, isV430: boolean): [WireValue, Transferable[]] {
   }
   return [
     {
-      type: isV430 ? V430WireValueType.RAW : WireValueType.RAW,
+      type: isLegacy ? LegacyWireValueType.RAW : WireValueType.RAW,
       value,
     },
     transferCache.get(value) || [],
@@ -643,11 +646,11 @@ function toWireValue(value: any, isV430: boolean): [WireValue, Transferable[]] {
 
 function fromWireValue(value: WireValue): any {
   switch (value.type) {
-    case V430WireValueType.HANDLER:
+    case LegacyWireValueType.HANDLER:
     case WireValueType.HANDLER:
-      const isV430 = value.type === V430WireValueType.HANDLER;
-      return transferHandlers.get(value.name)!.deserialize(value.value, isV430);
-    case V430WireValueType.RAW:
+      const legacy = value.type === LegacyWireValueType.HANDLER;
+      return transferHandlers.get(value.name)!.deserialize(value.value, legacy);
+    case LegacyWireValueType.RAW:
     case WireValueType.RAW:
       return value.value;
   }
@@ -676,30 +679,30 @@ function requestResponseMessage(
 
 function msgType<T extends MessageType>(
   type: T,
-  isV430: boolean
+  isLegacy: boolean
 ): MessageTypeMap[T] | T {
-  if (!isV430) {
+  if (!isLegacy) {
     return type;
   }
 
-  function mapMessageTypeToV430Type(type: MessageType): V430MessageType {
+  function mapMessageTypeToLegacyType(type: MessageType): LegacyMessageType {
     switch (type) {
       case MessageType.GET:
-        return V430MessageType.GET;
+        return LegacyMessageType.GET;
       case MessageType.SET:
-        return V430MessageType.SET;
+        return LegacyMessageType.SET;
       case MessageType.APPLY:
-        return V430MessageType.APPLY;
+        return LegacyMessageType.APPLY;
       case MessageType.CONSTRUCT:
-        return V430MessageType.CONSTRUCT;
+        return LegacyMessageType.CONSTRUCT;
       case MessageType.ENDPOINT:
-        return V430MessageType.ENDPOINT;
+        return LegacyMessageType.ENDPOINT;
       case MessageType.RELEASE:
-        return V430MessageType.RELEASE;
+        return LegacyMessageType.RELEASE;
     }
   }
 
-  return mapMessageTypeToV430Type(type) as MessageTypeMap[T];
+  return mapMessageTypeToLegacyType(type) as MessageTypeMap[T];
 }
 
 function generateUUID(): string {

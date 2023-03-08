@@ -32,7 +32,7 @@ export interface Endpoint extends EventSource {
   start?: () => void;
 }
 
-export const enum V430WireValueType {
+export const enum LegacyWireValueType {
   RAW,
   HANDLER = 3,
 }
@@ -46,13 +46,13 @@ export const enum WireValueType {
 
 export interface RawWireValue {
   id?: string;
-  type: WireValueType.RAW | V430WireValueType.RAW;
+  type: WireValueType.RAW | LegacyWireValueType.RAW;
   value: {};
 }
 
 export interface HandlerWireValue {
   id?: string;
-  type: WireValueType.HANDLER | V430WireValueType.HANDLER;
+  type: WireValueType.HANDLER | LegacyWireValueType.HANDLER;
   name: string;
   value: unknown;
 }
@@ -61,7 +61,7 @@ export type WireValue = RawWireValue | HandlerWireValue;
 
 export type MessageID = string;
 
-export const enum V430MessageType {
+export const enum LegacyMessageType {
   GET,
   SET,
   APPLY,
@@ -71,12 +71,12 @@ export const enum V430MessageType {
 }
 
 export interface MessageTypeMap {
-  [MessageType.GET]: V430MessageType.GET;
-  [MessageType.SET]: V430MessageType.SET;
-  [MessageType.APPLY]: V430MessageType.APPLY;
-  [MessageType.CONSTRUCT]: V430MessageType.CONSTRUCT;
-  [MessageType.ENDPOINT]: V430MessageType.ENDPOINT;
-  [MessageType.RELEASE]: V430MessageType.RELEASE;
+  [MessageType.GET]: LegacyMessageType.GET;
+  [MessageType.SET]: LegacyMessageType.SET;
+  [MessageType.APPLY]: LegacyMessageType.APPLY;
+  [MessageType.CONSTRUCT]: LegacyMessageType.CONSTRUCT;
+  [MessageType.ENDPOINT]: LegacyMessageType.ENDPOINT;
+  [MessageType.RELEASE]: LegacyMessageType.RELEASE;
 }
 
 export const enum MessageType {
@@ -90,39 +90,39 @@ export const enum MessageType {
 
 export interface GetMessage {
   id?: MessageID;
-  type: MessageType.GET | V430MessageType.GET;
+  type: MessageType.GET | LegacyMessageType.GET;
   path: string[];
 }
 
 export interface SetMessage {
   id?: MessageID;
-  type: MessageType.SET | V430MessageType.SET;
+  type: MessageType.SET | LegacyMessageType.SET;
   path: string[];
   value: WireValue;
 }
 
 export interface ApplyMessage {
   id?: MessageID;
-  type: MessageType.APPLY | V430MessageType.APPLY;
+  type: MessageType.APPLY | LegacyMessageType.APPLY;
   path: string[];
   argumentList: WireValue[];
 }
 
 export interface ConstructMessage {
   id?: MessageID;
-  type: MessageType.CONSTRUCT | V430MessageType.CONSTRUCT;
+  type: MessageType.CONSTRUCT | LegacyMessageType.CONSTRUCT;
   path: string[];
   argumentList: WireValue[];
 }
 
 export interface EndpointMessage {
   id?: MessageID;
-  type: MessageType.ENDPOINT | V430MessageType.ENDPOINT;
+  type: MessageType.ENDPOINT | LegacyMessageType.ENDPOINT;
 }
 
 export interface ReleaseMessage {
   id?: MessageID;
-  type: MessageType.RELEASE | V430MessageType.RELEASE;
+  type: MessageType.RELEASE | LegacyMessageType.RELEASE;
 }
 
 export type Message =
