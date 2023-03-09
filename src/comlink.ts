@@ -202,11 +202,8 @@ export interface TransferHandler<T, S> {
    * Gets called to deserialize an incoming value that was serialized in the
    * other thread with this transfer handler (known through the name it was
    * registered under).
-   *
-   * @param value the serialized value to build a T from
-   * @param legacy true if this was deserialized from a version of comlink older than 4.3.0
    */
-  deserialize(value: S, legacy: boolean): T;
+  deserialize(value: S): T;
 }
 
 /**
@@ -220,9 +217,9 @@ const proxyTransferHandler: TransferHandler<object, MessagePort> = {
     expose(obj, port1);
     return [port2, [port2]];
   },
-  deserialize(port, legacy) {
+  deserialize(port) {
     port.start();
-    return wrap(port, undefined, legacy);
+    return wrap(port);
   },
 };
 
@@ -317,8 +314,6 @@ export function expose(
     const isLegacy = typeof type === "number";
     const argumentList = (ev.data.argumentList || []).map(fromWireValue);
 
-    markLegacyPorts(...argumentList);
-
     let returnValue;
     try {
       const parent = path.slice(0, -1).reduce((obj, prop) => obj[prop], obj);
@@ -334,7 +329,6 @@ export function expose(
         case MessageType.SET:
           {
             const value = fromWireValue(ev.data.value);
-            markLegacyPorts(value);
             parent[path.slice(-1)[0]] = value;
             returnValue = true;
           }
@@ -417,11 +411,13 @@ function isEndpoint(endpoint: object): endpoint is Endpoint {
   );
 }
 
-function markLegacyPorts(...args: any[]) {
-  for (const arg of args) {
-    if (isObject(arg) && isEndpoint(arg) && isMessagePort(arg)) {
-      legacyEndpoints.add(arg);
-    }
+function markLegacyPort(maybePort: unknown) {
+  if (
+    isObject(maybePort) &&
+    isEndpoint(maybePort) &&
+    isMessagePort(maybePort)
+  ) {
+    legacyEndpoints.add(maybePort);
   }
 }
 
@@ -647,10 +643,11 @@ function toWireValue(
 function fromWireValue(value: WireValue): any {
   switch (value.type) {
     case LegacyWireValueType.HANDLER:
+      markLegacyPort(value.value);
     case WireValueType.HANDLER:
-      const legacy = value.type === LegacyWireValueType.HANDLER;
-      return transferHandlers.get(value.name)!.deserialize(value.value, legacy);
+      return transferHandlers.get(value.name)!.deserialize(value.value);
     case LegacyWireValueType.RAW:
+      markLegacyPort(value.value);
     case WireValueType.RAW:
       return value.value;
   }
