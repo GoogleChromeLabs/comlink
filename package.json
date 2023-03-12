@@ -31,6 +31,7 @@
     "@rollup/plugin-typescript": "11.0.0",
     "chai": "^4.3.7",
     "conditional-type-checks": "1.0.6",
+    "comlink": "4.3.0",
     "husky": "8.0.3",
     "karma": "6.4.1",
     "karma-chai": "0.1.0",

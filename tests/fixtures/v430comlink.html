@@ -1,0 +1,46 @@
+<script type="module">
+  // comlink main
+  import * as Comlink from "/base/dist/esm/comlink.mjs";
+
+  window.addEventListener("message", function l(ev) {
+    if (
+      ev.data &&
+      typeof ev.data === "object" &&
+      ev.data.constructor.name === "MessagePort"
+    ) {
+      window.removeEventListener("message", l);
+      register(ev.data);
+    }
+  });
+
+  function register(parentEndpoint) {
+    class Test {
+      async acceptProxy(aProxy) {
+        return (await aProxy()) + 1;
+      }
+
+      callme(port) {
+        Comlink.wrap(port.foo).maybe();
+      }
+
+      iwannabeaport = undefined;
+
+      wrapWannaBeAndCall() {
+        Comlink.wrap(this.iwannabeaport).rise();
+      }
+
+      pong(ping) {
+        return ping;
+      }
+    }
+
+    Comlink.expose(new Test(), parentEndpoint);
+    Comlink.transferHandlers.set("pingpong", {
+      canHandle: (obj) => obj === "ping",
+      serialize: (obj) => {
+        return ["pong", []];
+      },
+      deserialize: (obj) => "ping",
+    });
+  }
+</script>

@@ -32,6 +32,11 @@ export interface Endpoint extends EventSource {
   start?: () => void;
 }
 
+export const enum LegacyWireValueType {
+  RAW,
+  HANDLER = 3,
+}
+
 export const enum WireValueType {
   RAW = "RAW",
   PROXY = "PROXY",
@@ -41,13 +46,13 @@ export const enum WireValueType {
 
 export interface RawWireValue {
   id?: string;
-  type: WireValueType.RAW;
+  type: WireValueType.RAW | LegacyWireValueType.RAW;
   value: {};
 }
 
 export interface HandlerWireValue {
   id?: string;
-  type: WireValueType.HANDLER;
+  type: WireValueType.HANDLER | LegacyWireValueType.HANDLER;
   name: string;
   value: unknown;
 }
@@ -55,6 +60,24 @@ export interface HandlerWireValue {
 export type WireValue = RawWireValue | HandlerWireValue;
 
 export type MessageID = string;
+
+export const enum LegacyMessageType {
+  GET,
+  SET,
+  APPLY,
+  CONSTRUCT,
+  ENDPOINT,
+  RELEASE,
+}
+
+export interface MessageTypeMap {
+  [MessageType.GET]: LegacyMessageType.GET;
+  [MessageType.SET]: LegacyMessageType.SET;
+  [MessageType.APPLY]: LegacyMessageType.APPLY;
+  [MessageType.CONSTRUCT]: LegacyMessageType.CONSTRUCT;
+  [MessageType.ENDPOINT]: LegacyMessageType.ENDPOINT;
+  [MessageType.RELEASE]: LegacyMessageType.RELEASE;
+}
 
 export const enum MessageType {
   GET = "GET",
@@ -67,39 +90,39 @@ export const enum MessageType {
 
 export interface GetMessage {
   id?: MessageID;
-  type: MessageType.GET;
+  type: MessageType.GET | LegacyMessageType.GET;
   path: string[];
 }
 
 export interface SetMessage {
   id?: MessageID;
-  type: MessageType.SET;
+  type: MessageType.SET | LegacyMessageType.SET;
   path: string[];
   value: WireValue;
 }
 
 export interface ApplyMessage {
   id?: MessageID;
-  type: MessageType.APPLY;
+  type: MessageType.APPLY | LegacyMessageType.APPLY;
   path: string[];
   argumentList: WireValue[];
 }
 
 export interface ConstructMessage {
   id?: MessageID;
-  type: MessageType.CONSTRUCT;
+  type: MessageType.CONSTRUCT | LegacyMessageType.CONSTRUCT;
   path: string[];
   argumentList: WireValue[];
 }
 
 export interface EndpointMessage {
   id?: MessageID;
-  type: MessageType.ENDPOINT;
+  type: MessageType.ENDPOINT | LegacyMessageType.ENDPOINT;
 }
 
 export interface ReleaseMessage {
   id?: MessageID;
-  type: MessageType.RELEASE;
+  type: MessageType.RELEASE | LegacyMessageType.RELEASE;
 }
 
 export type Message =

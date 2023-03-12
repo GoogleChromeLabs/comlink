@@ -8,10 +8,13 @@ import {
   Endpoint,
   EventSource,
   Message,
+  LegacyMessageType,
   MessageType,
   PostMessageWithOrigin,
   WireValue,
+  LegacyWireValueType,
   WireValueType,
+  MessageTypeMap,
 } from "./protocol";
 export type { Endpoint };
 
@@ -305,36 +308,45 @@ export function expose(
     }
     const { id, type, path } = {
       path: [] as string[],
-      ...(ev.data as Message),
+      ...(ev.data as Message | WireValue),
     };
+
+    const isLegacy = typeof type === "number";
     const argumentList = (ev.data.argumentList || []).map(fromWireValue);
+
     let returnValue;
     try {
       const parent = path.slice(0, -1).reduce((obj, prop) => obj[prop], obj);
       const rawValue = path.reduce((obj, prop) => obj[prop], obj);
       switch (type) {
+        case LegacyMessageType.GET:
         case MessageType.GET:
           {
             returnValue = rawValue;
           }
           break;
+        case LegacyMessageType.SET:
         case MessageType.SET:
           {
-            parent[path.slice(-1)[0]] = fromWireValue(ev.data.value);
+            const value = fromWireValue(ev.data.value);
+            parent[path.slice(-1)[0]] = value;
             returnValue = true;
           }
           break;
+        case LegacyMessageType.APPLY:
         case MessageType.APPLY:
           {
             returnValue = rawValue.apply(parent, argumentList);
           }
           break;
+        case LegacyMessageType.CONSTRUCT:
         case MessageType.CONSTRUCT:
           {
             const value = new rawValue(...argumentList);
             returnValue = proxy(value);
           }
           break;
+        case LegacyMessageType.ENDPOINT:
         case MessageType.ENDPOINT:
           {
             const { port1, port2 } = new MessageChannel();
@@ -342,6 +354,7 @@ export function expose(
             returnValue = transfer(port1, [port1]);
           }
           break;
+        case LegacyMessageType.RELEASE:
         case MessageType.RELEASE:
           {
             returnValue = undefined;
@@ -358,7 +371,7 @@ export function expose(
         return { value, [throwMarker]: 0 };
       })
       .then((returnValue) => {
-        const [wireValue, transferables] = toWireValue(returnValue);
+        const [wireValue, transferables] = toWireValue(returnValue, isLegacy);
         ep.postMessage({ ...wireValue, id }, transferables);
         if (type === MessageType.RELEASE) {
           // detach and deactive after sending release response above.
@@ -371,10 +384,13 @@ export function expose(
       })
       .catch((error) => {
         // Send Serialization Error To Caller
-        const [wireValue, transferables] = toWireValue({
-          value: new TypeError("Unserializable return value"),
-          [throwMarker]: 0,
-        });
+        const [wireValue, transferables] = toWireValue(
+          {
+            value: new TypeError("Unserializable return value"),
+            [throwMarker]: 0,
+          },
+          isLegacy
+        );
         ep.postMessage({ ...wireValue, id }, transferables);
       });
   } as any);
@@ -387,11 +403,38 @@ function isMessagePort(endpoint: Endpoint): endpoint is MessagePort {
   return endpoint.constructor.name === "MessagePort";
 }
 
+function isEndpoint(endpoint: object): endpoint is Endpoint {
+  return (
+    "postMessage" in endpoint &&
+    "addEventListener" in endpoint &&
+    "removeEventListener" in endpoint
+  );
+}
+
+function markLegacyPort(maybePort: unknown) {
+  if (isObject(maybePort)) {
+    if (isEndpoint(maybePort) && isMessagePort(maybePort)) {
+      legacyEndpoints.add(maybePort);
+    } else {
+      for (const prop in maybePort) {
+        markLegacyPort(maybePort[prop as keyof typeof maybePort]);
+      }
+    }
+  }
+}
+
 function closeEndPoint(endpoint: Endpoint) {
   if (isMessagePort(endpoint)) endpoint.close();
 }
 
-export function wrap<T>(ep: Endpoint, target?: any): Remote<T> {
+export function wrap<T>(
+  ep: Endpoint,
+  target?: any,
+  legacy: boolean = false
+): Remote<T> {
+  if (legacy) {
+    legacyEndpoints.add(ep);
+  }
   return createProxy<T>(ep, [], target) as any;
 }
 
@@ -401,9 +444,9 @@ function throwIfProxyReleased(isReleased: boolean) {
   }
 }
 
-function releaseEndpoint(ep: Endpoint) {
+function releaseEndpoint(ep: Endpoint, legacy: boolean) {
   return requestResponseMessage(ep, {
-    type: MessageType.RELEASE,
+    type: msgType(MessageType.RELEASE, legacy),
   }).then(() => {
     closeEndPoint(ep);
   });
@@ -420,6 +463,7 @@ interface FinalizationRegistry<T> {
 }
 declare var FinalizationRegistry: FinalizationRegistry<Endpoint>;
 
+const legacyEndpoints = new WeakSet<Endpoint>();
 const proxyCounter = new WeakMap<Endpoint, number>();
 const proxyFinalizers =
   "FinalizationRegistry" in globalThis &&
@@ -427,7 +471,8 @@ const proxyFinalizers =
     const newCount = (proxyCounter.get(ep) || 0) - 1;
     proxyCounter.set(ep, newCount);
     if (newCount === 0) {
-      releaseEndpoint(ep);
+      releaseEndpoint(ep, legacyEndpoints.has(ep));
+      legacyEndpoints.delete(ep);
     }
   });
 
@@ -451,13 +496,14 @@ function createProxy<T>(
   target: object = function () {}
 ): Remote<T> {
   let isProxyReleased = false;
+  const isLegacy = legacyEndpoints.has(ep);
   const proxy = new Proxy(target, {
     get(_target, prop) {
       throwIfProxyReleased(isProxyReleased);
       if (prop === releaseProxy) {
         return () => {
           unregisterProxy(proxy);
-          releaseEndpoint(ep);
+          releaseEndpoint(ep, isLegacy);
           isProxyReleased = true;
         };
       }
@@ -466,7 +512,7 @@ function createProxy<T>(
           return { then: () => proxy };
         }
         const r = requestResponseMessage(ep, {
-          type: MessageType.GET,
+          type: msgType(MessageType.GET, isLegacy),
           path: path.map((p) => p.toString()),
         }).then(fromWireValue);
         return r.then.bind(r);
@@ -477,11 +523,11 @@ function createProxy<T>(
       throwIfProxyReleased(isProxyReleased);
       // FIXME: ES6 Proxy Handler `set` methods are supposed to return a
       // boolean. To show good will, we return true asynchronously ¯\_(ツ)_/¯
-      const [value, transferables] = toWireValue(rawValue);
+      const [value, transferables] = toWireValue(rawValue, isLegacy);
       return requestResponseMessage(
         ep,
         {
-          type: MessageType.SET,
+          type: msgType(MessageType.SET, isLegacy),
           path: [...path, prop].map((p) => p.toString()),
           value,
         },
@@ -493,18 +539,21 @@ function createProxy<T>(
       const last = path[path.length - 1];
       if ((last as any) === createEndpoint) {
         return requestResponseMessage(ep, {
-          type: MessageType.ENDPOINT,
+          type: msgType(MessageType.ENDPOINT, isLegacy),
         }).then(fromWireValue);
       }
       // We just pretend that `bind()` didn’t happen.
       if (last === "bind") {
         return createProxy(ep, path.slice(0, -1));
       }
-      const [argumentList, transferables] = processArguments(rawArgumentList);
+      const [argumentList, transferables] = processArguments(
+        rawArgumentList,
+        isLegacy
+      );
       return requestResponseMessage(
         ep,
         {
-          type: MessageType.APPLY,
+          type: msgType(MessageType.APPLY, isLegacy),
           path: path.map((p) => p.toString()),
           argumentList,
         },
@@ -513,11 +562,14 @@ function createProxy<T>(
     },
     construct(_target, rawArgumentList) {
       throwIfProxyReleased(isProxyReleased);
-      const [argumentList, transferables] = processArguments(rawArgumentList);
+      const [argumentList, transferables] = processArguments(
+        rawArgumentList,
+        isLegacy
+      );
       return requestResponseMessage(
         ep,
         {
-          type: MessageType.CONSTRUCT,
+          type: msgType(MessageType.CONSTRUCT, isLegacy),
           path: path.map((p) => p.toString()),
           argumentList,
         },
@@ -533,8 +585,11 @@ function myFlat<T>(arr: (T | T[])[]): T[] {
   return Array.prototype.concat.apply([], arr);
 }
 
-function processArguments(argumentList: any[]): [WireValue[], Transferable[]] {
-  const processed = argumentList.map(toWireValue);
+function processArguments(
+  argumentList: any[],
+  isLegacy: boolean
+): [WireValue[], Transferable[]] {
+  const processed = argumentList.map((arg) => toWireValue(arg, isLegacy));
   return [processed.map((v) => v[0]), myFlat(processed.map((v) => v[1]))];
 }
 
@@ -561,13 +616,16 @@ export function windowEndpoint(
   };
 }
 
-function toWireValue(value: any): [WireValue, Transferable[]] {
+function toWireValue(
+  value: any,
+  isLegacy: boolean
+): [WireValue, Transferable[]] {
   for (const [name, handler] of transferHandlers) {
     if (handler.canHandle(value)) {
       const [serializedValue, transferables] = handler.serialize(value);
       return [
         {
-          type: WireValueType.HANDLER,
+          type: isLegacy ? LegacyWireValueType.HANDLER : WireValueType.HANDLER,
           name,
           value: serializedValue,
         },
@@ -577,7 +635,7 @@ function toWireValue(value: any): [WireValue, Transferable[]] {
   }
   return [
     {
-      type: WireValueType.RAW,
+      type: isLegacy ? LegacyWireValueType.RAW : WireValueType.RAW,
       value,
     },
     transferCache.get(value) || [],
@@ -586,8 +644,12 @@ function toWireValue(value: any): [WireValue, Transferable[]] {
 
 function fromWireValue(value: WireValue): any {
   switch (value.type) {
+    case LegacyWireValueType.HANDLER:
+      markLegacyPort(value.value);
     case WireValueType.HANDLER:
       return transferHandlers.get(value.name)!.deserialize(value.value);
+    case LegacyWireValueType.RAW:
+      markLegacyPort(value.value);
     case WireValueType.RAW:
       return value.value;
   }
@@ -612,6 +674,34 @@ function requestResponseMessage(
     }
     ep.postMessage({ id, ...msg }, transfers);
   });
+}
+
+function msgType<T extends MessageType>(
+  type: T,
+  isLegacy: boolean
+): MessageTypeMap[T] | T {
+  if (!isLegacy) {
+    return type;
+  }
+
+  function mapMessageTypeToLegacyType(type: MessageType): LegacyMessageType {
+    switch (type) {
+      case MessageType.GET:
+        return LegacyMessageType.GET;
+      case MessageType.SET:
+        return LegacyMessageType.SET;
+      case MessageType.APPLY:
+        return LegacyMessageType.APPLY;
+      case MessageType.CONSTRUCT:
+        return LegacyMessageType.CONSTRUCT;
+      case MessageType.ENDPOINT:
+        return LegacyMessageType.ENDPOINT;
+      case MessageType.RELEASE:
+        return LegacyMessageType.RELEASE;
+    }
+  }
+
+  return mapMessageTypeToLegacyType(type) as MessageTypeMap[T];
 }
 
 function generateUUID(): string {
