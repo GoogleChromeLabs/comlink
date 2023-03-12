@@ -412,12 +412,14 @@ function isEndpoint(endpoint: object): endpoint is Endpoint {
 }
 
 function markLegacyPort(maybePort: unknown) {
-  if (
-    isObject(maybePort) &&
-    isEndpoint(maybePort) &&
-    isMessagePort(maybePort)
-  ) {
-    legacyEndpoints.add(maybePort);
+  if (isObject(maybePort)) {
+    if (isEndpoint(maybePort) && isMessagePort(maybePort)) {
+      legacyEndpoints.add(maybePort);
+    } else {
+      for (const prop in maybePort) {
+        markLegacyPort(maybePort[prop as keyof typeof maybePort]);
+      }
+    }
   }
 }
 

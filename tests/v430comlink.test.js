@@ -80,7 +80,9 @@ describe("Comlink across versions (4.3.0 to latest main)", function () {
     const channel = new MessageChannel();
     Comlink.expose(new Test(), channel.port1);
 
-    await latest.callme(Comlink.transfer(channel.port2, [channel.port2]));
+    await latest.callme(
+      Comlink.transfer({ foo: channel.port2 }, [channel.port2])
+    );
 
     expect(maybecalled).to.equal(true);
 
