@@ -1,5 +1,5 @@
 {
-  "name": "comlink",
+  "name": "@j2inn/comlink",
   "version": "4.4.1",
   "description": "Comlink makes WebWorkers enjoyable",
   "main": "dist/umd/comlink.js",
