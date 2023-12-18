@@ -70,7 +70,7 @@ export default defineConfig({
 
   /* Run your local dev server before starting the tests */
   webServer: {
-    command: 'npx serve -p 3000 tests/fixtures',
+    command: 'node test-server.mjs',
     url: 'http://127.0.0.1:3000',
     reuseExistingServer: true,
   },
