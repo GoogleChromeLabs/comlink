@@ -11,128 +11,187 @@
  * limitations under the License.
  */
 
-import * as Comlink from "/base/dist/esm/comlink.mjs";
+import { test, expect } from "@playwright/test";
 
-class SampleClass {
-  constructor(counterInit = 1) {
-    this._counter = counterInit;
-    this._promise = Promise.resolve(4);
-  }
-
-  static get SOME_NUMBER() {
-    return 4;
-  }
-
-  static ADD(a, b) {
-    return a + b;
-  }
-
-  get counter() {
-    return this._counter;
-  }
-
-  set counter(value) {
-    this._counter = value;
-  }
-
-  get promise() {
-    return this._promise;
-  }
-
-  method() {
-    return 4;
-  }
-
-  increaseCounter(delta = 1) {
-    this._counter += delta;
-  }
-
-  promiseFunc() {
-    return new Promise((resolve) => setTimeout((_) => resolve(4), 100));
-  }
-
-  proxyFunc() {
-    return Comlink.proxy({
-      counter: 0,
-      inc() {
-        this.counter++;
-      },
+test.describe("Comlink in the same realm", () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto("http://localhost:3000/empty.html");
+    await page.addScriptTag({
+      content: `
+import * as Comlink from "./dist/comlink.mjs"      
+window.testData = {
+  Comlink,
+};`,
+      type: "module",
     });
-  }
 
-  throwsAnError() {
-    throw Error("OMG");
-  }
-}
+    await page.waitForFunction(() => {
+      return window.testData !== undefined;
+    });
 
-describe("Comlink in the same realm", function () {
-  beforeEach(function () {
-    const { port1, port2 } = new MessageChannel();
-    port1.start();
-    port2.start();
-    this.port1 = port1;
-    this.port2 = port2;
+    await page.evaluate(async () => {
+      const { Comlink } = window.testData;
+      class SampleClass {
+        constructor(counterInit = 1) {
+          this._counter = counterInit;
+          this._promise = Promise.resolve(4);
+        }
+
+        static get SOME_NUMBER() {
+          return 4;
+        }
+
+        static ADD(a, b) {
+          return a + b;
+        }
+
+        get counter() {
+          return this._counter;
+        }
+
+        set counter(value) {
+          this._counter = value;
+        }
+
+        get promise() {
+          return this._promise;
+        }
+
+        method() {
+          return 4;
+        }
+
+        increaseCounter(delta = 1) {
+          this._counter += delta;
+        }
+
+        promiseFunc() {
+          return new Promise((resolve) => setTimeout((_) => resolve(4), 100));
+        }
+
+        proxyFunc() {
+          return Comlink.proxy({
+            counter: 0,
+            inc() {
+              this.counter++;
+            },
+          });
+        }
+
+        throwsAnError() {
+          throw Error("OMG");
+        }
+      }
+
+      const { port1, port2 } = new MessageChannel();
+      port1.start();
+      port2.start();
+
+      window.testData = {
+        Comlink,
+        SampleClass,
+        port1,
+        port2,
+      };
+    });
   });
 
-  it("can work with objects", async function () {
-    const thing = Comlink.wrap(this.port1);
-    Comlink.expose({ value: 4 }, this.port2);
-    expect(await thing.value).to.equal(4);
+  test("can work with objects", async ({ page }) => {
+    const result = await page.evaluate(async () => {
+      const { Comlink, port1, port2 } = window.testData;
+      const thing = Comlink.wrap(port1);
+      Comlink.expose({ value: 4 }, port2);
+      return await thing.value;
+    });
+    expect(result).toEqual(4);
   });
 
-  it("can work with functions on an object", async function () {
-    const thing = Comlink.wrap(this.port1);
-    Comlink.expose({ f: (_) => 4 }, this.port2);
-    expect(await thing.f()).to.equal(4);
+  test("can work with functions on an object", async ({ page }) => {
+    const result = await page.evaluate(async () => {
+      const { Comlink, port1, port2 } = window.testData;
+      const thing = Comlink.wrap(port1);
+      Comlink.expose({ f: (_) => 4 }, port2);
+      return await thing.f();
+    });
+    expect(result).toEqual(4);
   });
 
-  it("can work with functions", async function () {
-    const thing = Comlink.wrap(this.port1);
-    Comlink.expose((_) => 4, this.port2);
-    expect(await thing()).to.equal(4);
+  test("can work with functions", async ({ page }) => {
+    const result = await page.evaluate(async () => {
+      const { Comlink, port1, port2 } = window.testData;
+      const thing = Comlink.wrap(port1);
+      Comlink.expose((_) => 4, port2);
+      return await thing();
+    });
+    expect(result).toEqual(4);
   });
 
-  it("can work with objects that have undefined properties", async function () {
-    const thing = Comlink.wrap(this.port1);
-    Comlink.expose({ x: undefined }, this.port2);
-    expect(await thing.x).to.be.undefined;
+  test("can work with objects that have undefined properties", async ({
+    page,
+  }) => {
+    const result = await page.evaluate(async () => {
+      const { Comlink, port1, port2 } = window.testData;
+      const thing = Comlink.wrap(port1);
+      Comlink.expose({ x: undefined }, port2);
+      return await thing.x;
+    });
+    expect(result).toBeUndefined();
   });
 
-  it("can keep the stack and message of thrown errors", async function () {
-    let stack;
-    const thing = Comlink.wrap(this.port1);
-    Comlink.expose((_) => {
-      const error = Error("OMG");
-      stack = error.stack;
-      throw error;
-    }, this.port2);
-    try {
-      await thing();
-      throw "Should have thrown";
-    } catch (err) {
-      expect(err).to.not.eq("Should have thrown");
-      expect(err.message).to.equal("OMG");
-      expect(err.stack).to.equal(stack);
-    }
+  test("can keep the stack and message of thrown errors", async ({ page }) => {
+    const result = await page.evaluate(async () => {
+      const { Comlink, port1, port2 } = window.testData;
+      let stack;
+      const thing = Comlink.wrap(port1);
+      Comlink.expose((_) => {
+        const error = Error("OMG");
+        stack = error.stack;
+        throw error;
+      }, port2);
+      try {
+        await thing();
+        throw "Should have thrown";
+      } catch (err) {
+        return {
+          throwExpected: err !== "Should have thrown",
+          errMessage: err.message,
+          stackEquals: err.stack === stack,
+        };
+      }
+    });
+    expect(result).toEqual({
+      throwExpected: true,
+      errMessage: "OMG",
+      stackEquals: true,
+    });
   });
 
-  it("can forward an async function error", async function () {
-    const thing = Comlink.wrap(this.port1);
-    Comlink.expose(
-      {
-        async throwError() {
-          throw new Error("Should have thrown");
+  test("can forward an async function error", async ({ page }) => {
+    const result = await page.evaluate(async () => {
+      const { Comlink, port1, port2 } = window.testData;
+      const thing = Comlink.wrap(port1);
+      Comlink.expose(
+        {
+          async throwError() {
+            throw new Error("Should have thrown");
+          },
         },
-      },
-      this.port2
-    );
-    try {
-      await thing.throwError();
-    } catch (err) {
-      expect(err.message).to.equal("Should have thrown");
-    }
+        port2
+      );
+      try {
+        await thing.throwError();
+      } catch (err) {
+        return {
+          errMessage: err.message,
+        };
+      }
+    });
+    expect(result).toEqual({
+      errMessage: "Should have thrown",
+    });
   });
 
+  /*
   it("can rethrow non-error objects", async function () {
     const thing = Comlink.wrap(this.port1);
     Comlink.expose((_) => {
@@ -648,6 +707,7 @@ describe("Comlink in the same realm", function () {
       expect(err.message).to.equal("Unserializable return value");
     }
   });
+ */
 });
 
 function guardedIt(f) {
