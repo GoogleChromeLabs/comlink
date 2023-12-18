@@ -8,6 +8,7 @@
   "sideEffects": false,
   "scripts": {
     "build": "rollup -c",
+    "test-server": "node ./test-server.mjs",
     "test:unit": "playwright test",
     "test:node": "mocha ./tests/node/main.mjs",
     "test:types": "tsc -p ./tests/tsconfig.json",

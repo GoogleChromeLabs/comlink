@@ -8,7 +8,7 @@ export class TestPage {
 
   async goto(name = "empty.html") {
     const { page } = this;
-    await page.goto(`http://localhost:3000/${name}`);
+    await page.goto(`/${name}`);
   }
 
   async addComlinkImport() {
