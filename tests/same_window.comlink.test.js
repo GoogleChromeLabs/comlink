@@ -11,24 +11,11 @@
  * limitations under the License.
  */
 
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./helpers/testPageFixture.js";
 
 test.describe("Comlink in the same realm", () => {
-  test.beforeEach(async ({ page }) => {
-    await page.goto("http://localhost:3000/empty.html");
-    await page.addScriptTag({
-      content: `
-import * as Comlink from "./dist/comlink.mjs"      
-window.testData = {
-  Comlink,
-};`,
-      type: "module",
-    });
-
-    await page.waitForFunction(() => {
-      return window.testData !== undefined;
-    });
-
+  test.beforeEach(async ({ testPage, page }) => {
+    await testPage.addComlinkImport();
     await page.evaluate(async () => {
       const { Comlink } = window.testData;
       class SampleClass {

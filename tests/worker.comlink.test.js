@@ -11,19 +11,17 @@
  * limitations under the License.
  */
 
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./helpers/testPageFixture.js";
 
 test.describe("Comlink across workers", () => {
-  test.beforeEach(async ({ page }) => {
-    await page.goto("http://localhost:3000/empty.html");
-    await page.addScriptTag({
-      content: `
-import * as Comlink from "./dist/comlink.mjs"      
-window.testData = {
-  Comlink,
-  worker: new Worker("./worker.js", { type: 'module' }),
-};`,
-      type: "module",
+  test.beforeEach(async ({ testPage, page }) => {
+    await testPage.addComlinkImport();
+    await page.evaluate(() => {
+      const worker = new Worker("./worker.js", { type: "module" });
+      window.testData = {
+        ...window.testData,
+        worker,
+      };
     });
   });
 

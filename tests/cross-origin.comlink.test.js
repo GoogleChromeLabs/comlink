@@ -11,19 +11,11 @@
  * limitations under the License.
  */
 
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./helpers/testPageFixture.js";
 
 test.describe("Comlink origin filtering", () => {
-  test.beforeEach(async ({ page }) => {
-    await page.goto("http://localhost:3000/empty.html");
-    await page.addScriptTag({
-      content: `
-import * as Comlink from "./dist/comlink.mjs"      
-window.testData = {
-  Comlink,
-};`,
-      type: "module",
-    });
+  test.beforeEach(async ({ testPage }) => {
+    await testPage.addComlinkImport();
   });
 
   test("rejects messages from unknown origin", async ({ page }) => {

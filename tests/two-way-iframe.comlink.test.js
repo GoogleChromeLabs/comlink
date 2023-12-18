@@ -11,19 +11,11 @@
  * limitations under the License.
  */
 
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./helpers/testPageFixture.js";
 
 test.describe("Comlink across iframes", () => {
-  test.beforeEach(async ({ page }) => {
-    await page.goto("http://localhost:3000/empty.html");
-    await page.addScriptTag({
-      content: `
-import * as Comlink from "./dist/comlink.mjs"      
-window.testData = {
-  Comlink,
-};`,
-      type: "module",
-    });
+  test.beforeEach(async ({ testPage, page }) => {
+    await testPage.addComlinkImport();
     await page.evaluate(async () => {
       const ifr = document.createElement("iframe");
       window.testData = {
