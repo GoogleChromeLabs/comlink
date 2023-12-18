@@ -178,21 +178,30 @@ test.describe("Comlink in the same realm", () => {
     });
   });
 
-  /*
-  it("can rethrow non-error objects", async function () {
-    const thing = Comlink.wrap(this.port1);
-    Comlink.expose((_) => {
-      throw { test: true };
-    }, this.port2);
-    try {
-      await thing();
-      throw "Should have thrown";
-    } catch (err) {
-      expect(err).to.not.equal("Should have thrown");
-      expect(err.test).to.equal(true);
-    }
+  test("can rethrow non-error objects", async ({ page }) => {
+    const result = await page.evaluate(async () => {
+      const { Comlink, port1, port2 } = window.testData;
+      const thing = Comlink.wrap(port1);
+      Comlink.expose((_) => {
+        throw { test: true };
+      }, port2);
+      try {
+        await thing();
+        throw "Should have thrown";
+      } catch (err) {
+        return {
+          throwExpected: err !== "Should have thrown",
+          errTest: err.test,
+        };
+      }
+    });
+    expect(result).toEqual({
+      throwExpected: true,
+      errTest: true,
+    });
   });
 
+  /*
   it("can rethrow scalars", async function () {
     const thing = Comlink.wrap(this.port1);
     Comlink.expose((_) => {
