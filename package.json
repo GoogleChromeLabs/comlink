@@ -27,8 +27,10 @@
   },
   "license": "Apache-2.0",
   "devDependencies": {
+    "@playwright/test": "^1.40.1",
     "@rollup/plugin-terser": "0.4.0",
     "@rollup/plugin-typescript": "11.0.0",
+    "@types/node": "^20.10.5",
     "chai": "^4.3.7",
     "conditional-type-checks": "1.0.6",
     "husky": "8.0.3",
