@@ -597,9 +597,12 @@ function fromWireValue(value: WireValue): any {
 
 const messageResolvers = new Map();
 
-function handleMessage(event: MessageEvent) {
-    const { data } = event;
-    const resolver = data && messageResolvers.get(data.id);
+function handleMessage(ev: MessageEvent) {
+    const { data } = ev;
+    if (!data || !data.id) {
+      return;
+    }
+    const resolver = messageResolvers.get(data.id);
     if (resolver) {
         resolver(data);
         messageResolvers.delete(data.id);
