@@ -604,8 +604,11 @@ function handleMessage(ev: Event) {
     }
     const resolver = messageResolvers.get(data.id);
     if (resolver) {
+      try {
         resolver(data);
+      } finally {
         messageResolvers.delete(data.id);
+      }
     }
 }
 
