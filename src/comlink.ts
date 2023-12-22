@@ -388,10 +388,12 @@ function isMessagePort(endpoint: Endpoint): endpoint is MessagePort {
 }
 
 function closeEndPoint(endpoint: Endpoint) {
+  endpoint.removeEventListener("message", handleMessage);
   if (isMessagePort(endpoint)) endpoint.close();
 }
 
 export function wrap<T>(ep: Endpoint, target?: any): Remote<T> {
+  ep.addEventListener("message", handleMessage);
   return createProxy<T>(ep, [], target) as any;
 }
 
@@ -593,25 +595,23 @@ function fromWireValue(value: WireValue): any {
   }
 }
 
-function requestResponseMessage(
-  ep: Endpoint,
-  msg: Message,
-  transfers?: Transferable[]
-): Promise<WireValue> {
-  return new Promise((resolve) => {
-    const id = generateUUID();
-    ep.addEventListener("message", function l(ev: MessageEvent) {
-      if (!ev.data || !ev.data.id || ev.data.id !== id) {
-        return;
-      }
-      ep.removeEventListener("message", l as any);
-      resolve(ev.data);
-    } as any);
-    if (ep.start) {
-      ep.start();
+const messageResolvers = new Map();
+
+function handleMessage(event: MessageEvent) {
+    const { data } = event;
+    const resolver = data && messageResolvers.get(data.id);
+    if (resolver) {
+        resolver(data);
+        messageResolvers.delete(data.id);
     }
-    ep.postMessage({ id, ...msg }, transfers);
-  });
+}
+
+function requestResponseMessage(ep: Endpoint, msg: Message, transfers?: Transferable[]) {
+    return new Promise((resolve) => {
+        const id = generateUUID();
+        messageResolvers.set(id, resolve);
+        ep.postMessage({ id, ...msg }, transfers);
+    });
 }
 
 function generateUUID(): string {
