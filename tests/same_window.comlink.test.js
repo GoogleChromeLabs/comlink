@@ -488,66 +488,93 @@ test.describe("Comlink in the same realm", () => {
     expect(result).toEqual({ v1: 1, v2: 4 });
   });
 
-  /*
-  const hasBroadcastChannel = (_) => "BroadcastChannel" in self;
-  guardedtest(hasBroadcastChannel)(
-    "will work with BroadcastChannel",
-    async function () {
+  test("will work with BroadcastChannel", async ({ page }) => {
+    const result = await page.evaluate(async () => {
+      const { Comlink } = window.testData;
       const b1 = new BroadcastChannel("comlink_bc_test");
       const b2 = new BroadcastChannel("comlink_bc_test");
       const thing = Comlink.wrap(b1);
       Comlink.expose((b) => 40 + b, b2);
-      expect(await thing(2)).to.equal(42);
-    }
-  );
-
-  // Buffer transfers seem to have regressed in Safari 11.1, it’s fixed in 11.2.
-  const isNotSafari11_1 = (_) =>
-    !/11\.1(\.[0-9]+)? Safari/.test(navigator.userAgent);
-  guardedtest(isNotSafari11_1)("will transfer buffers", async function () {
-    const thing = Comlink.wrap(port1);
-    Comlink.expose((b) => b.byteLength, port2);
-    const buffer = new Uint8Array([1, 2, 3]).buffer;
-    expect(await thing(Comlink.transfer(buffer, [buffer]))).to.equal(3);
-    expect(buffer.byteLength).to.equal(0);
-  });
-
-  guardedtest(isNotSafari11_1)("will copy TypedArrays", async function () {
-    const thing = Comlink.wrap(port1);
-    Comlink.expose((b) => b, port2);
-    const array = new Uint8Array([1, 2, 3]);
-    const receive = await thing(array);
-    expect(array).to.not.equal(receive);
-    expect(array.byteLength).to.equal(receive.byteLength);
-    expect([...array]).to.deep.equal([...receive]);
-  });
-
-  guardedtest(isNotSafari11_1)("will copy nested TypedArrays", async function () {
-    const thing = Comlink.wrap(port1);
-    Comlink.expose((b) => b, port2);
-    const array = new Uint8Array([1, 2, 3]);
-    const receive = await thing({
-      v: 1,
-      array,
+      return await thing(2);
     });
-    expect(array).to.not.equal(receive.array);
-    expect(array.byteLength).to.equal(receive.array.byteLength);
-    expect([...array]).to.deep.equal([...receive.array]);
+    expect(result).toEqual(42);
   });
 
-  guardedtest(isNotSafari11_1)(
-    "will transfer deeply nested buffers",
-    async function () {
+  test("will transfer buffers", async ({ page }) => {
+    const result = await page.evaluate(async () => {
+      const { Comlink, port1, port2 } = window.testData;
+      const thing = Comlink.wrap(port1);
+      Comlink.expose((b) => b.byteLength, port2);
+      const buffer = new Uint8Array([1, 2, 3]).buffer;
+      const result = await thing(Comlink.transfer(buffer, [buffer]));
+      const byteLength = buffer.byteLength;
+      return { result, byteLength };
+    });
+    expect(result).toEqual({ result: 3, byteLength: 0 });
+  });
+
+  test("will copy TypedArrays", async ({ page }) => {
+    const result = await page.evaluate(async () => {
+      const { Comlink, port1, port2 } = window.testData;
+      const thing = Comlink.wrap(port1);
+      Comlink.expose((b) => b, port2);
+      const array = new Uint8Array([1, 2, 3]);
+      const receive = await thing(array);
+      const sameArray = array === receive;
+      const sameByteLength = array.byteLength === receive.byteLength;
+      const array1 = [...array];
+      const array2 = [...receive];
+      return { sameArray, sameByteLength, array1, array2 };
+    });
+    expect(result).toEqual({
+      sameArray: false,
+      sameByteLength: true,
+      array1: [1, 2, 3],
+      array2: [1, 2, 3],
+    });
+  });
+
+  test("will copy nested TypedArrays", async ({ page }) => {
+    const result = await page.evaluate(async () => {
+      const { Comlink, port1, port2 } = window.testData;
+      const thing = Comlink.wrap(port1);
+      Comlink.expose((b) => b, port2);
+      const array = new Uint8Array([1, 2, 3]);
+      const receive = await thing({
+        v: 1,
+        array,
+      });
+      const sameArray = array === receive.array;
+      const sameByteLength = array.byteLength === receive.array.byteLength;
+      const array1 = [...array];
+      const array2 = [...receive.array];
+      return { sameArray, sameByteLength, array1, array2 };
+    });
+    expect(result).toEqual({
+      sameArray: false,
+      sameByteLength: true,
+      array1: [1, 2, 3],
+      array2: [1, 2, 3],
+    });
+  });
+
+  test("will transfer deeply nested buffers", async ({ page }) => {
+    const result = await page.evaluate(async () => {
+      const { Comlink, port1, port2 } = window.testData;
       const thing = Comlink.wrap(port1);
       Comlink.expose((a) => a.b.c.d.byteLength, port2);
       const buffer = new Uint8Array([1, 2, 3]).buffer;
-      expect(
-        await thing(Comlink.transfer({ b: { c: { d: buffer } } }, [buffer]))
-      ).to.equal(3);
-      expect(buffer.byteLength).to.equal(0);
-    }
-  );
-*/
+      const result = await thing(
+        Comlink.transfer({ b: { c: { d: buffer } } }, [buffer])
+      );
+      const byteLength = buffer.byteLength;
+      return { result, byteLength };
+    });
+    expect(result).toEqual({
+      result: 3,
+      byteLength: 0,
+    });
+  });
 
   test("will transfer a message port", async ({ page }) => {
     const result = await page.evaluate(async () => {
@@ -931,7 +958,3 @@ test.describe("Comlink in the same realm", () => {
     });
   });
 });
-
-// function guardedtest(f) {
-//   return f() ? it : xit;
-// }
