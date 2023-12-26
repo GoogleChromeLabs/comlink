@@ -888,46 +888,48 @@ test.describe("Comlink in the same realm", () => {
     });
   });
 
-  /*
   // commented out this test as it could be unreliable in various browsers as
   // it has to wait for GC to kick in which could happen at any timing
   // this does seem to work when testing locally
-  it.skip("released proxy via GC should invoke finalizer", async ({ page }) => {
+  test.skip("released proxy via GC should invoke finalizer", async ({
+    page,
+  }) => {
+    test.slow();
     const result = await page.evaluate(async () => {
       const { Comlink, port1, port2 } = window.testData;
-    let finalized = false;
-    Comlink.expose(
-      {
-        a: "thing",
-        [Comlink.finalizer]: () => {
-          finalized = true;
+      let finalized = false;
+      Comlink.expose(
+        {
+          a: "thing",
+          [Comlink.finalizer]: () => {
+            finalized = true;
+          },
         },
-      },
-      port2
-    );
+        port2
+      );
 
-    let registry;
+      let registry;
+      let value;
 
-    // set a long enough timeout to wait for a garbage collection
-    this.timeout(10000);
-    // promise will resolve when the proxy is garbage collected
-    await new Promise(async (resolve, reject) => {
-      registry = new FinalizationRegistry((heldValue) => {
-        heldValue();
+      // promise will resolve when the proxy is garbage collected
+      await new Promise(async (resolve, reject) => {
+        registry = new FinalizationRegistry((heldValue) => {
+          heldValue();
+        });
+
+        const instance = Comlink.wrap(port1);
+        registry.register(instance, resolve);
+        value = await instance.a;
       });
-
-      const instance = Comlink.wrap(port1);
-      registry.register(instance, resolve);
-      expect(await instance.a).to.equal("thing");
-    });
-    // wait a beat to let the events process
-    await new Promise((resolve) => setTimeout(resolve, 1));
-    expect(finalized).to.be.true;
+      // wait a beat to let the events process
+      await new Promise((resolve) => setTimeout(resolve, 1));
+      return { value, finalized };
     });
     expect(result).toEqual({
+      value: "thing",
+      finalized: true,
     });
   });
-*/
 
   test("can proxy with a given target", async ({ page }) => {
     const result = await page.evaluate(async () => {
