@@ -11,23 +11,39 @@
  * limitations under the License.
  */
 
-import * as Comlink from "/base/dist/esm/comlink.mjs";
+import { test, expect } from "./helpers/testPageFixture.js";
 
-describe("Comlink across iframes", function () {
-  beforeEach(function () {
-    this.ifr = document.createElement("iframe");
-    this.ifr.sandbox.add("allow-scripts", "allow-same-origin");
-    this.ifr.src = "/base/tests/fixtures/iframe.html";
-    document.body.appendChild(this.ifr);
-    return new Promise((resolve) => (this.ifr.onload = resolve));
+test.describe("Comlink across iframes", () => {
+  test.beforeEach(async ({ testPage, page }) => {
+    await testPage.addComlinkImport();
+    await page.evaluate(async () => {
+      const ifr = document.createElement("iframe");
+      window.testData = {
+        ...window.testData,
+        ifr,
+      };
+      ifr.sandbox.add("allow-scripts", "allow-same-origin");
+      ifr.src = "/iframe.html";
+      document.body.appendChild(ifr);
+      await new Promise((resolve) => (ifr.onload = resolve));
+    });
   });
 
-  afterEach(function () {
-    this.ifr.remove();
+  test.afterEach(async ({ page }) => {
+    await page.evaluate(async () => {
+      const { ifr } = window.testData;
+      ifr.remove();
+    });
   });
 
-  it("can communicate", async function () {
-    const proxy = Comlink.wrap(Comlink.windowEndpoint(this.ifr.contentWindow));
-    expect(await proxy(1, 3)).to.equal(4);
+  test("can communicate", async ({ page }) => {
+    const result = await page.evaluate(async () => {
+      const { Comlink, ifr } = window.testData;
+      const proxy = Comlink.wrap(
+        Comlink.windowEndpoint(ifr.contentWindow)
+      );
+      return await proxy(1, 3);
+    });
+    expect(result).toEqual(4);
   });
 });
