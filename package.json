@@ -28,7 +28,7 @@
   "license": "Apache-2.0",
   "devDependencies": {
     "@rollup/plugin-terser": "0.4.0",
-    "@rollup/plugin-typescript": "11.0.0",
+    "@rollup/plugin-typescript": "11.1.6",
     "chai": "^4.3.7",
     "conditional-type-checks": "1.0.6",
     "husky": "8.0.3",
