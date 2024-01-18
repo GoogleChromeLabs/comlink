@@ -599,7 +599,7 @@ function requestResponseMessage(
   transfers?: Transferable[]
 ): Promise<WireValue> {
   return new Promise((resolve) => {
-    const id = generateUUID();
+    const id = Math.trunc(Math.random() * Number.MAX_SAFE_INTEGER).toString();
     ep.addEventListener("message", function l(ev: MessageEvent) {
       if (!ev.data || !ev.data.id || ev.data.id !== id) {
         return;
@@ -614,9 +614,3 @@ function requestResponseMessage(
   });
 }
 
-function generateUUID(): string {
-  return new Array(4)
-    .fill(0)
-    .map(() => Math.floor(Math.random() * Number.MAX_SAFE_INTEGER).toString(16))
-    .join("-");
-}
