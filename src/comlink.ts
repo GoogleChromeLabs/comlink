@@ -404,12 +404,14 @@ export function wrap<T>(ep: Endpoint, target?: any): Remote<T> {
       return;
     }
     const resolver = pendingListeners.get(data.id);
-    if (resolver) {
-      try {
-        resolver(data);
-      } finally {
-        pendingListeners.delete(data.id);
-      }
+    if (!resolver) {
+      return;
+    }
+
+    try {
+      resolver(data);
+    } finally {
+      pendingListeners.delete(data.id);
     }
   });
 
