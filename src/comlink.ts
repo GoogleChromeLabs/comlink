@@ -378,7 +378,7 @@ export function expose(
         ep.postMessage({ ...wireValue, id }, transferables);
       });
   } as any);
-  if (ep.start) {
+  if (typeof ep.start === "function") {
     ep.start();
   }
 }
@@ -607,7 +607,7 @@ function requestResponseMessage(
       ep.removeEventListener("message", l as any);
       resolve(ev.data);
     } as any);
-    if (ep.start) {
+    if (typeof ep.start === "function") {
       ep.start();
     }
     ep.postMessage({ id, ...msg }, transfers);
