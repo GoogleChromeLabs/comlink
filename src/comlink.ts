@@ -353,7 +353,7 @@ export function expose(
     } catch (value) {
       returnValue = { value, [throwMarker]: 0 };
     }
-    Promise.resolve(returnValue)
+    const result = Promise.resolve(returnValue)
       .catch((value) => {
         return { value, [throwMarker]: 0 };
       })
@@ -377,6 +377,9 @@ export function expose(
         });
         ep.postMessage({ ...wireValue, id }, transferables);
       });
+    if ('waitUntil' in ev && typeof ev.waitUntil === 'function') {
+      ev.waitUntil(result);
+    }
   } as any);
   if (ep.start) {
     ep.start();
