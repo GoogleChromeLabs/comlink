@@ -200,7 +200,7 @@ export interface TransferHandler<T, S> {
    * other thread with this transfer handler (known through the name it was
    * registered under).
    */
-  deserialize(value: S): T;
+  deserialize(value: S): Promise<T>;
 }
 
 /**
@@ -214,7 +214,7 @@ const proxyTransferHandler: TransferHandler<object, MessagePort> = {
     expose(obj, port1);
     return [port2, [port2]];
   },
-  deserialize(port) {
+  async deserialize(port) {
     port.start();
     return wrap(port);
   },
@@ -295,7 +295,7 @@ export function expose(
   ep: Endpoint = globalThis as any,
   allowedOrigins: (string | RegExp)[] = ["*"]
 ) {
-  ep.addEventListener("message", function callback(ev: MessageEvent) {
+  ep.addEventListener("message", async function callback(ev: MessageEvent) {
     if (!ev || !ev.data) {
       return;
     }
@@ -307,7 +307,9 @@ export function expose(
       path: [] as string[],
       ...(ev.data as Message),
     };
-    const argumentList = (ev.data.argumentList || []).map(fromWireValue);
+    const argumentList = await Promise.all(
+      (ev.data.argumentList || []).map(fromWireValue)
+    );
     let returnValue;
     try {
       const parent = path.slice(0, -1).reduce((obj, prop) => obj[prop], obj);
@@ -320,7 +322,7 @@ export function expose(
           break;
         case MessageType.SET:
           {
-            parent[path.slice(-1)[0]] = fromWireValue(ev.data.value);
+            parent[path.slice(-1)[0]] = await fromWireValue(ev.data.value);
             returnValue = true;
           }
           break;
@@ -593,7 +595,7 @@ async function toWireValue(value: any): Promise<[WireValue, Transferable[]]> {
   ];
 }
 
-function fromWireValue(value: WireValue): any {
+async function fromWireValue(value: WireValue): Promise<any> {
   switch (value.type) {
     case WireValueType.HANDLER:
       return transferHandlers.get(value.name)!.deserialize(value.value);
