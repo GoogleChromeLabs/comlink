@@ -1,4 +1,5 @@
-import typescript from "@rollup/plugin-typescript";
+// import typescript from "@rollup/plugin-typescript";
+import typescript from 'rollup-plugin-typescript2'
 import terser from "@rollup/plugin-terser";
 import { sync } from "rimraf";
 
@@ -9,19 +10,13 @@ function config({ format, minify, input, ext = "js" }) {
     input: `./src/${input}.ts`,
     output: {
       name: "Comlink",
-      file: `${dir}/${input}${minifierSuffix}.${ext}`,
+      file: `${dir}${input}${minifierSuffix}.${ext}`,
       format,
       sourcemap: true,
     },
     plugins: [
       typescript({
         tsconfig: "./tsconfig.json",
-        compilerOptions: {
-          declaration: true,
-          declarationDir: ".",
-          sourceMap: true,
-          outDir: "dist",
-        },
       }),
       minify
         ? terser({
