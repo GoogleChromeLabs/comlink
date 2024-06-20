@@ -18,5 +18,13 @@ async function main() {
   document.getElementById(
     "product"
   )!.textContent = `product: 2 * 3 = ${product.toString()}`;
+
+  // demo callback
+  const fibCallback = (ret: number) => {
+    document.getElementById(
+      "fibonacci"
+    )!.textContent = `fibonacci(10): ${ret.toString()}`;
+  };
+  await api.fibonacci(10, Comlink.proxy(fibCallback));
 }
 main();
