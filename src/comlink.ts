@@ -117,25 +117,25 @@ export interface ProxyMethods {
 export type Remote<T> =
   // Handle properties
   RemoteObject<T> &
-    // Handle call signature (if present)
-    (T extends (...args: infer TArguments) => infer TReturn
-      ? (
-          ...args: { [I in keyof TArguments]: UnproxyOrClone<TArguments[I]> }
-        ) => Promisify<ProxyOrClone<Unpromisify<TReturn>>>
-      : unknown) &
-    // Handle construct signature (if present)
-    // The return of construct signatures is always proxied (whether marked or not)
-    (T extends { new (...args: infer TArguments): infer TInstance }
-      ? {
-          new (
-            ...args: {
-              [I in keyof TArguments]: UnproxyOrClone<TArguments[I]>;
-            }
-          ): Promisify<Remote<TInstance>>;
+  // Handle call signature (if present)
+  (T extends (...args: infer TArguments) => infer TReturn
+    ? (
+      ...args: { [I in keyof TArguments]: UnproxyOrClone<TArguments[I]> }
+    ) => Promisify<ProxyOrClone<Unpromisify<TReturn>>>
+    : unknown) &
+  // Handle construct signature (if present)
+  // The return of construct signatures is always proxied (whether marked or not)
+  (T extends { new(...args: infer TArguments): infer TInstance }
+    ? {
+      new(
+        ...args: {
+          [I in keyof TArguments]: UnproxyOrClone<TArguments[I]>;
         }
-      : unknown) &
-    // Include additional special comlink methods available on the proxy.
-    ProxyMethods;
+      ): Promisify<Remote<TInstance>>;
+    }
+    : unknown) &
+  // Include additional special comlink methods available on the proxy.
+  ProxyMethods;
 
 /**
  * Expresses that a type can be either a sync or async.
@@ -151,25 +151,25 @@ type MaybePromise<T> = Promise<T> | T;
 export type Local<T> =
   // Omit the special proxy methods (they don't need to be supplied, comlink adds them)
   Omit<LocalObject<T>, keyof ProxyMethods> &
-    // Handle call signatures (if present)
-    (T extends (...args: infer TArguments) => infer TReturn
-      ? (
-          ...args: { [I in keyof TArguments]: ProxyOrClone<TArguments[I]> }
-        ) => // The raw function could either be sync or async, but is always proxied automatically
-        MaybePromise<UnproxyOrClone<Unpromisify<TReturn>>>
-      : unknown) &
-    // Handle construct signature (if present)
-    // The return of construct signatures is always proxied (whether marked or not)
-    (T extends { new (...args: infer TArguments): infer TInstance }
-      ? {
-          new (
-            ...args: {
-              [I in keyof TArguments]: ProxyOrClone<TArguments[I]>;
-            }
-          ): // The raw constructor could either be sync or async, but is always proxied automatically
-          MaybePromise<Local<Unpromisify<TInstance>>>;
+  // Handle call signatures (if present)
+  (T extends (...args: infer TArguments) => infer TReturn
+    ? (
+      ...args: { [I in keyof TArguments]: ProxyOrClone<TArguments[I]> }
+    ) => // The raw function could either be sync or async, but is always proxied automatically
+      MaybePromise<UnproxyOrClone<Unpromisify<TReturn>>>
+    : unknown) &
+  // Handle construct signature (if present)
+  // The return of construct signatures is always proxied (whether marked or not)
+  (T extends { new(...args: infer TArguments): infer TInstance }
+    ? {
+      new(
+        ...args: {
+          [I in keyof TArguments]: ProxyOrClone<TArguments[I]>;
         }
-      : unknown);
+      ): // The raw constructor could either be sync or async, but is always proxied automatically
+        MaybePromise<Local<Unpromisify<TInstance>>>;
+    }
+    : unknown);
 
 const isObject = (val: unknown): val is object =>
   (typeof val === "object" && val !== null) || typeof val === "function";
@@ -395,6 +395,23 @@ export function wrap<T>(ep: Endpoint, target?: any): Remote<T> {
   return createProxy<T>(ep, [], target) as any;
 }
 
+export function requestWrap<T>(ep: Endpoint, target?: any): Promise<Remote<T>> {
+  return new Promise((resolve) => {
+    ep.addEventListener("message", function l(ev: MessageEvent) {
+      if (!ev.data || !ev.data.status || ev.data.status !== "ready") {
+        return;
+      }
+      ep.removeEventListener("message", l as any);
+      resolve(createProxy<T>(ep, [], target) as any);
+    } as any);
+  })
+}
+
+export function sendReady(ep: Endpoint): void {
+  ep.postMessage({ status: "ready" });
+}
+
+
 function throwIfProxyReleased(isReleased: boolean) {
   if (isReleased) {
     throw new Error("Proxy has been released and is not useable");
@@ -410,7 +427,7 @@ function releaseEndpoint(ep: Endpoint) {
 }
 
 interface FinalizationRegistry<T> {
-  new (cb: (heldValue: T) => void): FinalizationRegistry<T>;
+  new(cb: (heldValue: T) => void): FinalizationRegistry<T>;
   register(
     weakItem: object,
     heldValue: T,
@@ -448,7 +465,7 @@ function unregisterProxy(proxy: object) {
 function createProxy<T>(
   ep: Endpoint,
   path: (string | number | symbol)[] = [],
-  target: object = function () {}
+  target: object = function() { }
 ): Remote<T> {
   let isProxyReleased = false;
   const proxy = new Proxy(target, {
