@@ -407,7 +407,7 @@ export function requestWrap<T>(ep: Endpoint, target?: any): Promise<Remote<T>> {
   })
 }
 
-export function sendReady(ep: Endpoint): void {
+export function sendReady(ep: Endpoint = globalThis as any): void {
   ep.postMessage({ status: "ready" });
 }
 
