@@ -11,26 +11,44 @@
  * limitations under the License.
  */
 
-import * as Comlink from "/base/dist/esm/comlink.mjs";
+import { test, expect } from "./helpers/testPageFixture.js";
 
-describe("Comlink across workers", function () {
-  beforeEach(function () {
-    this.worker = new Worker("/base/tests/fixtures/worker.js");
+test.describe("Comlink across workers", () => {
+  test.beforeEach(async ({ testPage, page }) => {
+    await testPage.addComlinkImport();
+    await page.evaluate(() => {
+      const worker = new Worker("./worker.js", { type: "module" });
+      window.testData = {
+        ...window.testData,
+        worker,
+      };
+    });
   });
 
-  afterEach(function () {
-    this.worker.terminate();
+  test.afterEach(async ({ page }) => {
+    await page.evaluate(async () => {
+      const { worker } = window.testData;
+      worker.terminate();
+    });
   });
 
-  it("can communicate", async function () {
-    const proxy = Comlink.wrap(this.worker);
-    expect(await proxy(1, 3)).to.equal(4);
+  test("can communicate", async ({ page }) => {
+    const result = await page.evaluate(async () => {
+      const { Comlink, worker } = window.testData;
+      const proxy = Comlink.wrap(worker);
+      return await proxy(1, 3);
+    });
+    expect(result).toEqual(4);
   });
 
-  it("can tunnels a new endpoint with createEndpoint", async function () {
-    const proxy = Comlink.wrap(this.worker);
-    const otherEp = await proxy[Comlink.createEndpoint]();
-    const otherProxy = Comlink.wrap(otherEp);
-    expect(await otherProxy(20, 1)).to.equal(21);
+  test("can tunnels a new endpoint with createEndpoint", async ({ page }) => {
+    const result = await page.evaluate(async () => {
+      const { Comlink, worker } = window.testData;
+      const proxy = Comlink.wrap(worker);
+      const otherEp = await proxy[Comlink.createEndpoint]();
+      const otherProxy = Comlink.wrap(otherEp);
+      return await otherProxy(20, 1);
+    });
+    expect(result).toEqual(21);
   });
 });
