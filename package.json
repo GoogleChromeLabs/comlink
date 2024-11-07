@@ -29,7 +29,7 @@
   "devDependencies": {
     "@rollup/plugin-terser": "0.4.0",
     "@rollup/plugin-typescript": "11.0.0",
-    "chai": "^4.3.7",
+    "chai": "4.5.0",
     "conditional-type-checks": "1.0.6",
     "husky": "8.0.3",
     "karma": "6.4.1",
