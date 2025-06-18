@@ -24,5 +24,17 @@ describe("node", () => {
       const otherProxy = Comlink.wrap(otherEp);
       expect(await otherProxy(20, 1)).to.equal(21);
     });
+
+    it("releaseProxy closes MessagePort created by createEndpoint", async function () {
+      const proxy = Comlink.wrap(nodeEndpoint(this.worker));
+      const otherEp = await proxy[Comlink.createEndpoint]();
+      const otherProxy = Comlink.wrap(otherEp);
+      expect(await otherProxy(20, 1)).to.equal(21);
+
+      await new Promise((resolve) => {
+        otherEp.close = resolve; // Resolve the promise when the MessagePort is closed.
+        otherProxy[Comlink.releaseProxy](); // Release the proxy, which should close the MessagePort.
+      });
+    });
   });
 });

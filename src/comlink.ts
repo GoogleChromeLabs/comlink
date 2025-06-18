@@ -231,6 +231,10 @@ type PendingListenersMap = Map<
   string,
   (value: WireValue | PromiseLike<WireValue>) => void
 >;
+type EndpointWithPendingListeners = {
+  endpoint: Endpoint;
+  pendingListeners: PendingListenersMap;
+};
 
 /**
  * Internal transfer handler to handle thrown exceptions.
@@ -415,7 +419,7 @@ export function wrap<T>(ep: Endpoint, target?: any): Remote<T> {
     }
   });
 
-  return createProxy<T>(ep, pendingListeners, [], target) as any;
+  return createProxy<T>({ endpoint: ep, pendingListeners }, [], target) as any;
 }
 
 function throwIfProxyReleased(isReleased: boolean) {
@@ -424,11 +428,11 @@ function throwIfProxyReleased(isReleased: boolean) {
   }
 }
 
-function releaseEndpoint(ep: Endpoint) {
-  return requestResponseMessage(ep, new Map(), {
+function releaseEndpoint(epWithPendingListeners: EndpointWithPendingListeners) {
+  return requestResponseMessage(epWithPendingListeners, {
     type: MessageType.RELEASE,
   }).then(() => {
-    closeEndPoint(ep);
+    closeEndPoint(epWithPendingListeners.endpoint);
   });
 }
 
@@ -441,24 +445,31 @@ interface FinalizationRegistry<T> {
   ): void;
   unregister(unregisterToken: object): void;
 }
-declare var FinalizationRegistry: FinalizationRegistry<Endpoint>;
+declare var FinalizationRegistry: FinalizationRegistry<EndpointWithPendingListeners>;
 
-const proxyCounter = new WeakMap<Endpoint, number>();
+const proxyCounter = new WeakMap<EndpointWithPendingListeners, number>();
 const proxyFinalizers =
   "FinalizationRegistry" in globalThis &&
-  new FinalizationRegistry((ep: Endpoint) => {
-    const newCount = (proxyCounter.get(ep) || 0) - 1;
-    proxyCounter.set(ep, newCount);
-    if (newCount === 0) {
-      releaseEndpoint(ep);
+  new FinalizationRegistry(
+    (epWithPendingListeners: EndpointWithPendingListeners) => {
+      const newCount = (proxyCounter.get(epWithPendingListeners) || 0) - 1;
+      proxyCounter.set(epWithPendingListeners, newCount);
+      if (newCount === 0) {
+        releaseEndpoint(epWithPendingListeners).finally(() => {
+          epWithPendingListeners.pendingListeners.clear();
+        });
+      }
     }
-  });
+  );
 
-function registerProxy(proxy: object, ep: Endpoint) {
-  const newCount = (proxyCounter.get(ep) || 0) + 1;
-  proxyCounter.set(ep, newCount);
+function registerProxy(
+  proxy: object,
+  epWithPendingListeners: EndpointWithPendingListeners
+) {
+  const newCount = (proxyCounter.get(epWithPendingListeners) || 0) + 1;
+  proxyCounter.set(epWithPendingListeners, newCount);
   if (proxyFinalizers) {
-    proxyFinalizers.register(proxy, ep, proxy);
+    proxyFinalizers.register(proxy, epWithPendingListeners, proxy);
   }
 }
 
@@ -469,8 +480,7 @@ function unregisterProxy(proxy: object) {
 }
 
 function createProxy<T>(
-  ep: Endpoint,
-  pendingListeners: PendingListenersMap,
+  epWithPendingListeners: EndpointWithPendingListeners,
   path: (string | number | symbol)[] = [],
   target: object = function () {}
 ): Remote<T> {
@@ -481,8 +491,9 @@ function createProxy<T>(
       if (prop === releaseProxy) {
         return () => {
           unregisterProxy(proxy);
-          releaseEndpoint(ep);
-          pendingListeners.clear();
+          releaseEndpoint(epWithPendingListeners).finally(() => {
+            epWithPendingListeners.pendingListeners.clear();
+          });
           isProxyReleased = true;
         };
       }
@@ -490,13 +501,13 @@ function createProxy<T>(
         if (path.length === 0) {
           return { then: () => proxy };
         }
-        const r = requestResponseMessage(ep, pendingListeners, {
+        const r = requestResponseMessage(epWithPendingListeners, {
           type: MessageType.GET,
           path: path.map((p) => p.toString()),
         }).then(fromWireValue);
         return r.then.bind(r);
       }
-      return createProxy(ep, pendingListeners, [...path, prop]);
+      return createProxy(epWithPendingListeners, [...path, prop]);
     },
     set(_target, prop, rawValue) {
       throwIfProxyReleased(isProxyReleased);
@@ -504,8 +515,7 @@ function createProxy<T>(
       // boolean. To show good will, we return true asynchronously ¯\_(ツ)_/¯
       const [value, transferables] = toWireValue(rawValue);
       return requestResponseMessage(
-        ep,
-        pendingListeners,
+        epWithPendingListeners,
         {
           type: MessageType.SET,
           path: [...path, prop].map((p) => p.toString()),
@@ -518,18 +528,17 @@ function createProxy<T>(
       throwIfProxyReleased(isProxyReleased);
       const last = path[path.length - 1];
       if ((last as any) === createEndpoint) {
-        return requestResponseMessage(ep, pendingListeners, {
+        return requestResponseMessage(epWithPendingListeners, {
           type: MessageType.ENDPOINT,
         }).then(fromWireValue);
       }
       // We just pretend that `bind()` didn’t happen.
       if (last === "bind") {
-        return createProxy(ep, pendingListeners, path.slice(0, -1));
+        return createProxy(epWithPendingListeners, path.slice(0, -1));
       }
       const [argumentList, transferables] = processArguments(rawArgumentList);
       return requestResponseMessage(
-        ep,
-        pendingListeners,
+        epWithPendingListeners,
         {
           type: MessageType.APPLY,
           path: path.map((p) => p.toString()),
@@ -542,8 +551,7 @@ function createProxy<T>(
       throwIfProxyReleased(isProxyReleased);
       const [argumentList, transferables] = processArguments(rawArgumentList);
       return requestResponseMessage(
-        ep,
-        pendingListeners,
+        epWithPendingListeners,
         {
           type: MessageType.CONSTRUCT,
           path: path.map((p) => p.toString()),
@@ -553,7 +561,7 @@ function createProxy<T>(
       ).then(fromWireValue);
     },
   });
-  registerProxy(proxy, ep);
+  registerProxy(proxy, epWithPendingListeners);
   return proxy as any;
 }
 
@@ -622,11 +630,12 @@ function fromWireValue(value: WireValue): any {
 }
 
 function requestResponseMessage(
-  ep: Endpoint,
-  pendingListeners: PendingListenersMap,
+  epWithPendingListeners: EndpointWithPendingListeners,
   msg: Message,
   transfers?: Transferable[]
 ): Promise<WireValue> {
+  const ep = epWithPendingListeners.endpoint;
+  const pendingListeners = epWithPendingListeners.pendingListeners;
   return new Promise((resolve) => {
     const id = generateUUID();
     pendingListeners.set(id, resolve);
