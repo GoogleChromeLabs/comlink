@@ -17,6 +17,18 @@
     "fmt_test": "test $(prettier -l './*.{mjs,js,ts,md,json,html}' './{src,docs,tests}/{**/,}*.{mjs,js,ts,md,json,html}' | wc -l) -eq 0",
     "watchtest": "CHROME_ONLY=1 karma start --no-single-run"
   },
+  "exports": {
+    ".": {
+      "require": "./dist/umd/comlink.js",
+      "import": "./dist/esm/comlink.mjs",
+      "types": "./dist/umd/comlink.d.ts"
+    },
+    "./node-adapter": {
+      "require": "./dist/umd/node-adapter.js",
+      "import": "./dist/esm/node-adapter.mjs",
+      "types": "./dist/umd/node-adapter.d.ts"
+    }
+  },
   "author": {
     "name": "Surma",
     "email": "surma@google.com"
