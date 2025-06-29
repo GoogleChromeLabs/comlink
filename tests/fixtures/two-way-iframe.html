@@ -5,6 +5,6 @@
   const wrappedParent = Comlink.wrap(parentEndpoint);
 
   Comlink.expose(async (a, b) => {
-    return a + (await wrappedParent(b));
+    return a + (await wrappedParent.increment(b));
   }, parentEndpoint);
 </script>

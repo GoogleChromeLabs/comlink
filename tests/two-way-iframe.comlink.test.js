@@ -14,7 +14,11 @@
 import * as Comlink from "/base/dist/esm/comlink.mjs";
 
 describe("Comlink across iframes", function () {
+  let oldTruncateThreshold;
+
   beforeEach(function () {
+    oldTruncateThreshold = chai.config.truncateThreshold;
+    chai.config.truncateThreshold = 0;
     this.ifr = document.createElement("iframe");
     this.ifr.sandbox.add("allow-scripts", "allow-same-origin");
     this.ifr.src = "/base/tests/fixtures/two-way-iframe.html";
@@ -24,17 +28,37 @@ describe("Comlink across iframes", function () {
 
   afterEach(function () {
     this.ifr.remove();
+    chai.config.truncateThreshold = oldTruncateThreshold;
   });
 
   it("can communicate both ways", async function () {
-    let called = false;
+    let notcalled = true;
+    let error = "";
+    window.addEventListener("unhandledrejection", (ev) => {
+      notcalled = false;
+      error = ev.reason;
+    });
     const iframe = Comlink.windowEndpoint(this.ifr.contentWindow);
-    Comlink.expose((a) => {
-      called = true;
-      return ++a;
-    }, iframe);
+    const channel = new MessageChannel();
+    let called = false;
+    class NonCloneable {
+      // this is key to get an error regarding port being non-cloneable
+      // otherwise the test pass despite the code being completely wrong
+      constructor(port) {
+        this.port = port;
+      }
+      increment(a) {
+        called = true;
+        return ++a;
+      }
+    }
+    Comlink.expose(new NonCloneable(channel.port1), iframe);
     const proxy = Comlink.wrap(iframe);
     expect(await proxy(1, 3)).to.equal(5);
+    expect(await proxy(1, 3)).to.equal(5);
+    // await new Promise((res) => res());
     expect(called).to.equal(true);
+    expect(error).to.equal("");
+    expect(notcalled).to.equal(true);
   });
 });
