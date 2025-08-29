@@ -318,7 +318,9 @@ export function expose(
   exposedObjects.add(obj);
 
   // Only add the event listener if this is the first exposed object on this endpoint
-  if (!endpointListeners.has(ep)) {
+  if (endpointListeners.has(ep)) {
+    console.warn("Endpoint has already been added for this object");
+  } else {
     const callback = function (ev: MessageEvent) {
       if (!ev || !ev.data) {
         return;
@@ -415,8 +417,6 @@ export function expose(
 
     ep.addEventListener("message", callback as any);
     endpointListeners.set(ep, callback);
-  } else {
-    console.log("No callback found for endpoint");
   }
 
   if (ep.start) {
