@@ -129,7 +129,7 @@ async function closureSoICanUseAwait() {
       method(param: string): number {
         return 123;
       }
-      methodWithProxiedReturnValue(): Baz & Comlink.ProxyMarked {
+      methodWithProxiedReturnValue(): Comlink.ProxyMarked<Baz> {
         return Comlink.proxy({ baz: 123, method: () => 123 });
       }
     }
@@ -177,7 +177,7 @@ async function closureSoICanUseAwait() {
 
     const r5 = proxy.proxyProp.methodWithProxiedReturnValue();
     assert<
-      IsExact<typeof r5, Promise<Comlink.Remote<Baz & Comlink.ProxyMarked>>>
+      IsExact<typeof r5, Promise<Comlink.Remote<Baz>>>
     >(true);
 
     const r6 = (await proxy.methodWithProxiedReturnValue()).baz;
