@@ -71,7 +71,7 @@ export function createRemote<T>(
   const proxy = new Proxy(proxyTarget, {
     get(_target, prop) {
       throwIfRemoteReleased(isProxyReleased);
-      if (prop === Symbol.asyncDispose || prop === Symbol.dispose) {
+      if (prop === Symbol.asyncDispose) {
         return async () => {
           if (remoteFinalizers) {
             remoteFinalizers.unregister(proxy);

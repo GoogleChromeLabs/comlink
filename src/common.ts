@@ -101,7 +101,6 @@ declare const remoteMarker: unique symbol;
  * Additional special comlink methods available on each proxy returned by `Comlink.wrap()`.
  */
 export interface ProxyMethods<T = any> {
-  [Symbol.dispose]: () => void;
   [Symbol.asyncDispose]: () => Promise<void>;
   [proxyRemoteData]: ProxyRemoteData;
   [remoteMarker]: T;
