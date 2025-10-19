@@ -552,30 +552,11 @@ describe("Comlink in the same realm", function () {
     port2.postMessage({ a: 1 });
   });
 
-  it("can tunnels a new endpoint with createEndpoint", async function () {
-    Comlink.expose(
-      {
-        a: 4,
-        c() {
-          return 5;
-        },
-      },
-      this.port2
-    );
-    const proxy = Comlink.wrap(this.port1);
-    const otherEp = await proxy[Comlink.createEndpoint]();
-    const otherProxy = Comlink.wrap(otherEp);
-    expect(await otherProxy.a).to.equal(4);
-    expect(await proxy.a).to.equal(4);
-    expect(await otherProxy.c()).to.equal(5);
-    expect(await proxy.c()).to.equal(5);
-  });
-
   it("released proxy should no longer be useable and throw an exception", async function () {
     const thing = Comlink.wrap(this.port1);
     Comlink.expose(SampleClass, this.port2);
     const instance = await new thing();
-    await instance[Comlink.releaseProxy]();
+    await instance[Symbol.asyncDispose]();
     expect(() => instance.method()).to.throw();
   });
 
@@ -584,7 +565,7 @@ describe("Comlink in the same realm", function () {
     Comlink.expose(
       {
         a: "thing",
-        [Comlink.finalizer]: () => {
+        [Symbol.dispose]: () => {
           finalized = true;
         },
       },
@@ -592,7 +573,7 @@ describe("Comlink in the same realm", function () {
     );
     const instance = Comlink.wrap(this.port1);
     expect(await instance.a).to.equal("thing");
-    await instance[Comlink.releaseProxy]();
+    await instance[Symbol.asyncDispose]();
     // wait a beat to let the events process
     await new Promise((resolve) => setTimeout(resolve, 1));
     expect(finalized).to.be.true;
@@ -606,7 +587,7 @@ describe("Comlink in the same realm", function () {
     Comlink.expose(
       {
         a: "thing",
-        [Comlink.finalizer]: () => {
+        [Symbol.dispose]: () => {
           finalized = true;
         },
       },
