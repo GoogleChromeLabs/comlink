@@ -21,11 +21,11 @@ export interface NodeEndpoint {
   start?: () => void;
 }
 
-export default function nodeEndpoint(nep: NodeEndpoint): Endpoint {
+export function nodeEndpoint(nep: NodeEndpoint): Endpoint {
   const listeners = new WeakMap();
   return {
     postMessage: nep.postMessage.bind(nep),
-    addEventListener: (_, eh) => {
+    addEventListener: (type, eh) => {
       const l = (data: any) => {
         if ("handleEvent" in eh) {
           eh.handleEvent({ data } as MessageEvent);
@@ -33,17 +33,17 @@ export default function nodeEndpoint(nep: NodeEndpoint): Endpoint {
           eh({ data } as MessageEvent);
         }
       };
-      nep.on("message", l);
+      nep.on(type, l);
       listeners.set(eh, l);
     },
-    removeEventListener: (_, eh) => {
+    removeEventListener: (type, eh) => {
       const l = listeners.get(eh);
       if (!l) {
         return;
       }
-      nep.off("message", l);
+      nep.off(type, l);
       listeners.delete(eh);
     },
-    start: nep.start && nep.start.bind(nep),
+    start: nep.start?.bind(nep),
   };
 }
