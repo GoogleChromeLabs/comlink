@@ -317,9 +317,18 @@ export function expose(
     };
     const argumentList = (ev.data.argumentList || []).map(fromWireValue);
     let returnValue;
+
+    const getDeepValue = (obj: any, path: string[]) =>
+      path.reduce((current, key) => {
+        if (current == null || !(key in current)) {
+          throw new Error(`Invalid path access: property '${key}' is undefined in path '${path.join(".")}'`);
+        }
+        return current[key];
+      }, obj);
+
     try {
-      const parent = path.slice(0, -1).reduce((obj, prop) => obj[prop], obj);
-      const rawValue = path.reduce((obj, prop) => obj[prop], obj);
+      const parent = getDeepValue(obj, path.slice(0, -1));
+      const rawValue = getDeepValue(obj, path);
       switch (type) {
         case MessageType.GET:
           {
