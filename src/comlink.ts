@@ -511,8 +511,6 @@ function createProxy<T>(
     },
     set(_target, prop, rawValue) {
       throwIfProxyReleased(isProxyReleased);
-      // FIXME: ES6 Proxy Handler `set` methods are supposed to return a
-      // boolean. To show good will, we return true asynchronously ¯\_(ツ)_/¯
       const [value, transferables] = toWireValue(rawValue);
       return requestResponseMessage(
         epWithPendingListeners,
@@ -522,7 +520,7 @@ function createProxy<T>(
           value,
         },
         transferables
-      ).then(fromWireValue) as any;
+      ).then(fromWireValue) as unknown as true;
     },
     apply(_target, _thisArg, rawArgumentList) {
       throwIfProxyReleased(isProxyReleased);
