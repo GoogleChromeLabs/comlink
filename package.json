@@ -2,17 +2,21 @@
   "name": "comlink",
   "version": "4.4.2",
   "description": "Comlink makes WebWorkers enjoyable",
-  "main": "dist/umd/comlink.js",
-  "module": "dist/esm/comlink.mjs",
-  "types": "dist/umd/comlink.d.ts",
+  "main": "./dist/umd/comlink.js",
+  "module": "./dist/esm/comlink.mjs",
+  "types": "./dist/umd/comlink.d.ts",
   "sideEffects": false,
   "scripts": {
     "build": "rollup -c",
     "test:unit": "karma start",
     "test:node": "mocha ./tests/node/main.mjs",
+    "test:portability": "npm run test:portability:node && npm run test:portability:bun && npm run test:portability:deno",
+    "test:portability:node": "./tests/portability/test.bash node --",
+    "test:portability:bun": "./tests/portability/test.bash npx -- bun run --",
+    "test:portability:deno": "./tests/portability/test.bash npx -- deno run --allow-read --",
     "test:types": "tsc -p ./tests/tsconfig.json",
     "test:types:watch": "npm run test:types -- --watch",
-    "test": "npm run fmt_test && npm run build && npm run test:types && npm run test:unit && npm run test:node",
+    "test": "npm run fmt_test && npm run build && npm run test:types && npm run test:unit && npm run test:node && npm run test:portability",
     "fmt": "prettier --write './*.{mjs,js,ts,md,json,html}' './{src,docs,tests}/{,**/}*.{mjs,js,ts,md,json,html}'",
     "fmt_test": "test $(prettier -l './*.{mjs,js,ts,md,json,html}' './{src,docs,tests}/{**/,}*.{mjs,js,ts,md,json,html}' | wc -l) -eq 0",
     "watchtest": "CHROME_ONLY=1 karma start --no-single-run"
@@ -29,8 +33,10 @@
   "devDependencies": {
     "@rollup/plugin-terser": "0.4.0",
     "@rollup/plugin-typescript": "11.0.0",
+    "bun": "1.3.6",
     "chai": "^4.3.7",
     "conditional-type-checks": "1.0.6",
+    "deno": "2.6.5",
     "husky": "8.0.3",
     "karma": "6.4.1",
     "karma-chai": "0.1.0",
@@ -45,6 +51,27 @@
     "rimraf": "4.1.2",
     "rollup": "3.10.1",
     "tslib": "2.4.1",
-    "typescript": "4.9.4"
+    "typescript": "5.9.3"
+  },
+  "files": [
+    "./dist/",
+    "./docs/",
+    "./src/"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/umd/comlink.d.ts",
+      "import": "./dist/esm/comlink.mjs",
+      "require": "./dist/umd/comlink.js"
+    },
+    "./node-adapter": {
+      "types": "./dist/umd/node-adapter.d.ts",
+      "import": "./dist/esm/node-adapter.mjs",
+      "require": "./dist/umd/node-adapter.js"
+    },
+    "./examples/portable-worker": {
+      "types": "./docs/examples/08-portable-worker/portable-worker.d.ts",
+      "import": "./docs/examples/08-portable-worker/portable-worker.mjs"
+    }
   }
 }
