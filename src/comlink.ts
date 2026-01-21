@@ -275,6 +275,41 @@ const throwTransferHandler: TransferHandler<
 };
 
 /**
+ * `deno` seems to have a bug: https://github.com/denoland/deno/issues/31871
+ *
+ * https://docs.deno.com/api/node/worker_threads/~/Worker#method_unref_0 states:
+ *
+ * > Calling `unref()` on a worker allows the thread to exit if this is the only
+ * > active handle in the event system. If the worker is already `unref()`ed
+ * > calling `unref()` again has no effect.
+ *
+ * And yet calling `.unref()` here doesn't allow the process to exit. Even two
+ * times is not enough. It seems to take at least 5 times, in some cases.
+ *
+ * Now:
+ *
+ * - There is no way to check if the first call suceeded.
+ * - It would be nice to avoid runtime sniffing in library code.
+ * - Calling it additional times doesn't have an effect in other runtimes.
+ * - The calls are *relatively* fast — on the order of a few nanoseconds in all runtimes.
+ *
+ * So we call it five times unconditionally (instead of once).
+ */
+function unrefWorkaround(reffable: {
+  unref?: () => void;
+}): (() => void) | undefined {
+  const unref = reffable.unref?.bind(reffable);
+  if (!unref) {
+    return;
+  }
+  return () => {
+    for (let i = 0; i < 5; i++) {
+      unref();
+    }
+  };
+}
+
+/**
  * Allows customizing the serialization of certain values.
  */
 export const transferHandlers = new Map<
@@ -346,7 +381,7 @@ export function nodeEndpoint(rawEndpoint: NodeEndpoint): Endpoint {
     // In theory, `node` exposes these on `Symbol.for('nodejs.ref') ` and
     // `Symbol.for('nodejs.unref') ` fields. In practice, this is not supported across all runtimes.
     ref: rawEndpoint.ref?.bind(rawEndpoint),
-    unref: rawEndpoint.unref?.bind(rawEndpoint),
+    unref: unrefWorkaround(rawEndpoint),
     start: (rawEndpoint as { start?: () => void }).start?.bind(rawEndpoint),
     terminate: (rawEndpoint as { terminate?: () => void }).terminate?.bind(
       rawEndpoint
@@ -526,32 +561,6 @@ export function wrap<T>(
         pendingListeners.size === 0 &&
         (options?.refCount ?? REF_COUNT_BY_DEFAULT)
       ) {
-        /**
-         * `deno` seems to have a bug here: https://github.com/denoland/deno/issues/31871
-         * 
-         * https://docs.deno.com/api/node/worker_threads/~/Worker#method_unref_0
-         * states:
-         *
-         * > Calling `unref()` on a worker allows the thread to exit if this
-         * > is the only active handle in the event system. If the worker is
-         * > already `unref()`ed calling `unref()` again has no effect.
-         *
-         * And yet calling `.unref()` here doesn't allow the process to exit.
-         * Even two times is not enough. It doesn't seem to work unless we
-         * Beetlejuice it (i.e. call it three times). 🤷
-         *
-         * Now:
-         *
-         * - There is no way to check if the first call suceeded.
-         * - It would be nice to avoid runtime sniffing in library code.
-         * - Calling it additional times doesn't have an effect in other
-         *   runtimes.
-         * - The calls are *relatively* fast.
-         *
-         * So we call it three times unconditionally (instead of once).
-         */
-        ep.unref?.();
-        ep.unref?.();
         ep.unref?.();
       }
     }
