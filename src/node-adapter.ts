@@ -5,45 +5,16 @@
  */
 
 import { Endpoint } from "./protocol";
+import { nodeEndpoint as comlinkNodeEndpoint, NodeEndpoint } from "./comlink";
 
-export interface NodeEndpoint {
-  postMessage(message: any, transfer?: any[]): void;
-  on(
-    type: string,
-    listener: EventListenerOrEventListenerObject,
-    options?: {}
-  ): void;
-  off(
-    type: string,
-    listener: EventListenerOrEventListenerObject,
-    options?: {}
-  ): void;
-  start?: () => void;
-}
+let warned = false;
 
-export default function nodeEndpoint(nep: NodeEndpoint): Endpoint {
-  const listeners = new WeakMap();
-  return {
-    postMessage: nep.postMessage.bind(nep),
-    addEventListener: (_, eh) => {
-      const l = (data: any) => {
-        if ("handleEvent" in eh) {
-          eh.handleEvent({ data } as MessageEvent);
-        } else {
-          eh({ data } as MessageEvent);
-        }
-      };
-      nep.on("message", l);
-      listeners.set(eh, l);
-    },
-    removeEventListener: (_, eh) => {
-      const l = listeners.get(eh);
-      if (!l) {
-        return;
-      }
-      nep.off("message", l);
-      listeners.delete(eh);
-    },
-    start: nep.start && nep.start.bind(nep),
-  };
+export default function nodeEndpoint(rawEndpoint: NodeEndpoint): Endpoint {
+  if (warned) {
+    console.warn(
+      "It is no longer necessary to call `nodeAdapter(…)` unless you want to call the `.addEventListener(…)` / `.removeEventListener(…)` API yourself. If you need this, `nodeEndpoint(…)` is now exported from the main `comlink` module — import from there to avoid duplicated code and avoid this warning."
+    );
+    warned = true;
+  }
+  return comlinkNodeEndpoint(rawEndpoint);
 }

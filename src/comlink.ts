@@ -22,6 +22,8 @@ export const finalizer = Symbol("Comlink.finalizer");
 
 const throwMarker = Symbol("Comlink.thrown");
 
+const REF_COUNT_BY_DEFAULT = true;
+
 /**
  * Interface of values that were marked to be proxied with `comlink.proxy()`.
  * Can also be implemented by classes.
@@ -273,6 +275,41 @@ const throwTransferHandler: TransferHandler<
 };
 
 /**
+ * `deno` seems to have a bug: https://github.com/denoland/deno/issues/31871
+ *
+ * https://docs.deno.com/api/node/worker_threads/~/Worker#method_unref_0 states:
+ *
+ * > Calling `unref()` on a worker allows the thread to exit if this is the only
+ * > active handle in the event system. If the worker is already `unref()`ed
+ * > calling `unref()` again has no effect.
+ *
+ * And yet calling `.unref()` here doesn't allow the process to exit. Even two
+ * times is not enough. It seems to take at least 5 times, in some cases.
+ *
+ * Now:
+ *
+ * - There is no way to check if the first call suceeded.
+ * - It would be nice to avoid runtime sniffing in library code.
+ * - Calling it additional times doesn't have an effect in other runtimes.
+ * - The calls are *relatively* fast — on the order of a few nanoseconds in all runtimes.
+ *
+ * So we call it five times unconditionally (instead of once).
+ */
+function unrefWorkaround(reffable: {
+  unref?: () => void;
+}): (() => void) | undefined {
+  const unref = reffable.unref?.bind(reffable);
+  if (!unref) {
+    return;
+  }
+  return () => {
+    for (let i = 0; i < 5; i++) {
+      unref();
+    }
+  };
+}
+
+/**
  * Allows customizing the serialization of certain values.
  */
 export const transferHandlers = new Map<
@@ -282,6 +319,86 @@ export const transferHandlers = new Map<
   ["proxy", proxyTransferHandler],
   ["throw", throwTransferHandler],
 ]);
+
+export interface NodeEndpoint {
+  postMessage(message: any, transfer?: any[]): void;
+  on(
+    type: string,
+    listener: EventListenerOrEventListenerObject,
+    options?: {}
+  ): void;
+  off(
+    type: string,
+    listener: EventListenerOrEventListenerObject,
+    options?: {}
+  ): void;
+  ref?: () => void;
+  unref?: () => void;
+  start?: () => void;
+  terminate?: () => void;
+  close?: () => void;
+}
+
+export function nodeEndpoint(rawEndpoint: NodeEndpoint): Endpoint {
+  const listeners: {
+    [event: string]:
+      | WeakMap<EventListenerOrEventListenerObject, any>
+      | undefined;
+  } = {};
+  function removeEventListener(
+    event: "message",
+    eh: EventListenerOrEventListenerObject
+  ) {
+    const l = listeners[event]?.get(eh);
+    if (!l) {
+      return;
+    }
+    rawEndpoint.off(event, l);
+    listeners[event]?.delete(eh);
+  }
+
+  return {
+    postMessage: rawEndpoint.postMessage.bind(rawEndpoint) as any,
+    addEventListener: (
+      event: "message",
+      handler,
+      options?: { once: boolean }
+    ) => {
+      const listener = (data: any) => {
+        if (options?.once) {
+          removeEventListener(event, listener);
+        }
+        if ("handleEvent" in handler) {
+          handler.handleEvent({ data } as MessageEvent);
+        } else {
+          handler({ data } as MessageEvent);
+        }
+      };
+      rawEndpoint.on(event, listener);
+      (listeners[event] ?? new WeakMap()).set(handler, listener);
+    },
+    removeEventListener,
+    // In theory, `node` exposes these on `Symbol.for('nodejs.ref') ` and
+    // `Symbol.for('nodejs.unref') ` fields. In practice, this is not supported across all runtimes.
+    ref: rawEndpoint.ref?.bind(rawEndpoint),
+    unref: unrefWorkaround(rawEndpoint),
+    start: (rawEndpoint as { start?: () => void }).start?.bind(rawEndpoint),
+    terminate: (rawEndpoint as { terminate?: () => void }).terminate?.bind(
+      rawEndpoint
+    ),
+    close: (rawEndpoint as { close?: () => void }).close?.bind(rawEndpoint),
+  };
+}
+
+function toEndpoint(endpoint: Endpoint | NodeEndpoint): Endpoint {
+  if (
+    !("addEventListener" in endpoint) ||
+    !("removeEventListener" in endpoint)
+  ) {
+    return nodeEndpoint(endpoint);
+  }
+  return endpoint;
+}
 
 function isAllowedOrigin(
   allowedOrigins: (string | RegExp)[],
@@ -298,11 +415,19 @@ function isAllowedOrigin(
   return false;
 }
 
+function defaultExposeEndpoint() {
+  return (
+    globalThis.process?.getBuiltinModule("node:worker_threads").parentPort ??
+    (globalThis as Endpoint)
+  );
+}
+
 export function expose(
   obj: any,
-  ep: Endpoint = globalThis as any,
+  endpoint: Endpoint | NodeEndpoint = defaultExposeEndpoint(),
   allowedOrigins: (string | RegExp)[] = ["*"]
 ) {
+  const ep = toEndpoint(endpoint);
   ep.addEventListener("message", function callback(ev: MessageEvent) {
     if (!ev || !ev.data) {
       return;
@@ -369,7 +494,7 @@ export function expose(
         const [wireValue, transferables] = toWireValue(returnValue);
         ep.postMessage({ ...wireValue, id }, transferables);
         if (type === MessageType.RELEASE) {
-          // detach and deactive after sending release response above.
+          // detach and deactivate after sending release response above.
           ep.removeEventListener("message", callback as any);
           closeEndPoint(ep);
           if (finalizer in obj && typeof obj[finalizer] === "function") {
@@ -386,21 +511,37 @@ export function expose(
         ep.postMessage({ ...wireValue, id }, transferables);
       });
   } as any);
-  if (ep.start) {
-    ep.start();
-  }
-}
-
-function isMessagePort(endpoint: Endpoint): endpoint is MessagePort {
-  return endpoint.constructor.name === "MessagePort";
+  ep.start?.();
 }
 
 function closeEndPoint(endpoint: Endpoint) {
-  if (isMessagePort(endpoint)) endpoint.close();
+  endpoint.close?.();
+  endpoint.terminate?.();
 }
 
-export function wrap<T>(ep: Endpoint, target?: any): Remote<T> {
-  const pendingListeners : PendingListenersMap = new Map();
+/**
+ * In certain runtimes like `node`, communicating with a worker will effectively
+ * call `.ref()` on (i.e."reference") the worker, which means that the worker
+ * will keep the process from terminating by default (similar to an unresolved
+ * `Promise`). It is possible to call `.unref()` on a worker to prevent this,
+ * but that may allows process to exit before all the intended work is
+ * completed.
+ *
+ * When wrapping a `node` worker, `comlink` now automatically tracks wrapped
+ * calls, and calls `.unref()` on the worker whenever there are no more pending
+ * calls. This is usually what you want if you are using the the worker
+ * specifically for a wrapped API and nothing else. If you need manually manage
+ * the worker or pass messages outside of `comlink`, pass `{ refCount: false }`
+ * for `options` to disable this behaviour. Note that this makes no difference
+ * for workers in web browsers.
+ */
+export function wrap<T>(
+  endpoint: Endpoint | NodeEndpoint,
+  target?: any,
+  options?: { refCount: boolean }
+): Remote<T> {
+  const ep = toEndpoint(endpoint);
+  const pendingListeners: PendingListenersMap = new Map();
 
   ep.addEventListener("message", function handleMessage(ev: Event) {
     const { data } = ev as MessageEvent;
@@ -416,6 +557,12 @@ export function wrap<T>(ep: Endpoint, target?: any): Remote<T> {
       resolver(data);
     } finally {
       pendingListeners.delete(data.id);
+      if (
+        pendingListeners.size === 0 &&
+        (options?.refCount ?? REF_COUNT_BY_DEFAULT)
+      ) {
+        ep.unref?.();
+      }
     }
   });
 
@@ -639,11 +786,10 @@ function requestResponseMessage(
   return new Promise((resolve) => {
     const id = generateUUID();
     pendingListeners.set(id, resolve);
-    if (ep.start) {
-      ep.start();
-    }
+    ep.start?.();
+    ep.ref?.();
     ep.postMessage({ id, ...msg }, transfers);
-});
+  });
 }
 
 function generateUUID(): string {

@@ -1,11 +1,7 @@
-import { Worker } from "worker_threads";
-import * as Comlink from "../../../dist/esm/comlink.mjs";
-import nodeEndpoint from "../../../dist/esm/node-adapter.mjs";
+import { Worker as NodeWorker } from "node:worker_threads";
+import { wrap } from "../../../dist/esm/comlink.mjs";
 
-async function init() {
-  const worker = new Worker("./worker.mjs");
+const worker = new NodeWorker(new URL(import.meta.resolve("./worker.mjs")));
 
-  const api = Comlink.wrap(nodeEndpoint(worker));
-  console.log(await api.doMath());
-}
-init();
+const api = wrap(worker);
+console.log(await api.add(6, 7));
