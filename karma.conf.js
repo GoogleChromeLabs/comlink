@@ -44,17 +44,15 @@ module.exports = function (config) {
         if (process.env.INSIDE_DOCKER) {
           return ["DockerChrome"];
         } else if (process.env.CHROME_ONLY) {
-          return ["ChromeHeadlessGC"];
+          return ["ChromeHeadless"];
         } else {
           // Filtering SafariTechPreview because I am having
           // local issues and I have no idea how to fix them.
           // I know that’s not a good reason to disable tests,
           // but Safari TP is relatively unimportant.
-          return availableBrowsers
-            .filter((browser) => browser !== "SafariTechPreview")
-            .map((browser) =>
-              browser === "ChromeHeadless" ? "ChromeHeadlessGC" : browser
-            );
+          return availableBrowsers.filter(
+            (browser) => browser !== "SafariTechPreview"
+          );
         }
       },
     },
@@ -62,14 +60,6 @@ module.exports = function (config) {
       DockerChrome: {
         base: "ChromeHeadless",
         flags: ["--no-sandbox", "--js-flags=--expose-gc"],
-      },
-      ChromeHeadlessGC: {
-        base: "ChromeHeadless",
-        flags: ["--js-flags=--expose-gc"],
-      },
-      ChromeHeadlessGC: {
-        base: "ChromeHeadless",
-        flags: ["--js-flags=--expose-gc"],
       },
     },
   };
