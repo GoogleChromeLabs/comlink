@@ -234,6 +234,7 @@ type PendingListenersMap = Map<
 type EndpointWithPendingListeners = {
   endpoint: Endpoint;
   pendingListeners: PendingListenersMap;
+  releaseDeferred?: boolean;
 };
 
 /**
@@ -401,6 +402,10 @@ function closeEndPoint(endpoint: Endpoint) {
 
 export function wrap<T>(ep: Endpoint, target?: any): Remote<T> {
   const pendingListeners : PendingListenersMap = new Map();
+  const epWithPendingListeners: EndpointWithPendingListeners = {
+    endpoint: ep,
+    pendingListeners,
+  };
 
   ep.addEventListener("message", function handleMessage(ev: Event) {
     const { data } = ev as MessageEvent;
@@ -416,10 +421,19 @@ export function wrap<T>(ep: Endpoint, target?: any): Remote<T> {
       resolver(data);
     } finally {
       pendingListeners.delete(data.id);
+      if (
+        epWithPendingListeners.releaseDeferred &&
+        pendingListeners.size === 0
+      ) {
+        epWithPendingListeners.releaseDeferred = false;
+        releaseEndpoint(epWithPendingListeners).finally(() => {
+          pendingListeners.clear();
+        });
+      }
     }
   });
 
-  return createProxy<T>({ endpoint: ep, pendingListeners }, [], target) as any;
+  return createProxy<T>(epWithPendingListeners, [], target) as any;
 }
 
 function throwIfProxyReleased(isReleased: boolean) {
@@ -455,6 +469,10 @@ const proxyFinalizers =
       const newCount = (proxyCounter.get(epWithPendingListeners) || 0) - 1;
       proxyCounter.set(epWithPendingListeners, newCount);
       if (newCount === 0) {
+        if (epWithPendingListeners.pendingListeners.size > 0) {
+          epWithPendingListeners.releaseDeferred = true;
+          return;
+        }
         releaseEndpoint(epWithPendingListeners).finally(() => {
           epWithPendingListeners.pendingListeners.clear();
         });

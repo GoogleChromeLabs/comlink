@@ -9,6 +9,7 @@
   "scripts": {
     "build": "rollup -c",
     "test:unit": "karma start",
+    "test:unit:gc": "karma start --browsers ChromeHeadlessGC",
     "test:node": "mocha ./tests/node/main.mjs",
     "test:types": "tsc -p ./tests/tsconfig.json",
     "test:types:watch": "npm run test:types -- --watch",
