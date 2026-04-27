@@ -59,7 +59,7 @@ module.exports = function (config) {
     customLaunchers: {
       DockerChrome: {
         base: "ChromeHeadless",
-        flags: ["--no-sandbox"],
+        flags: ["--no-sandbox", "--js-flags=--expose-gc"],
       },
     },
   };

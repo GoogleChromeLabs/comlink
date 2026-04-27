@@ -598,6 +598,42 @@ describe("Comlink in the same realm", function () {
     expect(finalized).to.be.true;
   });
 
+  it("in-flight requests should not be dropped when proxy is GC'd mid-await", async function () {
+    if (typeof globalThis.gc !== "function") this.skip();
+    this.timeout(15000);
+
+    const hammer = setInterval(() => globalThis.gc(), 50);
+    const garbage = [];
+    const pressure = setInterval(() => {
+      garbage.push(new Uint8Array(2_000_000));
+      if (garbage.length > 20) garbage.length = 0;
+    }, 50);
+
+    try {
+      for (let i = 0; i < 20; i++) {
+        const { port1, port2 } = new MessageChannel();
+        port1.start();
+        port2.start();
+        Comlink.expose(
+          {
+            slow: () => new Promise((r) => setTimeout(() => r("ok"), 100)),
+          },
+          port2
+        );
+        const result = await Promise.race([
+          Comlink.wrap(port1).slow(),
+          new Promise((_, reject) =>
+            setTimeout(() => reject(new Error(`call ${i} hung — port closed mid-await`)), 2000)
+          ),
+        ]);
+        expect(result).to.equal("ok");
+      }
+    } finally {
+      clearInterval(hammer);
+      clearInterval(pressure);
+    }
+  });
+
   // commented out this test as it could be unreliable in various browsers as
   // it has to wait for GC to kick in which could happen at any timing
   // this does seem to work when testing locally
