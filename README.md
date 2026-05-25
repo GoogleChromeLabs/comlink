@@ -94,6 +94,56 @@ async function remoteFunction(cb) {
 Comlink.expose(remoteFunction);
 ```
 
+### Two-way communication
+
+Comlink can be used when both sides of a channel need to expose APIs. `wrap()`
+always consumes the API exposed by the other side, while `expose()` publishes the
+API from the current side. Keep those APIs separate, and expose one object per
+endpoint. For callbacks or event-style communication, prefer passing a
+`Comlink.proxy()` value as shown above.
+
+**main.js**
+
+```javascript
+import * as Comlink from "https://unpkg.com/comlink/dist/esm/comlink.mjs";
+
+async function init() {
+  const worker = new Worker("worker.js");
+  const workerApi = Comlink.wrap(worker);
+
+  Comlink.expose(
+    {
+      logFromWorker(message) {
+        console.log(message);
+      },
+    },
+    worker
+  );
+
+  await workerApi.notifyMain();
+}
+
+init();
+```
+
+**worker.js**
+
+```javascript
+importScripts("https://unpkg.com/comlink/dist/umd/comlink.js");
+
+const mainApi = Comlink.wrap(self);
+
+Comlink.expose({
+  async notifyMain() {
+    await mainApi.logFromWorker("Worker is ready");
+  },
+});
+```
+
+If both sides need independent APIs rather than callbacks, create a dedicated
+`MessageChannel` for that API, or use `[Comlink.createEndpoint]()` to mint a new
+port connected to an existing proxy.
+
 ### [`SharedWorker`](./docs/examples/07-sharedworker-example)
 
 When using Comlink with a [`SharedWorker`](https://developer.mozilla.org/en-US/docs/Web/API/SharedWorker) you have to:
