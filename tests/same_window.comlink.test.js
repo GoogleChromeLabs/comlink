@@ -645,7 +645,37 @@ describe("Comlink in the same realm", function () {
     try {
       await thing.value;
     } catch (err) {
-      expect(err.message).to.equal("Unserializable return value");
+      expect(err.message).to.contain("Unserializable return value");
+    }
+  });
+
+  it("includes serialization error details for unserializable return values", async function () {
+    const transferHandlerName = "throwing-test";
+    Comlink.transferHandlers.set(transferHandlerName, {
+      canHandle(value) {
+        return value && value.throwOnSerialize === true;
+      },
+      serialize() {
+        throw new Error("custom serialization failed");
+      },
+      deserialize() {},
+    });
+
+    try {
+      const thing = Comlink.wrap(this.port1, { value: {} });
+      Comlink.expose({ value: { throwOnSerialize: true } }, this.port2);
+
+      try {
+        await thing.value;
+        throw "Should have thrown";
+      } catch (err) {
+        expect(err).to.not.equal("Should have thrown");
+        expect(err.message).to.equal(
+          "Unserializable return value: custom serialization failed"
+        );
+      }
+    } finally {
+      Comlink.transferHandlers.delete(transferHandlerName);
     }
   });
 });
