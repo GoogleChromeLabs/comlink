@@ -380,7 +380,7 @@ export function expose(
       .catch((error) => {
         // Send Serialization Error To Caller
         const [wireValue, transferables] = toWireValue({
-          value: new TypeError("Unserializable return value"),
+          value: new TypeError(getUnserializableErrorMessage(error)),
           [throwMarker]: 0,
         });
         ep.postMessage({ ...wireValue, id }, transferables);
@@ -399,8 +399,16 @@ function closeEndPoint(endpoint: Endpoint) {
   if (isMessagePort(endpoint)) endpoint.close();
 }
 
+function getUnserializableErrorMessage(error: unknown) {
+  const details = error instanceof Error ? error.message : String(error);
+
+  return details
+    ? `Unserializable return value: ${details}`
+    : "Unserializable return value";
+}
+
 export function wrap<T>(ep: Endpoint, target?: any): Remote<T> {
-  const pendingListeners : PendingListenersMap = new Map();
+  const pendingListeners: PendingListenersMap = new Map();
 
   ep.addEventListener("message", function handleMessage(ev: Event) {
     const { data } = ev as MessageEvent;
@@ -643,7 +651,7 @@ function requestResponseMessage(
       ep.start();
     }
     ep.postMessage({ id, ...msg }, transfers);
-});
+  });
 }
 
 function generateUUID(): string {
