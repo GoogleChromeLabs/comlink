@@ -178,6 +178,12 @@ myProxy.onready = Comlink.proxy((data) => {
 });
 ```
 
+### Two-way communication
+
+Comlink proxies can be used for bidirectional communication, but one side has to pass the other side a proxy or endpoint explicitly. For occasional calls back to the caller, pass a callback or object with `Comlink.proxy()`. For a second long-lived proxy, use `[Comlink.createEndpoint]()` or create a separate `MessageChannel` and call `wrap()`/`expose()` on opposite ports.
+
+Avoid assuming that `wrap()` and `expose()` on their own make both sides' local objects available over the same worker. `wrap()` only talks to the value that the other side exposed, and `expose()` only makes one local value available. If both sides need to call each other, model that connection explicitly with a proxied callback, a proxied object, or another endpoint.
+
 ### Transfer handlers and event listeners
 
 It is common that you want to use Comlink to add an event listener, where the event source is on another thread:
