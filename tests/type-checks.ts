@@ -87,9 +87,27 @@ async function closureSoICanUseAwait() {
     assert<IsAny<typeof b>>(false);
     const subproxy = proxy.c;
     assert<Has<typeof subproxy, Promise<{ d: number }>>>(true);
+    assert<Has<typeof subproxy, { d: Promise<number> }>>(true);
     assert<IsAny<typeof subproxy>>(false);
     const copy = await proxy.c;
     assert<Has<typeof copy, { d: number }>>(true);
+
+    const nestedValue = proxy.c.d;
+    assert<Has<typeof nestedValue, Promise<number>>>(true);
+  }
+
+  {
+    interface WorkerApi {
+      service: {
+        method: () => void;
+      };
+    }
+
+    const proxy = Comlink.wrap<WorkerApi>(0 as any);
+    const call = proxy.service.method();
+    assert<Has<typeof call, Promise<void>>>(true);
+    const service = await proxy.service;
+    assert<Has<typeof service, { method: () => void }>>(true);
   }
 
   {
