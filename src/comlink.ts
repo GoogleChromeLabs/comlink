@@ -53,9 +53,13 @@ type Unpromisify<P> = P extends Promise<infer T> ? T : P;
  */
 type RemoteProperty<T> =
   // If the value is a method, comlink will proxy it automatically.
-  // Objects are only proxied if they are marked to be proxied.
+  // Objects can be either awaited as cloned values or traversed as remote paths.
   // Otherwise, the property is converted to a Promise that resolves the cloned value.
-  T extends Function | ProxyMarked ? Remote<T> : Promisify<T>;
+  T extends Function | ProxyMarked
+    ? Remote<T>
+    : T extends object
+    ? Remote<T> & Promisify<T>
+    : Promisify<T>;
 
 /**
  * Takes the raw type of a property as a remote thread would see it through a proxy (e.g. when passed in as a function
@@ -400,7 +404,7 @@ function closeEndPoint(endpoint: Endpoint) {
 }
 
 export function wrap<T>(ep: Endpoint, target?: any): Remote<T> {
-  const pendingListeners : PendingListenersMap = new Map();
+  const pendingListeners: PendingListenersMap = new Map();
 
   ep.addEventListener("message", function handleMessage(ev: Event) {
     const { data } = ev as MessageEvent;
@@ -643,7 +647,7 @@ function requestResponseMessage(
       ep.start();
     }
     ep.postMessage({ id, ...msg }, transfers);
-});
+  });
 }
 
 function generateUUID(): string {
