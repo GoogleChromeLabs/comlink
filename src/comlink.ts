@@ -315,9 +315,12 @@ export function expose(
       path: [] as string[],
       ...(ev.data as Message),
     };
-    const argumentList = (ev.data.argumentList || []).map(fromWireValue);
     let returnValue;
     try {
+      // Deserializing the arguments has to happen inside the try block: if the
+      // sender used a transfer handler we don't have, throwing out of the
+      // listener would leave the caller waiting for a reply forever.
+      const argumentList = (ev.data.argumentList || []).map(fromWireValue);
       const parent = path.slice(0, -1).reduce((obj, prop) => obj[prop], obj);
       const rawValue = path.reduce((obj, prop) => obj[prop], obj);
       switch (type) {
@@ -622,8 +625,13 @@ function toWireValue(value: any): [WireValue, Transferable[]] {
 
 function fromWireValue(value: WireValue): any {
   switch (value.type) {
-    case WireValueType.HANDLER:
-      return transferHandlers.get(value.name)!.deserialize(value.value);
+    case WireValueType.HANDLER: {
+      const handler = transferHandlers.get(value.name);
+      if (!handler) {
+        throw new Error(`No transfer handler registered for '${value.name}'`);
+      }
+      return handler.deserialize(value.value);
+    }
     case WireValueType.RAW:
       return value.value;
   }

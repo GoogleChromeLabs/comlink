@@ -37,4 +37,36 @@ describe("node", () => {
       });
     });
   });
+
+  describe("Comlink.expose", function () {
+    beforeEach(function () {
+      const { port1, port2 } = new MessageChannel();
+      this.local = port1;
+      this.remote = port2;
+      this.local.start();
+      this.remote.start();
+      Comlink.expose({ ping: () => "pong" }, this.local);
+    });
+
+    it("answers an error when the arguments cannot be deserialized", async function () {
+      const reply = new Promise((resolve) =>
+        this.remote.addEventListener("message", (ev) => resolve(ev.data), {
+          once: true,
+        })
+      );
+      // Same shape as a call coming out of Comlink.wrap(), except the argument
+      // was serialized with a transfer handler this endpoint never registered.
+      this.remote.postMessage({
+        id: "1",
+        type: "APPLY",
+        path: ["ping"],
+        argumentList: [{ type: "HANDLER", name: "not-registered", value: 1 }],
+      });
+
+      const { type, name, value } = await reply;
+      expect(type).to.equal("HANDLER");
+      expect(name).to.equal("throw");
+      expect(value.value.message).to.contain("not-registered");
+    });
+  });
 });
