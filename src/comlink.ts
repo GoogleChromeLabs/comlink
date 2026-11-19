@@ -15,16 +15,10 @@ export type {
   TransferHandler,
 } from "./common";
 export type { PoolOptions } from "./consumer-pool";
-export {
-  proxyMarker,
-  proxyRemoteData,
-  opch,
-  transferHandlers,
-  transfer,
-} from "./common";
+export { proxyMarker, proxyRemoteData, opch, transfer } from "./common";
 export { windowEndpoint } from "./window-adapter";
 export { nodeEndpoint } from "./node-adapter";
 export { expose, unexpose, proxy } from "./provider";
 export { wrap } from "./consumer";
 export { pool } from "./consumer-pool";
-import "./transfer-handler";
+export { default as transferHandlers } from "./transfer-handler";
